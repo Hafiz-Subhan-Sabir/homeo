@@ -18,7 +18,10 @@ class UploadedDocument(models.Model):
 
 
 class MindsetKnowledge(models.Model):
-    """Latest extracted mindset graph (replaced on re-ingest)."""
+    """
+    Structured output from the ingest agent (OpenAI): mindsets with patterns, habits, benefits,
+    plus themes and anti_patterns. Challenge generation reads this JSON, not the source file.
+    """
 
     source = models.OneToOneField(
         UploadedDocument,

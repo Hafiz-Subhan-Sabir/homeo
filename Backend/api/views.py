@@ -1,4 +1,10 @@
-"""REST API for document upload, mindset ingest, and syndicate bootstrap."""
+"""REST API for document upload, mindset ingest, and syndicate bootstrap.
+
+Intended pipeline (also used from Django admin):
+  1) Upload → save file + extracted text on ``UploadedDocument`` (and optional object storage).
+  2) Ingest → OpenAI agent fills ``MindsetKnowledge.payload`` (mindsets, patterns, habits, benefits, themes).
+  3) Challenges app loads latest ``MindsetKnowledge`` and generates missions from that payload (not from the raw file).
+"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -16,7 +22,7 @@ from apps.challenges.services import ensure_daily_challenges_for_device
 
 from .models import MindsetKnowledge, UploadedDocument
 from .services.document_extract import extract_text, extract_text_from_bytes, file_sha256, truncate
-from .services.openai_client import extract_mindsets_from_document
+from .services.openai_client import extract_mindsets_from_document, normalize_mindset_ingest_payload
 from .services.storage_urls import document_presigned_download_url
 from .services.upload_store import SUPPORTED_SUFFIXES, store_uploaded_file
 
@@ -71,7 +77,7 @@ def run_ingest(doc: UploadedDocument) -> tuple[bool, dict | None, str | None]:
 
     text = truncate(raw)
     try:
-        payload = extract_mindsets_from_document(text)
+        payload = normalize_mindset_ingest_payload(extract_mindsets_from_document(text))
     except RuntimeError as e:
         return False, None, str(e)
     except Exception as e:
@@ -102,15 +108,21 @@ def health(_request):
 
 @api_view(["GET"])
 def mindset_status(_request):
-    """Whether mindsets are loaded and from which file."""
+    """Whether mindsets are loaded (upload → ingest → payload used for challenges)."""
     latest = MindsetKnowledge.objects.select_related("source").order_by("-updated_at").first()
     if not latest:
         return Response(
             {
                 "ready": False,
-                "message": "No document ingested yet. Add a file under data/uploads/ and sync, or upload in the UI.",
+                "message": (
+                    "No ingest yet. Flow: upload file (POST /api/documents/upload/ or admin) → "
+                    "run ingest (POST /api/documents/ingest/ or admin background job) → "
+                    "challenges read stored mindsets."
+                ),
             }
         )
+    p = latest.payload or {}
+    mindsets = p.get("mindsets") if isinstance(p.get("mindsets"), list) else []
     return Response(
         {
             "ready": True,
@@ -118,13 +130,15 @@ def mindset_status(_request):
             "content_hash": latest.source.content_hash,
             "updated_at": latest.updated_at.isoformat(),
             "model_used": latest.model_used,
+            "mindset_count": len(mindsets),
+            "theme_count": len(p.get("themes") or []) if isinstance(p.get("themes"), list) else 0,
         }
     )
 
 
 @api_view(["POST"])
 def upload_document(request):
-    """Multipart: field `file` (pdf, txt, md, docx)."""
+    """Multipart: field ``file`` (pdf, txt, md, docx). Saves document only; call ``/api/documents/ingest/`` to run the mindset agent."""
     f = request.FILES.get("file")
     if not f:
         return Response({"detail": "Missing file field."}, status=status.HTTP_400_BAD_REQUEST)

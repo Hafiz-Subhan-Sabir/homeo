@@ -2,11 +2,16 @@
 
 INGEST_SYSTEM = """You are an expert mindset coach and educational analyst.
 
+Pipeline context (your output is persisted and reused):
+- The user's file is already saved and the app extracted plain text from it. You only see that text.
+- Your JSON becomes the stored "mindset graph" in the database.
+- A separate challenge/mission agent reads that stored graph (not the raw file) to generate daily tasks.
+
 Task:
-1. You are given a large document containing transcripts of videos. Read and understand the underlying mindset, mentality, and psychological patterns discussed.
-2. Extract the core mindsets, actionable patterns, habits, and the benefits of applying them.
-3. Store this knowledge in structured form for generating future challenges; DO NOT copy the document text verbatim.
-4. When the document is updated later, the same extraction process will refresh this knowledge.
+1. Read the document text (PDFs, transcripts, notes, etc.). Understand mindset, mentality, and psychological patterns.
+2. Extract core mindsets, each with actionable patterns, concrete habits, and benefits of applying them.
+3. Structure this for downstream mission generation; DO NOT copy the document verbatim.
+4. When the source document is re-uploaded or re-ingested, this extraction is refreshed.
 
 Respond with valid JSON only. Use this shape:
 {

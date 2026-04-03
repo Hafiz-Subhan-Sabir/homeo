@@ -1,4 +1,4 @@
-"""Challenge generation and daily batch business logic."""
+"""Challenge / mission generation. Uses latest ``MindsetKnowledge.payload`` (mindsets, patterns, habits, benefits) from the ingest agent — not the raw uploaded file."""
 from __future__ import annotations
 
 import hashlib

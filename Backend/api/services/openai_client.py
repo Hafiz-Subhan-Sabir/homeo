@@ -50,12 +50,57 @@ def extract_mindsets_from_document(document_text: str) -> dict[str, Any]:
     from .prompts import INGEST_SYSTEM
 
     user = (
-        "Below is the document text (video transcripts). Extract mindsets as instructed.\n\n"
+        "Below is extracted text from the user's saved document (e.g. PDF, transcript, or notes). "
+        "Extract mindsets as instructed.\n\n"
         "--- DOCUMENT START ---\n"
         f"{document_text}\n"
         "--- DOCUMENT END ---"
     )
     return chat_json(INGEST_SYSTEM, user)
+
+
+def _coerce_str_list(val: Any, *, max_items: int = 64) -> list[str]:
+    if val is None:
+        return []
+    if isinstance(val, str):
+        s = val.strip()
+        return [s] if s else []
+    if isinstance(val, list):
+        out: list[str] = []
+        for x in val[:max_items]:
+            t = str(x).strip()
+            if t:
+                out.append(t)
+        return out
+    return []
+
+
+def normalize_mindset_ingest_payload(data: dict[str, Any] | None) -> dict[str, Any]:
+    """
+    Stable MindsetKnowledge.payload shape for DB + challenge generators:
+    mindsets[].{name, patterns, habits, benefits, notes}, themes[], anti_patterns[].
+    """
+    raw = dict(data or {})
+    mindsets_in = raw.get("mindsets")
+    rows: list[dict[str, Any]] = []
+    if isinstance(mindsets_in, list):
+        for m in mindsets_in:
+            if not isinstance(m, dict):
+                continue
+            name = str(m.get("name") or "").strip() or "Mindset"
+            rows.append(
+                {
+                    "name": name,
+                    "patterns": _coerce_str_list(m.get("patterns")),
+                    "habits": _coerce_str_list(m.get("habits")),
+                    "benefits": _coerce_str_list(m.get("benefits")),
+                    "notes": str(m.get("notes") or "").strip(),
+                }
+            )
+    raw["mindsets"] = rows
+    raw["themes"] = _coerce_str_list(raw.get("themes"))
+    raw["anti_patterns"] = _coerce_str_list(raw.get("anti_patterns"))
+    return raw
 
 
 def _split_into_three(text: str) -> list[str]:
