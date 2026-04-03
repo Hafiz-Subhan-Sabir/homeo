@@ -1,7 +1,8 @@
 # Use repo branch that includes latest syndicate auth fixes (e.g. challenges), or merge to your tracked branch.
 [build]
 builder = "NIXPACKS"
-buildCommand = "npm ci && npm run build"
+# Railway sets NODE_ENV=production; plain `npm ci` skips devDependencies and breaks `next build` (TypeScript, Tailwind, etc.).
+buildCommand = "NPM_CONFIG_PRODUCTION=false npm ci && npm run build"
 
 [deploy]
 startCommand = "npm run start"
