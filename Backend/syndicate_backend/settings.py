@@ -64,18 +64,43 @@ USE_CLOUDINARY = bool(
 
 
 def _s3_object_storage_config() -> dict | None:
-    """S3-compatible object storage (AWS S3, Cloudflare R2, Tigris, etc.)."""
+    """S3-compatible object storage (AWS S3, Cloudflare R2, Tigris, Railway Buckets, etc.)."""
     if (os.environ.get("USE_S3_OBJECT_STORAGE") or "").strip().lower() in ("0", "false", "no", "off"):
         return None
-    bucket = (os.environ.get("AWS_STORAGE_BUCKET_NAME") or os.environ.get("S3_BUCKET_NAME") or "").strip()
-    access = (os.environ.get("AWS_ACCESS_KEY_ID") or "").strip().strip("\ufeff")
-    secret = (os.environ.get("AWS_SECRET_ACCESS_KEY") or "").strip().strip("\ufeff")
+    # Railway Buckets: BUCKET, ACCESS_KEY_ID, SECRET_ACCESS_KEY, ENDPOINT, REGION (see railway.com/docs — Storage Buckets).
+    # AWS SDK preset on Railway maps many of these to AWS_*; we accept both.
+    railway_bucket = (os.environ.get("BUCKET") or "").strip()
+    bucket = (
+        (os.environ.get("AWS_STORAGE_BUCKET_NAME") or "").strip()
+        or (os.environ.get("S3_BUCKET_NAME") or "").strip()
+        or railway_bucket
+    )
+    access = (
+        (os.environ.get("AWS_ACCESS_KEY_ID") or "").strip().strip("\ufeff")
+        or (os.environ.get("ACCESS_KEY_ID") or "").strip().strip("\ufeff")
+    )
+    secret = (
+        (os.environ.get("AWS_SECRET_ACCESS_KEY") or "").strip().strip("\ufeff")
+        or (os.environ.get("SECRET_ACCESS_KEY") or "").strip().strip("\ufeff")
+    )
     if not (bucket and access and secret):
         return None
-    endpoint = (os.environ.get("AWS_S3_ENDPOINT_URL") or os.environ.get("S3_ENDPOINT_URL") or "").strip()
-    if not endpoint and access.startswith("tid_"):
-        endpoint = "https://t3.storage.dev"
-    region = (os.environ.get("AWS_S3_REGION_NAME") or os.environ.get("AWS_DEFAULT_REGION") or "").strip()
+    endpoint = (
+        (os.environ.get("AWS_S3_ENDPOINT_URL") or "").strip()
+        or (os.environ.get("S3_ENDPOINT_URL") or "").strip()
+        or (os.environ.get("ENDPOINT") or "").strip()
+    )
+    if not endpoint:
+        if access.startswith("tid_"):
+            endpoint = "https://t3.storage.dev"
+        elif railway_bucket and bucket == railway_bucket:
+            # Bucket name came from Railway's BUCKET — use Railway's S3 API host.
+            endpoint = "https://storage.railway.app"
+    region = (
+        (os.environ.get("AWS_S3_REGION_NAME") or "").strip()
+        or (os.environ.get("AWS_DEFAULT_REGION") or "").strip()
+        or (os.environ.get("REGION") or "").strip()
+    )
     if not region:
         region = "auto" if access.startswith("tid_") else "us-east-1"
     return {
