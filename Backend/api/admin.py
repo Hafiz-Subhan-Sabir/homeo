@@ -50,6 +50,9 @@ class UploadedDocumentAddForm(forms.ModelForm):
         if err:
             raise forms.ValidationError(err)
         self.instance = doc
+        # ModelAdmin.save_related() always calls form.save_m2m(). BaseModelForm only
+        # attaches save_m2m when super().save(commit=False) runs; we bypass that.
+        self.save_m2m = lambda: None
         return doc
 
 

@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import hashlib
+import logging
+import uuid
 from pathlib import Path
 
 from django.conf import settings
@@ -11,6 +13,8 @@ from django.core.files.uploadedfile import UploadedFile
 
 from api.models import UploadedDocument
 from api.services.document_extract import extract_text_from_bytes
+
+logger = logging.getLogger(__name__)
 
 SUPPORTED_SUFFIXES = frozenset({".pdf", ".txt", ".md", ".markdown", ".docx"})
 
@@ -41,8 +45,13 @@ def store_uploaded_file(f: UploadedFile) -> tuple[UploadedDocument | None, str |
         return None, f"Could not read this document (corrupt or unsupported content): {e}"
 
     if getattr(settings, "USE_S3_OBJECT_STORAGE", False):
-        key = f"uploads/{content_hash}{suffix}"
-        stored_path = default_storage.save(key, ContentFile(data))
+        # Unique key per row avoids S3 backends that mishandle overwrite of the same name.
+        key = f"uploads/{content_hash}-{uuid.uuid4().hex[:12]}{suffix}"
+        try:
+            stored_path = default_storage.save(key, ContentFile(data))
+        except Exception as e:
+            logger.exception("Object storage upload failed for key=%s", key)
+            return None, f"Could not store file in object storage: {e}"
     else:
         stored_path = f"inline/{content_hash}{suffix}"
     try:
