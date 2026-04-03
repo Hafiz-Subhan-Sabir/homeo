@@ -267,6 +267,15 @@ else:
         "http://127.0.0.1:3000",
     ]
 
+# Django admin login POST must match a trusted origin. Frontend-only CSRF vars omit the API
+# hostname, which breaks /admin/ on Railway unless we add the public domain here too.
+_rail_csrf = (os.environ.get("RAILWAY_PUBLIC_DOMAIN") or "").strip()
+if _rail_csrf:
+    _rail_origin = _rail_csrf if _rail_csrf.startswith("http") else f"https://{_rail_csrf}"
+    _norm = [x.rstrip("/") for x in CSRF_TRUSTED_ORIGINS]
+    if _rail_origin.rstrip("/") not in _norm:
+        CSRF_TRUSTED_ORIGINS = [*CSRF_TRUSTED_ORIGINS, _rail_origin]
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.TokenAuthentication",
