@@ -7,7 +7,8 @@ from django.conf import settings
 from django.core.files.storage import default_storage
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.challenges.models import GeneratedChallenge
@@ -16,6 +17,7 @@ from apps.challenges.services import ensure_daily_challenges_for_device
 from .models import MindsetKnowledge, UploadedDocument
 from .services.document_extract import extract_text, extract_text_from_bytes, file_sha256, truncate
 from .services.openai_client import extract_mindsets_from_document
+from .services.storage_urls import document_presigned_download_url
 from .services.upload_store import SUPPORTED_SUFFIXES, store_uploaded_file
 
 
@@ -131,15 +133,56 @@ def upload_document(request):
     if err:
         return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
 
+    body: dict = {
+        "id": doc.id,
+        "original_name": doc.original_name,
+        "content_hash": doc.content_hash,
+        "char_count": len(doc.text_extracted or ""),
+        "created_at": doc.created_at.isoformat(),
+    }
+    dl_url, dl_exp = document_presigned_download_url(doc)
+    if dl_url:
+        body["download_url"] = dl_url
+        body["download_url_expires_in"] = dl_exp
+    return Response(body, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def document_download_url(request, document_id: int):
+    """
+    Return a time-limited presigned GET URL for the raw file (private Railway/S3 bucket only).
+    Optional query: expires_in=seconds (60–604800, default from PRESIGNED_URL_EXPIRE_SECONDS).
+    """
+    try:
+        doc = UploadedDocument.objects.get(pk=document_id)
+    except UploadedDocument.DoesNotExist:
+        return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    raw = request.query_params.get("expires_in")
+    expires_req: int | None = None
+    if raw is not None and str(raw).strip() != "":
+        try:
+            expires_req = int(raw)
+        except ValueError:
+            return Response({"detail": "expires_in must be an integer."}, status=status.HTTP_400_BAD_REQUEST)
+
+    url, exp = document_presigned_download_url(doc, expires_in=expires_req)
+    if not url:
+        return Response(
+            {
+                "detail": "This document has no object-storage file (inline/local dev). Presigned URLs apply to private buckets only.",
+                "stored_path": doc.stored_path,
+            },
+            status=status.HTTP_404_NOT_FOUND,
+        )
     return Response(
         {
-            "id": doc.id,
+            "url": url,
+            "expires_in": exp,
             "original_name": doc.original_name,
-            "content_hash": doc.content_hash,
-            "char_count": len(doc.text_extracted or ""),
-            "created_at": doc.created_at.isoformat(),
-        },
-        status=status.HTTP_201_CREATED,
+            "document_id": doc.id,
+        }
     )
 
 

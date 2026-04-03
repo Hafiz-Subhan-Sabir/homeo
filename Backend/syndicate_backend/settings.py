@@ -296,6 +296,10 @@ if USE_S3_OBJECT_STORAGE and _s3_object_storage_cfg:
         AWS_S3_ENDPOINT_URL = _s3_object_storage_cfg["endpoint_url"]
     AWS_DEFAULT_ACL = None
     AWS_S3_FILE_OVERWRITE = True
+    # Private buckets: URLs from default_storage.url() are time-limited presigned GET links.
+    AWS_QUERYSTRING_AUTH = True
+    _presign = int((os.environ.get("PRESIGNED_URL_EXPIRE_SECONDS") or "3600").strip() or "3600")
+    AWS_QUERYSTRING_EXPIRE = max(60, min(_presign, 604800))
     STORAGES["default"] = {
         "BACKEND": "storages.backends.s3.S3Storage",
     }
