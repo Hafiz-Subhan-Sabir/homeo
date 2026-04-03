@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate, get_user_model
+from django.db import IntegrityError
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes
@@ -21,7 +22,11 @@ def signup(request):
     if User.objects.filter(username=email).exists():
         return Response({"detail": "Email already registered."}, status=status.HTTP_400_BAD_REQUEST)
 
-    user = User.objects.create_user(username=email, email=email, password=password)
+    try:
+        user = User.objects.create_user(username=email, email=email, password=password)
+    except IntegrityError:
+        return Response({"detail": "Email already registered."}, status=status.HTTP_400_BAD_REQUEST)
+
     token, _ = Token.objects.get_or_create(user=user)
     return Response(
         {

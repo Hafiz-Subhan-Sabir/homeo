@@ -264,6 +264,7 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    "EXCEPTION_HANDLER": "api.exception_handlers.drf_json_exception_handler",
 }
 
 if not DEBUG:
