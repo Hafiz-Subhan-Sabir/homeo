@@ -221,13 +221,11 @@ STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
+    # Plain StaticFilesStorage: whitenoise.storage.CompressedStaticFilesStorage can raise
+    # FileNotFoundError during collectstatic (admin select2 i18n paths on Linux). WhiteNoise
+    # middleware still serves STATIC_ROOT and can compress responses at request time.
     "staticfiles": {
-        "BACKEND": (
-            "django.contrib.staticfiles.storage.StaticFilesStorage"
-            if DEBUG
-            # Non-manifest storage avoids collectstatic manifest failures on some deploys; still compressed.
-            else "whitenoise.storage.CompressedStaticFilesStorage"
-        ),
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
 }
 MEDIA_URL = "/media/"
