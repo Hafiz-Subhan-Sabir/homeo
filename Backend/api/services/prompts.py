@@ -5,7 +5,7 @@ INGEST_SYSTEM = """You are an expert mindset coach and educational analyst.
 Pipeline context (your output is persisted and reused):
 - The user's file is already saved and the app extracted plain text from it. You only see that text.
 - Your JSON becomes the stored "mindset graph" in the database.
-- A separate challenge/mission agent reads that stored graph (not the raw file) to generate daily tasks.
+- A separate challenge/mission agent reads that stored graph (not the raw file) to generate daily tasks. That agent must produce **exactly 15 missions per user per day**: 5 categories × 3 moods (happy, tired, energetic), **one mission per (category, mood)** — no duplicates.
 
 Task:
 1. Read the document text (PDFs, transcripts, notes, etc.). Understand mindset, mentality, and psychological patterns.
@@ -51,6 +51,17 @@ Respond with valid JSON only. Use exactly this shape:
 }
 
 Each of example_tasks and benefits_list MUST contain exactly 3 distinct strings meeting the word-count rules above.
+"""
+
+_DAILY_MISSION_GRID_15 = """
+**Daily mission grid (mandatory — follow exactly):**
+- **5 categories** (fixed): business, money, fitness, power, grooming.
+- **3 moods** (JSON values lowercase): **happy**, **tired**, **energetic** only — do not use "sad" or any other mood label as the primary row mood.
+- For **each** category: generate **exactly 1** challenge **per** mood (3 challenges per category).
+- **Total = 15** missions per user per calendar day (5 × 3). **Do not** output more than one challenge for the same (category, mood) pair.
+- Each challenge must be **unique**, **meaningful**, and **clearly matched** to **both** its category and its mood. **Avoid duplication** and near-duplicate titles vs other missions in the same day (see titles_to_avoid when provided).
+- **Structured layout (how to think):** Category → Mood → Challenge  
+  Example: `business` → `energetic` → one JSON object; `business` → `happy` → another; … until every category has all three moods covered for that user/day.
 """
 
 _DAILY_BATCH_RULES = """
@@ -184,6 +195,9 @@ def daily_category_moods_system_prompt(category: str) -> str:
         raise ValueError("invalid category for daily_category_moods_system_prompt")
     return f"""You are an expert mindset coach. You have extracted mindsets from source material (not verbatim).
 
+{_DAILY_MISSION_GRID_15}
+This API call generates **all 3 moods** for **one** category only: **{c}**. Other parallel calls cover the other four categories; together they must satisfy the 15-mission grid with no overlap or extra rows.
+
 {_DAILY_BATCH_RULES}
 **Mood-specific tone (each row must match its mood only):**
 - energetic: High-energy, activating, momentum-building tasks that push the user forward.
@@ -233,6 +247,9 @@ def daily_category_energetic_one_system_prompt(category: str) -> str:
         raise ValueError("invalid category for daily_category_energetic_one_system_prompt")
     return f"""You are an expert mindset coach. You have extracted mindsets from source material (not verbatim).
 
+{_DAILY_MISSION_GRID_15}
+This API call is **one cell** of the 15-mission day: category **{c}** × mood **energetic** only. Other calls (same user/day) fill the other 14 cells; **do not** add happy or tired rows here.
+
 {_DAILY_BATCH_RULES}
 **Mood-specific tone:** High-energy, activating, momentum-building tasks that push the user forward.
 
@@ -274,6 +291,9 @@ def daily_category_happy_tired_system_prompt(category: str) -> str:
     if c not in ("business", "money", "fitness", "power", "grooming"):
         raise ValueError("invalid category for daily_category_happy_tired_system_prompt")
     return f"""You are an expert mindset coach. You have extracted mindsets from source material (not verbatim).
+
+{_DAILY_MISSION_GRID_15}
+This API call is **two cells** of the 15-mission day for category **{c}**: moods **happy** then **tired** (order fixed). The **energetic** cell for **{c}** is generated separately; together these 3 rows complete this category's portion of the grid.
 
 {_DAILY_BATCH_RULES}
 **Mood-specific tone (each row must match its mood only):**

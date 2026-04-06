@@ -57,7 +57,7 @@ class GeneratedChallenge(models.Model):
 
     mood = models.CharField(max_length=128, db_index=True, blank=True)
     creator_device = models.CharField(max_length=128, db_index=True, blank=True, default="")
-    # When set with creator_device="", rows are the per-device daily batch (40) for that device_id.
+    # When set with creator_device="", rows are the per-device daily batch (15 missions) for that device_id.
     # Empty = legacy shared batch or non–device-scoped rows.
     device_batch_device_id = models.CharField(max_length=128, db_index=True, blank=True, default="")
     category = models.CharField(max_length=32, db_index=True, blank=True)

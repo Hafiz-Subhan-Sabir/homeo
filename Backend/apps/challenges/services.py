@@ -628,7 +628,7 @@ def generate_device_ai_batch_phase_happy_tired_parallel(device_id: str, _user_id
 
 
 def ensure_daily_challenges(force_regenerate: bool = False) -> tuple[bool, list[dict], str | None]:
-    """Create or return today's shared challenges: 5 categories × 3 moods × 2 slots (no device scope)."""
+    """Create or return today's shared challenges: 5 categories × 3 moods × 1 slot each = 15 (no device scope)."""
     prune_stale_syndicate_daily_rows()
     today = timezone.localdate()
     qs_all = GeneratedChallenge.objects.filter(challenge_date=today)

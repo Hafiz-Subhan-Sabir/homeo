@@ -547,7 +547,7 @@ def leaderboard_sync(request):
 
 @api_view(["POST"])
 def challenges_generate_daily(request):
-    """Regenerate today's system batch (5 categories × 3 moods × 2). Body: { force: true, device_id?: string }."""
+    """Regenerate today's system batch (5 categories × 3 moods = 15). Body: { force: true, device_id?: string }."""
     if not MindsetKnowledge.objects.exists():
         return Response({"detail": "Ingest a document first."}, status=status.HTTP_400_BAD_REQUEST)
     force = bool(request.data.get("force", False))
