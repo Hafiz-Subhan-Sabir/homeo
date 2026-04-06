@@ -415,6 +415,122 @@ function cn(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
 }
 
+type SyndicateHelpTopic = "custom-mission" | "hud-points-streak" | "unlock" | "mega-mission";
+
+function SyndicateHelpMark({
+  topic,
+  label,
+  onOpen
+}: {
+  topic: SyndicateHelpTopic;
+  label: string;
+  onOpen: (t: SyndicateHelpTopic) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(topic)}
+      aria-label={label}
+      className="inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border border-white/40 bg-black/45 text-[12px] font-black leading-none text-white/95 shadow-[0_0_12px_rgba(255,255,255,0.1)] transition hover:border-[rgba(254,222,0,0.55)] hover:text-[#fef08a] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(254,222,0,0.45)]"
+    >
+      ?
+    </button>
+  );
+}
+
+function SyndicateHelpOverlay({ topic, onClose }: { topic: SyndicateHelpTopic; onClose: () => void }) {
+  useEffect(() => {
+    const fn = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", fn);
+    return () => window.removeEventListener("keydown", fn);
+  }, [onClose]);
+
+  const title =
+    topic === "custom-mission"
+      ? "Create your mission"
+      : topic === "hud-points-streak"
+        ? "Points & streak"
+        : topic === "unlock"
+          ? "Unlock & redeem rewards"
+          : "Mega mission";
+
+  return (
+    <div
+      className="fixed inset-0 z-[180] flex items-end justify-center bg-black/75 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-[2px] sm:items-center sm:p-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="syndicate-help-title"
+      onClick={onClose}
+    >
+      <div
+        className="syndicate-readable max-h-[min(80vh,32rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-[rgba(255,215,0,0.35)] bg-[linear-gradient(180deg,rgba(24,18,10,0.98),rgba(8,6,4,0.99))] p-5 shadow-[0_0_40px_rgba(0,0,0,0.55)] sm:p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <h2 id="syndicate-help-title" className="text-left text-[18px] font-black uppercase tracking-[0.08em] text-[color:var(--gold)] sm:text-[20px]">
+            {title}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-md border border-white/25 px-2.5 py-1 text-[12px] font-bold uppercase tracking-wider text-white/80 transition hover:bg-white/10"
+          >
+            Close
+          </button>
+        </div>
+        <div className="mt-4 space-y-3 text-left text-[15px] leading-relaxed text-white/88">
+          {topic === "custom-mission" ? (
+            <>
+              <p>
+                You can create up to <strong className="text-white">two custom missions per calendar day</strong>. Each needs a title (at least three characters) and a difficulty you choose.
+              </p>
+              <p>
+                The server fills in points in the <strong className="text-white">0–9</strong> range, plus description, examples, and benefits, and stores a short mindset summary that can shape your next{" "}
+                <strong className="text-white">custom missions</strong> and <strong className="text-white">mood + category</strong> picks.
+              </p>
+              <p>Finishing a custom mission uses the same daily completion limits as the main mission board.</p>
+            </>
+          ) : topic === "hud-points-streak" ? (
+            <>
+              <p>
+                <strong className="text-sky-100">Level</strong> reflects how many reward tiers your <strong className="text-white">lifetime points</strong> have crossed—the same thresholds you see under Unlock &amp; redeem rewards.
+              </p>
+              <p>
+                <strong className="text-amber-100">Points</strong> are your total earned from missions, bonus mega-mission payouts when claimed, and any bonus from redeeming rewards. Use them to qualify for each unlock tier (and other actions this screen offers, like conversion where shown).
+              </p>
+              <p>
+                <strong className="text-fuchsia-100">Streak</strong> counts <strong className="text-white">consecutive calendar days</strong> with at least one qualifying mission completed. Miss a day and it can reset; if you are in the restore window, use{" "}
+                <strong className="text-white">Restore streak</strong> (referral flow) as described in that section.
+              </p>
+            </>
+          ) : topic === "unlock" ? (
+            <>
+              <p>
+                Rewards redeem <strong className="text-white">in order</strong>: Level 1, then 2, then 3, and so on. You must redeem the previous tier before the next one can be redeemed, even if you already have enough points.
+              </p>
+              <p>
+                Each card shows the <strong className="text-white">points threshold</strong> for that tier and the <strong className="text-white">bonus points</strong> you get when you redeem. Redeeming adds those bonus points to your total.
+              </p>
+            </>
+          ) : (
+            <>
+              <p>
+                <strong className="text-white">Mega mission</strong> is the bonus track: tasks published by admins show up here, often with a visible time limit from when they were posted.
+              </p>
+              <p>
+                You submit a <strong className="text-white">written response</strong> and can attach a file or recording where the form allows. Staff review submissions in admin; you get <strong className="text-white">one submission per device per task</strong>.
+              </p>
+              <p>After approval, use <strong className="text-white">Claim reviewed points</strong> on that task to receive the payout—this pipeline is separate from your daily syndicate missions.</p>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Scroll the dashboard shell and window so mission detail opens at the top (not the list bottom). */
 function scrollSyndicateShellToTop() {
   if (typeof window === "undefined") return;
@@ -1014,6 +1130,7 @@ export function SyndicateAiChallengePanel() {
     elapsedSeconds: number;
   } | null>(null);
   const [redeemedRewards, setRedeemedRewards] = useState<Set<string>>(() => new Set());
+  const [syndicateHelpPanel, setSyndicateHelpPanel] = useState<SyndicateHelpTopic | null>(null);
   const [adminTasks, setAdminTasks] = useState<AdminTaskRow[]>([]);
   const [adminTaskDrafts, setAdminTaskDrafts] = useState<Record<number, string>>({});
   const [adminTaskFiles, setAdminTaskFiles] = useState<Record<number, File | null>>({});
@@ -2208,10 +2325,16 @@ export function SyndicateAiChallengePanel() {
       </div>
     ) : null;
 
+  const syndicateHelpModal =
+    syndicateHelpPanel !== null ? (
+      <SyndicateHelpOverlay topic={syndicateHelpPanel} onClose={() => setSyndicateHelpPanel(null)} />
+    ) : null;
+
   if (selected) {
     return (
       <>
         {completionToast}
+        {syndicateHelpModal}
         <DetailPane
           row={selected}
           initialResponse={initialResp}
@@ -2234,6 +2357,7 @@ export function SyndicateAiChallengePanel() {
   return (
     <>
       {completionToast}
+      {syndicateHelpModal}
       <div className="syndicate-dash-outer relative mx-auto w-full min-w-0 max-w-[min(100%,100rem)] space-y-5 border px-0 py-3 sm:py-5 max-md:space-y-4 max-md:border-0 max-md:bg-[linear-gradient(168deg,#050508_0%,#0d0818_44%,#0a0610_100%)] max-md:px-0 max-md:pb-3 max-md:pt-0 max-md:shadow-none">
       <div className="pointer-events-none absolute inset-0 -z-10 syndicate-dash-scanlines max-md:opacity-35" />
       <div className="syndicate-dash-header mb-2 flex w-full min-w-0 flex-col gap-4 rounded-2xl border px-3 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-4 max-md:mb-0 max-md:rounded-none max-md:border-x-0 max-md:border-t-0 max-md:border-b-[rgba(255,215,0,0.24)] max-md:px-2 max-md:py-3">
@@ -2694,7 +2818,15 @@ export function SyndicateAiChallengePanel() {
                 </div>
                 <div className="hidden sm:block" aria-hidden />
               </div>
-              <div className="mt-4 grid grid-cols-1 items-stretch gap-3 min-[420px]:grid-cols-3">
+              <div className="relative mt-4">
+                <div className="pointer-events-auto absolute right-0 top-0 z-[1] sm:right-1 sm:top-1">
+                  <SyndicateHelpMark
+                    topic="hud-points-streak"
+                    label="How level, points, and streak work"
+                    onOpen={setSyndicateHelpPanel}
+                  />
+                </div>
+                <div className="grid grid-cols-1 items-stretch gap-3 min-[420px]:grid-cols-3">
                 <div className="flex min-h-[150px] flex-col border border-sky-300/70 bg-[linear-gradient(135deg,rgba(56,189,248,0.38),rgba(59,130,246,0.28)_45%,rgba(10,20,60,0.92)_100%)] px-3 py-3 text-center [clip-path:polygon(8%_0,100%_0,92%_100%,0_100%)] [box-shadow:0_0_16px_rgba(56,189,248,0.3),inset_0_1px_0_rgba(210,240,255,0.45)] min-[420px]:min-h-[182px] sm:px-3 sm:py-3">
                   <div className={cn(HUD_LABEL, "text-[11px] text-sky-100/90 sm:text-[12px]")}>Level</div>
                   <div className="mt-0.5 text-[28px] font-black tabular-nums leading-none text-sky-50 sm:text-[34px]">
@@ -2755,6 +2887,7 @@ export function SyndicateAiChallengePanel() {
                       {showRestore ? `Restore streak (${restoreDaysLeftCount}d left)` : "Restore streak"}
                     </button>
                   </div>
+                </div>
                 </div>
               </div>
               <div className="mt-4">
@@ -2884,7 +3017,10 @@ export function SyndicateAiChallengePanel() {
           {!showStatsProfile && syndicateView === "dashboard" ? (
           <section className="syndicate-readable mt-5 w-full min-w-0 rounded-2xl border border-[rgba(255,215,0,0.28)] bg-[linear-gradient(180deg,rgba(255,200,80,0.06),rgba(20,12,8,0.35))] px-2 py-4 sm:mt-6 sm:px-3 sm:py-5 [box-shadow:inset_0_0_0_1px_rgba(255,215,0,0.08)] max-md:mt-4 max-md:rounded-none max-md:border-0 max-md:bg-transparent max-md:px-2 max-md:shadow-none">
             <div className="text-center">
-              <h3 className="text-[20px] font-black uppercase tracking-[0.14em] text-[color:var(--gold)] sm:text-[24px]">Unlock & redeem rewards</h3>
+              <h3 className="flex flex-wrap items-center justify-center gap-2 text-[20px] font-black uppercase tracking-[0.14em] text-[color:var(--gold)] sm:text-[24px]">
+                <span>Unlock & redeem rewards</span>
+                <SyndicateHelpMark topic="unlock" label="How unlock and redeem rewards work" onOpen={setSyndicateHelpPanel} />
+              </h3>
               <p className="mt-1 text-[14px] font-semibold text-white/70 sm:text-[15px]">
                 Redeem in order: Level 1, then 2, then 3… Meet each points threshold and redeem before the next tier opens.
               </p>
@@ -2981,8 +3117,9 @@ export function SyndicateAiChallengePanel() {
             className="syndicate-readable mt-10 w-full min-w-0 scroll-mt-8 space-y-6 max-md:mt-6"
           >
             <header className="w-full px-1 text-center sm:px-2">
-              <h2 className="font-black uppercase leading-[1.02] tracking-[0.1em] text-[color:var(--gold)] [text-shadow:0_0_28px_rgba(255,215,0,0.45),0_0_64px_rgba(34,211,238,0.12)] text-[clamp(2rem,9vw,4rem)] sm:tracking-[0.14em] md:text-[clamp(2.5rem,6vw,4.25rem)]">
-                Mega mission
+              <h2 className="flex flex-wrap items-center justify-center gap-3 font-black uppercase leading-[1.02] tracking-[0.1em] text-[color:var(--gold)] [text-shadow:0_0_28px_rgba(255,215,0,0.45),0_0_64px_rgba(34,211,238,0.12)] text-[clamp(2rem,9vw,4rem)] sm:tracking-[0.14em] md:text-[clamp(2.5rem,6vw,4.25rem)]">
+                <span>Mega mission</span>
+                <SyndicateHelpMark topic="mega-mission" label="How mega missions work" onOpen={setSyndicateHelpPanel} />
               </h2>
               <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200/70 sm:mt-3 sm:text-xs sm:tracking-[0.28em]">
                 Bonus track · admin-reviewed payouts
@@ -3308,7 +3445,10 @@ export function SyndicateAiChallengePanel() {
             Today&apos;s missions
           </h3>
           <div className="syndicate-readable mt-3 w-full min-w-0 border-t border-[rgba(120,200,255,0.45)] px-2 py-3 sm:px-3 sm:py-4">
-            <div className="text-[18px] font-black uppercase tracking-[0.1em] text-[#a8d8ff] sm:text-[20px]">Create your mission</div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="text-[18px] font-black uppercase tracking-[0.1em] text-[#a8d8ff] sm:text-[20px]">Create your mission</div>
+              <SyndicateHelpMark topic="custom-mission" label="How creating your own mission works" onOpen={setSyndicateHelpPanel} />
+            </div>
             <p className="mt-2 w-full min-w-0 text-[15px] leading-relaxed text-white/80 sm:text-[16px]">
               Up to <strong className="text-white/80">two</strong> per day. You set the title and difficulty; the server fills in{" "}
               <strong className="text-white/80">random points from 0–9</strong>, description, examples, and benefits, and keeps a short mindset summary for your next{" "}
