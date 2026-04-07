@@ -330,6 +330,16 @@ else:
 
 CORS_ALLOW_METHODS = ("DELETE", "GET", "OPTIONS", "PATCH", "POST", "PUT")
 
+# DEBUG: allow Next.js (or any dev server) on any localhost port — avoids "Failed to fetch" when
+# CORS_ALLOWED_ORIGINS is set to production-only in .env or when Next binds :3001, etc.
+if DEBUG:
+    CORS_ALLOWED_ORIGIN_REGEXES = [
+        r"^http://localhost(?::\d+)?$",
+        r"^http://127\.0\.0\.1(?::\d+)?$",
+    ]
+else:
+    CORS_ALLOWED_ORIGIN_REGEXES = []
+
 _csrf_env = (os.environ.get("CSRF_TRUSTED_ORIGINS") or "").strip()
 if _csrf_env:
     CSRF_TRUSTED_ORIGINS = [x.strip() for x in _csrf_env.split(",") if x.strip()]

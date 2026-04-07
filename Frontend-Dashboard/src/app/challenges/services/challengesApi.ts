@@ -319,6 +319,13 @@ export async function syncLeaderboard(pointsTotal: number, displayName?: string)
   });
 }
 
+/** Pre-scoring gate from the evaluation agent (strict ``is_valid``). */
+export type MissionAgentValidation = {
+  is_valid: boolean;
+  reason: string;
+  source?: string;
+};
+
 /** Qualitative mission check from the OpenAI agent (null if API key missing or call failed). */
 export type MissionAgentAttestation = {
   verdict: "pass" | "partial" | "needs_work";
@@ -327,37 +334,51 @@ export type MissionAgentAttestation = {
   suggestions: string[];
 };
 
+export type MissionScoreBreakdown = {
+  word_count: number;
+  word_score: number;
+  elapsed_seconds: number;
+  target_seconds: number;
+  time_score: number;
+  /** Present when scored after validation: secondary speed factor (1 + k·time_score). */
+  time_multiplier?: number;
+  accuracy_ratio?: number;
+  relevance_score: number;
+  keyword_score?: number;
+  unique_ratio: number;
+  repetition_penalty: number;
+  syndicate_bonus: number;
+};
+
 export type MissionScoreResponse = {
+  /** False when the evaluation agent rejected the response (no numeric rubric applied). */
+  is_valid?: boolean;
+  agent_validation?: MissionAgentValidation;
   awarded_points: number;
   max_points: number;
   score_ratio: number;
-  breakdown: {
-    word_count: number;
-    word_score: number;
-    elapsed_seconds: number;
-    target_seconds: number;
-    time_score: number;
-    relevance_score: number;
-    unique_ratio: number;
-    repetition_penalty: number;
-    syndicate_bonus: number;
-  };
+  accuracy_ratio?: number | null;
+  breakdown: MissionScoreBreakdown | null;
   agent_attestation?: MissionAgentAttestation | null;
 };
 
 export async function postScoreMissionResponse(args: {
-  responseText: string;
+  /** How the operator completed the mission (required with completionLearned). */
+  completionHow: string;
+  /** What the operator learned from it (required with completionHow). */
+  completionLearned: string;
   challengeTitle: string;
   difficulty: string;
   maxPoints: number;
   elapsedSeconds: number;
-  /** Mission body text — improves agent attestation quality. */
+  /** Mission body text — improves validation and attestation. */
   challengeDescription?: string;
   /** Example actions from the mission card. */
   exampleTasks?: string[];
 }): Promise<MissionScoreResponse> {
   const body: Record<string, unknown> = {
-    response_text: args.responseText.trim(),
+    completion_how: args.completionHow.trim(),
+    completion_learned: args.completionLearned.trim(),
     challenge_title: args.challengeTitle,
     difficulty: args.difficulty,
     max_points: args.maxPoints,

@@ -636,12 +636,55 @@ function loadTotalPoints(): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function loadResponses(): Record<number, string> {
+/** In-memory / localStorage shape for mission draft (two required fields before submit). */
+type MissionResponseDraft = { how: string; learned: string };
+
+/** Must match ``resolve_mission_response_text`` in ``Backend/apps/challenges/services.py``. */
+const COMBINED_HOW_PREFIX = "How I completed this mission:\n";
+const COMBINED_LEARNED_MARKER = "\n\nWhat I learned from it:\n";
+
+function formatCombinedMissionResponse(how: string, learned: string): string {
+  return `${COMBINED_HOW_PREFIX}${how.trim()}${COMBINED_LEARNED_MARKER}${learned.trim()}`;
+}
+
+function normalizeResponseEntry(raw: unknown): MissionResponseDraft {
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    const o = raw as Record<string, unknown>;
+    if ("how" in o || "learned" in o) {
+      return {
+        how: typeof o.how === "string" ? o.how : "",
+        learned: typeof o.learned === "string" ? o.learned : ""
+      };
+    }
+  }
+  if (typeof raw === "string") {
+    if (raw.startsWith(COMBINED_HOW_PREFIX) && raw.includes(COMBINED_LEARNED_MARKER)) {
+      const body = raw.slice(COMBINED_HOW_PREFIX.length);
+      const i = body.indexOf(COMBINED_LEARNED_MARKER);
+      if (i >= 0) {
+        return {
+          how: body.slice(0, i).trim(),
+          learned: body.slice(i + COMBINED_LEARNED_MARKER.length).trim()
+        };
+      }
+    }
+    return { how: raw, learned: "" };
+  }
+  return { how: "", learned: "" };
+}
+
+function loadResponses(): Record<number, MissionResponseDraft> {
   if (typeof window === "undefined") return {};
   try {
     const raw = window.localStorage.getItem(ls("challenge_responses"));
     if (!raw) return {};
-    return JSON.parse(raw) as Record<number, string>;
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const out: Record<number, MissionResponseDraft> = {};
+    for (const [k, v] of Object.entries(parsed || {})) {
+      const id = parseInt(k, 10);
+      if (Number.isFinite(id)) out[id] = normalizeResponseEntry(v);
+    }
+    return out;
   } catch {
     return {};
   }
@@ -659,7 +702,7 @@ function persistPoints(n: number) {
   onSyndicatePersist();
 }
 
-function persistResponses(r: Record<number, string>) {
+function persistResponses(r: Record<number, MissionResponseDraft>) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(ls("challenge_responses"), JSON.stringify(r));
   onSyndicatePersist();
@@ -764,30 +807,79 @@ const MAX_MISSION_COMPLETION_LOG = 400;
 type MissionCompletionLogEntryV1 = {
   entryId: string;
   challengeId: number;
+  /** Calendar date (YYYY-MM-DD) for filtering by day. */
   completedIso: string;
+  /** When the mission was submitted (ISO 8601); used for time-of-day display. */
+  completedAtIso?: string;
   title: string;
   category: string;
   mood: string;
+  /** Combined string (same format as API); used for sync and legacy display. */
   responseText: string;
+  completionHow?: string;
+  completionLearned?: string;
   awardedPoints: number;
   maxPoints: number;
+  /** Seconds from first opening the mission detail to submit (same as scoring timer). */
+  elapsedSeconds?: number;
 };
+
+function splitCompletionLogEntry(e: MissionCompletionLogEntryV1): { how: string; learned: string } | null {
+  const ch = typeof e.completionHow === "string" ? e.completionHow.trim() : "";
+  const cl = typeof e.completionLearned === "string" ? e.completionLearned.trim() : "";
+  if (ch || cl) return { how: ch, learned: cl };
+  const t = (e.responseText || "").trim();
+  if (t.startsWith(COMBINED_HOW_PREFIX) && t.includes(COMBINED_LEARNED_MARKER)) {
+    const body = t.slice(COMBINED_HOW_PREFIX.length);
+    const i = body.indexOf(COMBINED_LEARNED_MARKER);
+    return {
+      how: body.slice(0, i).trim(),
+      learned: body.slice(i + COMBINED_LEARNED_MARKER.length).trim()
+    };
+  }
+  return null;
+}
 
 function isMissionCompletionLogEntry(x: unknown): x is MissionCompletionLogEntryV1 {
   if (!x || typeof x !== "object") return false;
   const o = x as Record<string, unknown>;
-  return (
-    typeof o.entryId === "string" &&
-    typeof o.challengeId === "number" &&
-    Number.isFinite(o.challengeId) &&
-    typeof o.completedIso === "string" &&
-    typeof o.title === "string" &&
-    typeof o.category === "string" &&
-    typeof o.mood === "string" &&
-    typeof o.responseText === "string" &&
-    typeof o.awardedPoints === "number" &&
-    typeof o.maxPoints === "number"
-  );
+  if (
+    typeof o.entryId !== "string" ||
+    typeof o.challengeId !== "number" ||
+    !Number.isFinite(o.challengeId) ||
+    typeof o.completedIso !== "string" ||
+    typeof o.title !== "string" ||
+    typeof o.category !== "string" ||
+    typeof o.mood !== "string" ||
+    typeof o.responseText !== "string" ||
+    typeof o.awardedPoints !== "number" ||
+    typeof o.maxPoints !== "number"
+  ) {
+    return false;
+  }
+  if (o.completionHow !== undefined && typeof o.completionHow !== "string") return false;
+  if (o.completionLearned !== undefined && typeof o.completionLearned !== "string") return false;
+  if (o.completedAtIso !== undefined && typeof o.completedAtIso !== "string") return false;
+  if (o.elapsedSeconds !== undefined) {
+    if (typeof o.elapsedSeconds !== "number" || !Number.isFinite(o.elapsedSeconds) || o.elapsedSeconds < 0) return false;
+  }
+  return true;
+}
+
+/** Local date/time string for completion log; falls back to date-only if no timestamp. */
+function formatMissionCompletionTime(e: MissionCompletionLogEntryV1): string {
+  const raw = (e.completedAtIso || "").trim();
+  if (raw) {
+    try {
+      const d = new Date(raw);
+      if (!Number.isNaN(d.getTime())) {
+        return d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  return e.completedIso;
 }
 
 function loadMissionCompletionLog(): MissionCompletionLogEntryV1[] {
@@ -987,10 +1079,11 @@ function DetailPane({
   taskTimerStartMs,
   onBack,
   onSubmit,
-  onLogout
+  onLogout,
+  onDraftPersist
 }: {
   row: ChallengeRow;
-  initialResponse: string;
+  initialResponse: MissionResponseDraft;
   submitting?: boolean;
   scorePreview?: MissionScoreResponse | null;
   awardedPoints?: number | null;
@@ -1000,11 +1093,16 @@ function DetailPane({
   done?: boolean;
   taskTimerStartMs?: number | null;
   onBack: () => void;
-  onSubmit: (text: string) => Promise<void>;
+  onSubmit: (draft: MissionResponseDraft) => Promise<void>;
   onLogout?: () => void;
+  /** Persist draft to localStorage while typing (incomplete missions only). */
+  onDraftPersist?: (draft: MissionResponseDraft) => void;
 }) {
   const p = row.payload;
-  const [text, setText] = useState(initialResponse);
+  const [how, setHow] = useState(initialResponse.how);
+  const [learned, setLearned] = useState(initialResponse.learned);
+  const draftRef = useRef({ how: initialResponse.how, learned: initialResponse.learned });
+  draftRef.current = { how, learned };
   const examples = getChallengeExamples(p);
   const benefits = getChallengeBenefits(p);
   const readOnlyCompleted = !!done;
@@ -1014,8 +1112,24 @@ function DetailPane({
       : 0;
 
   useEffect(() => {
-    setText(initialResponse);
-  }, [initialResponse, row.id]);
+    setHow(initialResponse.how);
+    setLearned(initialResponse.learned);
+  }, [initialResponse.how, initialResponse.learned, row.id]);
+
+  useEffect(() => {
+    if (readOnlyCompleted || !onDraftPersist) return;
+    const t = window.setTimeout(() => {
+      onDraftPersist({ how, learned });
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [how, learned, readOnlyCompleted, onDraftPersist, row.id]);
+
+  useEffect(() => {
+    if (readOnlyCompleted || !onDraftPersist) return;
+    return () => {
+      onDraftPersist(draftRef.current);
+    };
+  }, [row.id, readOnlyCompleted, onDraftPersist]);
   const remainingSec = secondsUntilLocalMidnight(nowMs);
 
   return (
@@ -1135,14 +1249,36 @@ function DetailPane({
         </p>
 
         <div className="mt-8 border-t border-white/10 pt-5">
-          <label className="mb-2 block text-[13px] font-semibold text-white/80" htmlFor="mission-response">
-            {readOnlyCompleted ? "Your submitted response" : "Your response"}
-          </label>
+          <h4 className="mb-3 text-[12px] font-bold uppercase tracking-[0.14em] text-[color:var(--gold)]/85">
+            {readOnlyCompleted ? "Your submitted response" : "Your completion"}
+          </h4>
           {readOnlyCompleted ? (
-            text.trim() ? (
-              <div className="syndicate-readable rounded-md border border-[rgba(255,215,0,0.35)] bg-black/60 px-3 py-2.5 text-[15px] leading-relaxed text-white/95">
-                {text}
-              </div>
+            how.trim() || learned.trim() ? (
+              learned.trim() ? (
+                <div className="space-y-4">
+                  <div>
+                    <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-[color:var(--gold)]/75">
+                      How you completed it
+                    </div>
+                    <div className="syndicate-readable whitespace-pre-wrap break-words rounded-md border border-[rgba(255,215,0,0.35)] bg-black/60 px-3 py-2.5 text-[15px] leading-relaxed text-white/95">
+                      {how.trim() || "—"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-[color:var(--gold)]/75">
+                      What you learned from it
+                    </div>
+                    <div className="syndicate-readable whitespace-pre-wrap break-words rounded-md border border-[rgba(255,215,0,0.35)] bg-black/60 px-3 py-2.5 text-[15px] leading-relaxed text-white/95">
+                      {learned.trim()}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="syndicate-readable rounded-md border border-[rgba(255,215,0,0.35)] bg-black/60 px-3 py-2.5 text-[15px] leading-relaxed text-white/95">
+                  <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white/45">Your response</div>
+                  <p className="whitespace-pre-wrap break-words">{how.trim()}</p>
+                </div>
+              )
             ) : (
               <p className="rounded-md border border-white/15 bg-black/40 px-3 py-2 text-[13px] text-white/65">
                 No response was submitted for this completed mission.
@@ -1150,18 +1286,35 @@ function DetailPane({
             )
           ) : (
             <>
+              <label className="mb-1.5 block text-[12px] font-semibold text-white/80" htmlFor="mission-how">
+                How you completed it
+              </label>
               <textarea
-                id="mission-response"
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                rows={6}
-                placeholder="Write how you will complete this mission or what you learned…"
-                className="syndicate-readable min-h-[140px] w-full resize-y rounded-md border border-[rgba(255,215,0,0.35)] bg-black/60 px-3 py-3 text-[16px] leading-relaxed text-white/95 outline-none placeholder:text-white/35 focus:border-[rgba(255,215,0,0.65)] sm:min-h-[120px] sm:text-[15px]"
+                id="mission-how"
+                value={how}
+                onChange={(e) => setHow(e.target.value)}
+                rows={4}
+                placeholder="Describe what you did to complete this mission…"
+                className="syndicate-readable mb-4 min-h-[112px] w-full resize-y rounded-md border border-[rgba(255,215,0,0.35)] bg-black/60 px-3 py-3 text-[16px] leading-relaxed text-white/95 outline-none placeholder:text-white/35 focus:border-[rgba(255,215,0,0.65)] sm:text-[15px]"
               />
+              <label className="mb-1.5 block text-[12px] font-semibold text-white/80" htmlFor="mission-learned">
+                What you learned from it
+              </label>
+              <textarea
+                id="mission-learned"
+                value={learned}
+                onChange={(e) => setLearned(e.target.value)}
+                rows={4}
+                placeholder="Reflect on insights, skills, or takeaways from doing this mission…"
+                className="syndicate-readable min-h-[112px] w-full resize-y rounded-md border border-[rgba(255,215,0,0.35)] bg-black/60 px-3 py-3 text-[16px] leading-relaxed text-white/95 outline-none placeholder:text-white/35 focus:border-[rgba(255,215,0,0.65)] sm:text-[15px]"
+              />
+              <p className="mt-2 text-[11px] leading-snug text-white/50 sm:text-[12px]">
+                Both fields are required before you can submit. Scoring uses them together.
+              </p>
               <button
                 type="button"
-                disabled={!text.trim() || submitting || submitDisabled}
-                onClick={() => void onSubmit(text.trim())}
+                disabled={!how.trim() || !learned.trim() || submitting || submitDisabled}
+                onClick={() => void onSubmit({ how: how.trim(), learned: learned.trim() })}
                 className={cn(
                   "syndicate-readable mt-3 px-5 py-2.5 text-[15px] font-bold uppercase tracking-[0.08em] transition disabled:cursor-not-allowed disabled:opacity-40",
                   CTA_BTN
@@ -1184,15 +1337,36 @@ function DetailPane({
           ) : null}
           {scorePreview ? (
             <>
-              <p className="mt-2 text-[12px] leading-relaxed text-white/70">
-                Score: <span className="font-semibold text-[color:var(--gold)]">{scorePreview.awarded_points}</span> /{" "}
-                {scorePreview.max_points} points · Words: {scorePreview.breakdown.word_count} · Time:{" "}
-                <span className="font-medium text-white/85">
-                  {formatDurationReadable(scorePreview.breakdown.elapsed_seconds)}
-                </span>{" "}
-                ({scorePreview.breakdown.elapsed_seconds}s) · Relevance:{" "}
-                {Math.round(scorePreview.breakdown.relevance_score * 100)}%
-              </p>
+              {scorePreview.is_valid === false ? (
+                <div className="mt-2 space-y-2 rounded-md border border-amber-400/35 bg-amber-500/10 px-3 py-2 text-[12px] leading-relaxed text-amber-100/90">
+                  <p>
+                    <span className="font-bold text-amber-50">Not scored.</span> The evaluation agent rejected this
+                    response (0 / {scorePreview.max_points} points). Time and accuracy rubric were not applied.
+                  </p>
+                  {scorePreview.agent_validation?.reason ? (
+                    <p className="text-[11px] text-amber-100/75 sm:text-[12px]">{scorePreview.agent_validation.reason}</p>
+                  ) : null}
+                </div>
+              ) : scorePreview.breakdown ? (
+                <p className="mt-2 text-[12px] leading-relaxed text-white/70">
+                  Score: <span className="font-semibold text-[color:var(--gold)]">{scorePreview.awarded_points}</span> /{" "}
+                  {scorePreview.max_points} points · Accuracy:{" "}
+                  {typeof scorePreview.accuracy_ratio === "number"
+                    ? `${Math.round(scorePreview.accuracy_ratio * 100)}%`
+                    : typeof scorePreview.breakdown.accuracy_ratio === "number"
+                      ? `${Math.round(scorePreview.breakdown.accuracy_ratio * 100)}%`
+                      : "—"}{" "}
+                  · Time bonus: ×{scorePreview.breakdown.time_multiplier?.toFixed(3) ?? "1.000"} · Words:{" "}
+                  {scorePreview.breakdown.word_count} · Elapsed:{" "}
+                  <span className="font-medium text-white/85">
+                    {formatDurationReadable(scorePreview.breakdown.elapsed_seconds)}
+                  </span>{" "}
+                  ({scorePreview.breakdown.elapsed_seconds}s) · Relevance:{" "}
+                  {Math.round(scorePreview.breakdown.relevance_score * 100)}%
+                </p>
+              ) : (
+                <p className="mt-2 text-[12px] text-white/60">Score details unavailable.</p>
+              )}
               {scorePreview.agent_attestation ? (
                 <div
                   className={cn(
@@ -1230,9 +1404,9 @@ function DetailPane({
                     </div>
                   ) : null}
                 </div>
-              ) : scorePreview.agent_attestation === null ? (
+              ) : scorePreview.agent_attestation === null && scorePreview.is_valid !== false ? (
                 <p className="mt-3 text-[11px] leading-snug text-white/45 sm:text-[12px]">
-                  Agent attestation unavailable (no API key or model error). Numeric score above still applies.
+                  Agent attestation unavailable (no API key or model error). Your validated score above still applies.
                 </p>
               ) : null}
             </>
@@ -1312,6 +1486,9 @@ export function SyndicateAiChallengePanel() {
   const adminTaskRecorderRef = useRef<Record<number, MediaRecorder | null>>({});
   const adminTaskStreamRef = useRef<Record<number, MediaStream | null>>({});
   const adminTaskChunksRef = useRef<Record<number, BlobPart[]>>({});
+  /** Wall-clock ms when admin-task recording started (for on-screen duration). */
+  const adminTaskRecordingStartMsRef = useRef<Record<number, number>>({});
+  const adminTaskPreviewVideoRef = useRef<Record<number, HTMLVideoElement | null>>({});
 
   const handleSyndicateLogout = useCallback(() => {
     void fetch(`${API_BASE}/auth/logout/`, {
@@ -2248,6 +2425,11 @@ export function SyndicateAiChallengePanel() {
         if (e.data && e.data.size > 0) adminTaskChunksRef.current[taskId].push(e.data);
       };
       rec.onstop = () => {
+        delete adminTaskRecordingStartMsRef.current[taskId];
+        const preview = adminTaskPreviewVideoRef.current[taskId];
+        if (preview) {
+          preview.srcObject = null;
+        }
         const chunks = adminTaskChunksRef.current[taskId] || [];
         const blob = new Blob(chunks, { type: rec.mimeType || "video/webm" });
         if (blob.size > 0) {
@@ -2262,9 +2444,10 @@ export function SyndicateAiChallengePanel() {
       };
       adminTaskRecorderRef.current[taskId] = rec;
       adminTaskStreamRef.current[taskId] = stream;
+      adminTaskRecordingStartMsRef.current[taskId] = Date.now();
       rec.start();
       setAdminTaskRecording((prev) => ({ ...prev, [taskId]: true }));
-      setAdminTaskMsg("Recording started. Press Stop to attach video.");
+      setAdminTaskMsg("Camera is on — you are recording. Use Stop recording when finished.");
     } catch {
       setAdminTaskMsg("Camera access was blocked or unavailable.");
     }
@@ -2306,7 +2489,7 @@ export function SyndicateAiChallengePanel() {
     scrollSyndicateShellToTop();
   }, [selected]);
 
-  async function handleSubmit(text: string) {
+  async function handleSubmit(draft: MissionResponseDraft) {
     if (!selected) return;
     if (doneIds.has(selected.id)) {
       setError("Mission already completed. You can only view your submitted response.");
@@ -2323,11 +2506,17 @@ export function SyndicateAiChallengePanel() {
         return;
       }
     }
+    const how = draft.how.trim();
+    const learned = draft.learned.trim();
+    if (!how || !learned) {
+      setError("Fill in both how you completed the mission and what you learned before submitting.");
+      return;
+    }
     setSubmitBusy(true);
     try {
       const id = selected.id;
       const responses = loadResponses();
-      responses[id] = text;
+      responses[id] = { how, learned };
       persistResponses(responses);
 
       const startedAt = missionStartMap[id] ?? Date.now();
@@ -2337,7 +2526,8 @@ export function SyndicateAiChallengePanel() {
       const exampleTasksRaw = Array.isArray(sp?.example_tasks) ? sp.example_tasks : [];
       const exampleTasks = exampleTasksRaw.map((x) => String(x).trim()).filter(Boolean);
       const scored = await postScoreMissionResponse({
-        responseText: text,
+        completionHow: how,
+        completionLearned: learned,
         challengeTitle: sp?.challenge_title ?? "Mission",
         difficulty: selected.difficulty || sp?.difficulty || "medium",
         maxPoints: selected.points || 0,
@@ -2373,16 +2563,21 @@ export function SyndicateAiChallengePanel() {
         const cat = (selected.category || selected.payload?.category || "business").toLowerCase();
         appendPointsForDay(today, cat, pts);
         recordCompletionForDay(today);
+        const combined = formatCombinedMissionResponse(how, learned);
         const logEntry: MissionCompletionLogEntryV1 = {
           entryId: `${id}-${today}-${Date.now()}`,
           challengeId: id,
           completedIso: today,
+          completedAtIso: new Date().toISOString(),
           title: ((selected.payload?.challenge_title ?? "Mission") as string).trim() || "Mission",
           category: cat,
           mood: ((selected.mood || "") as string).toLowerCase() || "—",
-          responseText: text,
+          responseText: combined,
+          completionHow: how,
+          completionLearned: learned,
           awardedPoints: pts,
-          maxPoints: typeof scored.max_points === "number" ? scored.max_points : selected.points || 0
+          maxPoints: typeof scored.max_points === "number" ? scored.max_points : selected.points || 0,
+          elapsedSeconds
         };
         const nextLog = [logEntry, ...loadMissionCompletionLog()].slice(0, MAX_MISSION_COMPLETION_LOG);
         persistMissionCompletionLog(nextLog);
@@ -2418,7 +2613,14 @@ export function SyndicateAiChallengePanel() {
     return () => window.clearTimeout(t);
   }, [missionCompleteToast]);
 
-  const initialResp = selected ? loadResponses()[selected.id] ?? "" : "";
+  const initialResp = selected ? loadResponses()[selected.id] ?? { how: "", learned: "" } : { how: "", learned: "" };
+
+  const persistMissionDraft = useCallback((draft: MissionResponseDraft) => {
+    if (!selected) return;
+    const responses = loadResponses();
+    responses[selected.id] = draft;
+    persistResponses(responses);
+  }, [selected]);
   const selectedScorePreview = selected ? missionScores[selected.id] ?? lastScore : null;
   const selectedAwardedPoints =
     selected && typeof missionAwardedMap[selected.id] === "number"
@@ -2524,6 +2726,7 @@ export function SyndicateAiChallengePanel() {
         {completionToast}
         {syndicateHelpModal}
         <DetailPane
+          key={selected.id}
           row={selected}
           initialResponse={initialResp}
           submitting={submitBusy}
@@ -2537,6 +2740,7 @@ export function SyndicateAiChallengePanel() {
           onBack={() => setSelected(null)}
           onSubmit={handleSubmit}
           onLogout={handleSyndicateLogout}
+          onDraftPersist={doneIds.has(selected.id) ? undefined : persistMissionDraft}
         />
       </>
     );
@@ -2924,13 +3128,63 @@ export function SyndicateAiChallengePanel() {
                             <span className="text-white/25 max-sm:hidden" aria-hidden>
                               ·
                             </span>
+                            <span className="font-medium normal-case tracking-normal text-emerald-200/90" title="When you submitted this completion">
+                              {formatMissionCompletionTime(e)}
+                            </span>
+                            {typeof e.elapsedSeconds === "number" &&
+                            Number.isFinite(e.elapsedSeconds) &&
+                            e.elapsedSeconds >= 0 ? (
+                              <>
+                                <span className="text-white/25 max-sm:hidden" aria-hidden>
+                                  ·
+                                </span>
+                                <span
+                                  className="font-medium normal-case tracking-normal text-amber-100/88"
+                                  title="Time from first opening this mission until you submitted"
+                                >
+                                  {formatDurationReadable(e.elapsedSeconds)} total
+                                </span>
+                              </>
+                            ) : null}
+                            <span className="text-white/25 max-sm:hidden" aria-hidden>
+                              ·
+                            </span>
                             <span className="w-full text-white/40 max-sm:mt-0.5 sm:w-auto">ID {e.challengeId}</span>
                           </div>
                           <div className="mt-3 rounded-lg border border-white/10 bg-black/35 p-3 sm:p-4">
-                            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/45">Your response</div>
-                            <p className="mt-2 whitespace-pre-wrap break-words text-[14px] leading-relaxed text-white/88 sm:text-[15px]">
-                              {e.responseText.trim() || "—"}
-                            </p>
+                            {(() => {
+                              const parts = splitCompletionLogEntry(e);
+                              if (parts && (parts.how.trim() || parts.learned.trim())) {
+                                return (
+                                  <div className="space-y-4">
+                                    <div>
+                                      <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/45">
+                                        How you completed it
+                                      </div>
+                                      <p className="mt-2 whitespace-pre-wrap break-words text-[14px] leading-relaxed text-white/88 sm:text-[15px]">
+                                        {parts.how.trim() || "—"}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/45">
+                                        What you learned from it
+                                      </div>
+                                      <p className="mt-2 whitespace-pre-wrap break-words text-[14px] leading-relaxed text-white/88 sm:text-[15px]">
+                                        {parts.learned.trim() || "—"}
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <>
+                                  <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/45">Your response</div>
+                                  <p className="mt-2 whitespace-pre-wrap break-words text-[14px] leading-relaxed text-white/88 sm:text-[15px]">
+                                    {e.responseText.trim() || "—"}
+                                  </p>
+                                </>
+                              );
+                            })()}
                           </div>
                         </article>
                       ))
@@ -3580,9 +3834,60 @@ export function SyndicateAiChallengePanel() {
                                     </button>
                                   )}
                                   {isRecording ? (
-                                    <span className="text-[12px] font-semibold text-rose-200">Recording… camera is live</span>
+                                    <span className="inline-flex items-center gap-2 rounded-lg border border-rose-400/50 bg-rose-600/25 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-rose-50">
+                                      <span
+                                        className="inline-block h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-rose-300 shadow-[0_0_10px_rgba(254,205,211,0.9)]"
+                                        aria-hidden
+                                      />
+                                      Recording
+                                    </span>
                                   ) : null}
                                 </div>
+                                {isRecording ? (
+                                  <div className="relative mt-3 overflow-hidden rounded-xl border-2 border-rose-500/70 bg-black shadow-[0_0_0_1px_rgba(244,63,94,0.35),0_8px_32px_rgba(0,0,0,0.55)] ring-2 ring-rose-500/25">
+                                    <div className="absolute left-2 top-2 z-10 flex flex-wrap items-center gap-2">
+                                      <span className="inline-flex items-center gap-1.5 rounded-md bg-rose-600/95 px-2 py-1 font-mono text-[11px] font-black tabular-nums uppercase tracking-wide text-white shadow-md">
+                                        <span
+                                          className="inline-block h-2 w-2 animate-pulse rounded-full bg-white"
+                                          aria-hidden
+                                        />
+                                        Rec ·{" "}
+                                        {formatDurationReadable(
+                                          Math.max(
+                                            0,
+                                            Math.floor(
+                                              (nowTick - (adminTaskRecordingStartMsRef.current[t.id] ?? nowTick)) / 1000
+                                            )
+                                          )
+                                        )}
+                                      </span>
+                                    </div>
+                                    <video
+                                      ref={(el) => {
+                                        adminTaskPreviewVideoRef.current[t.id] = el;
+                                        if (!el) return;
+                                        if (isRecording) {
+                                          const s = adminTaskStreamRef.current[t.id];
+                                          if (s) {
+                                            el.srcObject = s;
+                                            el.muted = true;
+                                            void el.play().catch(() => null);
+                                          }
+                                        } else {
+                                          el.srcObject = null;
+                                        }
+                                      }}
+                                      className="aspect-video max-h-[min(50vh,22rem)] w-full bg-black object-cover"
+                                      playsInline
+                                      muted
+                                      autoPlay
+                                    />
+                                    <p className="border-t border-white/10 bg-black/75 px-3 py-2 text-center text-[12px] font-semibold leading-snug text-white/90">
+                                      Live camera — your video is recording now. Tap{" "}
+                                      <span className="text-rose-200">Stop recording</span> when done.
+                                    </p>
+                                  </div>
+                                ) : null}
                                 {fileName ? (
                                   <p className="mt-2 text-[12px] text-cyan-200/90">Selected: {fileName}</p>
                                 ) : (

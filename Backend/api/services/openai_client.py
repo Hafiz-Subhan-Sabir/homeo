@@ -46,6 +46,58 @@ def chat_json(
     return json.loads(text)
 
 
+def validate_user_mission_response_for_scoring(
+    *,
+    challenge_title: str,
+    challenge_description: str,
+    example_tasks: list[str],
+    difficulty: str,
+    user_response: str,
+) -> dict[str, Any]:
+    """
+    Pre-scoring gate: model returns strict JSON with is_valid (bool) and reason.
+    Caller treats any failure to produce a valid structure as is_valid False.
+    """
+    from .prompts import MISSION_RESPONSE_VALIDATION_SYSTEM
+
+    desc = (challenge_description or "").strip()[:2800]
+    ex_lines = []
+    for t in (example_tasks or [])[:5]:
+        s = str(t).strip()[:500]
+        if s:
+            ex_lines.append(s)
+    ex_text = "\n".join(f"- {line}" for line in ex_lines)[:1400]
+    payload = {
+        "challenge_title": (challenge_title or "").strip()[:500],
+        "challenge_description": desc,
+        "example_tasks_text": ex_text or "(none provided)",
+        "difficulty": (difficulty or "medium").strip().lower()[:16],
+        "user_response": (user_response or "").strip()[:8000],
+    }
+    user = "Mission validation input (JSON):\n" + json.dumps(payload, ensure_ascii=False)
+    raw = chat_json(MISSION_RESPONSE_VALIDATION_SYSTEM, user, temperature=0.2, max_tokens=280)
+    return _normalize_mission_validation(raw)
+
+
+def _normalize_mission_validation(raw: Any) -> dict[str, Any]:
+    if not isinstance(raw, dict):
+        return {"is_valid": False, "reason": "Validation response was not usable."}
+    v = raw.get("is_valid")
+    if v is True:
+        is_valid = True
+    elif v is False:
+        is_valid = False
+    elif isinstance(v, str):
+        s = v.strip().lower()
+        is_valid = s in ("true", "1", "yes")
+    else:
+        is_valid = False
+    reason = str(raw.get("reason") or "").strip()
+    if not reason:
+        reason = "Response accepted for scoring." if is_valid else "Response rejected as invalid or off-topic."
+    return {"is_valid": is_valid, "reason": reason[:500]}
+
+
 def attest_user_mission_response(
     *,
     challenge_title: str,

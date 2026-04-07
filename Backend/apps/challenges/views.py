@@ -45,7 +45,9 @@ from .services import (
     prune_stale_syndicate_daily_rows,
     run_generate,
     enrich_mission_score_with_agent_attestation,
-    score_mission_response,
+    evaluate_mission_validity_with_agent,
+    resolve_mission_response_text,
+    score_mission_response_after_validation,
     serialize_challenge_row,
 )
 
@@ -567,11 +569,18 @@ def challenges_generate_daily(request):
 @api_view(["POST"])
 def mission_score_response(request):
     """
-    Score a mission response (deterministic rubric) and attach an optional OpenAI
-    agent attestation against mission description / examples when ``OPENAI_API_KEY`` is set.
-    Optional body fields: ``challenge_description`` (string), ``example_tasks`` (string array).
+    Evaluation agent (OpenAI) runs **first** and sets ``is_valid``. Invalid responses get
+    zero points; time and numeric rubric are **not** applied. If valid, a deterministic
+    accuracy rubric runs, then time as a secondary multiplicative bonus only. Optional
+    attestation enriches the result when ``OPENAI_API_KEY`` is set.
+
+    Body: ``completion_how`` and ``completion_learned`` (both required for the dashboard;
+    combined for scoring), or legacy ``response_text`` only. Optional: ``challenge_description``,
+    ``example_tasks``.
     """
-    response_text = (request.data.get("response_text") or "").strip()
+    response_text, body_err = resolve_mission_response_text(request.data)
+    if body_err:
+        return Response({"detail": body_err}, status=status.HTTP_400_BAD_REQUEST)
     title = (request.data.get("challenge_title") or "").strip()
     difficulty = (request.data.get("difficulty") or "").strip().lower()
     try:
@@ -583,8 +592,6 @@ def mission_score_response(request):
     except (TypeError, ValueError):
         elapsed_seconds = 0
 
-    if not response_text:
-        return Response({"detail": "response_text is required"}, status=status.HTTP_400_BAD_REQUEST)
     if not title:
         return Response({"detail": "challenge_title is required"}, status=status.HTTP_400_BAD_REQUEST)
     if max_points < 0:
@@ -596,18 +603,42 @@ def mission_score_response(request):
     if isinstance(example_tasks_raw, list):
         example_tasks = [str(x).strip() for x in example_tasks_raw[:8] if str(x).strip()]
 
-    scored = score_mission_response(
+    diff = difficulty or "medium"
+    agent_validation = evaluate_mission_validity_with_agent(
+        title=title,
+        response_text=response_text,
+        difficulty=diff,
+        challenge_description=challenge_description,
+        example_tasks=example_tasks,
+    )
+    if not agent_validation.get("is_valid"):
+        return Response(
+            {
+                "is_valid": False,
+                "awarded_points": 0,
+                "max_points": max_points,
+                "score_ratio": 0.0,
+                "accuracy_ratio": None,
+                "agent_validation": agent_validation,
+                "breakdown": None,
+                "agent_attestation": None,
+            }
+        )
+
+    scored = score_mission_response_after_validation(
         title=title,
         response_text=response_text,
         elapsed_seconds=max(0, elapsed_seconds),
         max_points=max_points,
-        difficulty=difficulty or "medium",
+        difficulty=diff,
     )
+    scored["is_valid"] = True
+    scored["agent_validation"] = agent_validation
     scored = enrich_mission_score_with_agent_attestation(
         scored,
         title=title,
         response_text=response_text,
-        difficulty=difficulty or "medium",
+        difficulty=diff,
         challenge_description=challenge_description,
         example_tasks=example_tasks,
     )

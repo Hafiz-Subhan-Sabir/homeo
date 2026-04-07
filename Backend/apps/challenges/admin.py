@@ -1,9 +1,24 @@
+from __future__ import annotations
+
+from typing import Optional
+
 from django.contrib import admin
+from django.contrib.admin.sites import NotRegistered
+from django.contrib.auth import get_user_model
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.text import Truncator
 
-from .models import AdminAssignedTask, AdminTaskSubmission, GeneratedChallenge, ReferralRestore
+from .models import (
+    AdminAssignedTask,
+    AdminTaskSubmission,
+    GeneratedChallenge,
+    ReferralRestore,
+    SyndicateUserProgress,
+)
+
+User = get_user_model()
 
 
 def _format_elapsed(seconds: int) -> str:
@@ -26,6 +41,25 @@ def _dt_display(dt) -> str:
     if timezone.is_aware(dt):
         dt = timezone.localtime(dt)
     return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _syndicate_progress_for_user(user) -> SyndicateUserProgress | None:
+    if user is None or not getattr(user, "pk", None):
+        return None
+    return SyndicateUserProgress.objects.filter(user_id=user.pk).first()
+
+
+def _pounds_from_state(state: Optional[dict]) -> str:
+    if not state:
+        return "—"
+    raw = state.get("pounds_balance_v1")
+    if raw is None or raw == "":
+        return "—"
+    try:
+        v = float(str(raw).strip())
+        return f"£{v:.2f}"
+    except (TypeError, ValueError):
+        return str(raw)
 
 
 @admin.register(GeneratedChallenge)
@@ -169,3 +203,108 @@ class AdminTaskSubmissionAdmin(admin.ModelAdmin):
             return "-"
         # Keep full response readable in detail view without editing it here.
         return text
+
+
+# --- User + Syndicate progress (staff can inspect streak / points / level / pounds) ---
+
+
+try:
+    admin.site.unregister(User)
+except NotRegistered:
+    pass
+
+
+@admin.register(User)
+class UserAdmin(BaseUserAdmin):
+    list_display = tuple(BaseUserAdmin.list_display) + ("syndicate_streak_short", "syndicate_points_short")
+    readonly_fields = tuple(getattr(BaseUserAdmin, "readonly_fields", ()) or ()) + (
+        "syndicate_streak_display",
+        "syndicate_points_display",
+        "syndicate_level_display",
+        "syndicate_pounds_display",
+        "syndicate_last_activity_display",
+    )
+    fieldsets = tuple(BaseUserAdmin.fieldsets) + (
+        (
+            "Syndicate (read-only)",
+            {
+                "description": "Values from SyndicateUserProgress (and pounds from synced JSON state).",
+                "fields": (
+                    "syndicate_streak_display",
+                    "syndicate_points_display",
+                    "syndicate_level_display",
+                    "syndicate_pounds_display",
+                    "syndicate_last_activity_display",
+                ),
+            },
+        ),
+    )
+
+    @admin.display(description="Streak")
+    def syndicate_streak_short(self, obj: User) -> str:
+        sp = _syndicate_progress_for_user(obj)
+        return "—" if not sp else str(sp.streak_count)
+
+    @admin.display(description="Points")
+    def syndicate_points_short(self, obj: User) -> str:
+        sp = _syndicate_progress_for_user(obj)
+        return "—" if not sp else str(int(sp.points_total or 0))
+
+    @admin.display(description="Streak (consecutive days)")
+    def syndicate_streak_display(self, obj: User) -> str:
+        sp = _syndicate_progress_for_user(obj)
+        if not sp:
+            return "— (no Syndicate progress row yet — user has not synced progress)"
+        return str(sp.streak_count)
+
+    @admin.display(description="Total points")
+    def syndicate_points_display(self, obj: User) -> str:
+        sp = _syndicate_progress_for_user(obj)
+        if not sp:
+            return "—"
+        return str(int(sp.points_total or 0))
+
+    @admin.display(description="Level (backend)")
+    def syndicate_level_display(self, obj: User) -> str:
+        sp = _syndicate_progress_for_user(obj)
+        if not sp:
+            return "—"
+        return str(int(sp.level or 0))
+
+    @admin.display(description="Pounds balance (from synced state)")
+    def syndicate_pounds_display(self, obj: User) -> str:
+        sp = _syndicate_progress_for_user(obj)
+        if not sp:
+            return "—"
+        return _pounds_from_state(sp.state or {})
+
+    @admin.display(description="Last activity date (streak)")
+    def syndicate_last_activity_display(self, obj: User) -> str:
+        sp = _syndicate_progress_for_user(obj)
+        if not sp or sp.last_activity_date is None:
+            return "—"
+        return sp.last_activity_date.isoformat()
+
+
+@admin.register(SyndicateUserProgress)
+class SyndicateUserProgressAdmin(admin.ModelAdmin):
+    list_display = [
+        "user",
+        "points_total",
+        "level",
+        "streak_count",
+        "last_activity_date",
+        "pounds_list_display",
+        "updated_at",
+    ]
+    list_select_related = ("user",)
+    search_fields = ["user__username", "user__email"]
+    ordering = ["-updated_at"]
+    readonly_fields = ["user", "state", "points_total", "level", "streak_count", "last_activity_date", "updated_at"]
+
+    @admin.display(description="Pounds (synced)")
+    def pounds_list_display(self, obj: SyndicateUserProgress) -> str:
+        return _pounds_from_state(obj.state or {})
+
+    def has_add_permission(self, request) -> bool:
+        return False

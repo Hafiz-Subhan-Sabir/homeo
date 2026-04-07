@@ -72,9 +72,18 @@ STOPWORDS = {
 }
 
 MOOD_BEHAVIOR: dict[str, str] = {
-    "energetic": "High-energy, activating, momentum-building tasks that push the user forward.",
-    "happy": "Very positive, joyful, celebratory framing; lean into optimism and gratitude.",
-    "tired": "Relaxing, low-effort, restorative micro-steps; conserve energy.",
+    "energetic": (
+        "User is in an activation state: ready to push forward. Missions should demand momentum, "
+        "clear stretch, and 'do it now' execution in the category — forward motion, not winding down."
+    ),
+    "happy": (
+        "User benefits from uplift and positive affect: appreciation, gratitude, savoring wins, "
+        "joyful or celebratory framing. Rewarding and emotionally bright without requiring a brutal sprint."
+    ),
+    "tired": (
+        "User is low bandwidth: missions must be tiny, gentle, restorative, and low cognitive load — "
+        "permission to go small, recovery-friendly, still on-category but never a high-intensity push."
+    ),
 }
 
 
@@ -255,11 +264,86 @@ def serialize_challenge_row(c: GeneratedChallenge) -> dict:
     }
 
 
+def resolve_mission_response_text(data: dict) -> tuple[str, str | None]:
+    """
+    Build the single string used for validation and scoring.
+
+    Preferred: ``completion_how`` and ``completion_learned`` (both non-empty).
+    Legacy: ``response_text`` alone.
+    Returns ``(combined_text, error_message_or_none)``.
+    """
+    how = (data.get("completion_how") or "").strip()
+    learned = (data.get("completion_learned") or "").strip()
+    legacy = (data.get("response_text") or "").strip()
+    if how or learned:
+        if not how:
+            return "", "completion_how is required together with completion_learned."
+        if not learned:
+            return "", "completion_learned is required together with completion_how."
+        return (
+            "How I completed this mission:\n"
+            f"{how}\n\n"
+            "What I learned from it:\n"
+            f"{learned}",
+            None,
+        )
+    if legacy:
+        return legacy, None
+    return (
+        "",
+        "Provide completion_how and completion_learned (both non-empty), or response_text for legacy clients.",
+    )
+
+
 def _tokenize_words(text: str) -> list[str]:
     return re.findall(r"[a-zA-Z0-9']+", (text or "").lower())
 
 
-def score_mission_response(
+def evaluate_mission_validity_with_agent(
+    *,
+    title: str,
+    response_text: str,
+    difficulty: str = "medium",
+    challenge_description: str = "",
+    example_tasks: list[str] | None = None,
+) -> dict:
+    """
+    Mandatory pre-scoring step: OpenAI evaluation agent returns ``is_valid`` and ``reason``.
+    Without ``OPENAI_API_KEY``, validation cannot run — response is treated as invalid (zero points).
+    """
+    from django.conf import settings
+
+    api_key = (getattr(settings, "OPENAI_API_KEY", None) or "").strip().strip("\ufeff")
+    if not api_key:
+        return {
+            "is_valid": False,
+            "reason": "Mission validation requires OPENAI_API_KEY to be configured on the server.",
+            "source": "unavailable",
+        }
+    try:
+        from api.services.openai_client import validate_user_mission_response_for_scoring
+
+        out = validate_user_mission_response_for_scoring(
+            challenge_title=title,
+            challenge_description=challenge_description or "",
+            example_tasks=list(example_tasks or []),
+            difficulty=difficulty or "medium",
+            user_response=response_text,
+        )
+        return {**out, "source": "openai"}
+    except Exception:
+        return {
+            "is_valid": False,
+            "reason": "Validation agent could not complete; response was not scored.",
+            "source": "error",
+        }
+
+
+# Max extra multiplier from speed when accuracy is already positive (secondary bonus only).
+_TIME_SECONDARY_COEFF = 0.15
+
+
+def score_mission_response_after_validation(
     *,
     title: str,
     response_text: str,
@@ -268,8 +352,10 @@ def score_mission_response(
     difficulty: str = "medium",
 ) -> dict:
     """
-    Rule-based mission scoring for completion responses.
-    Factors: time spent, word count, repetition penalty, "syndicate" bonus, title-keyword relevance.
+    Numeric scoring **only** after the evaluation agent marked the response valid.
+    Accuracy (relevance, keywords, length, uniqueness, syndicate bonus, repetition penalty) forms
+    ``accuracy_ratio``. Time is **not** mixed into that blend; it applies only as a bounded
+    multiplicative bonus so it cannot compensate for low accuracy and is inert when accuracy is 0.
     """
     text = (response_text or "").strip()
     words = _tokenize_words(text)
@@ -279,11 +365,7 @@ def score_mission_response(
     diff = (difficulty or "medium").strip().lower()
     target_seconds = {"easy": 8 * 60, "medium": 15 * 60, "hard": 22 * 60}.get(diff, 15 * 60)
 
-    # Word-count contribution: reward richer answers, cap after ~60 words.
     word_score = min(1.0, wc / 60.0)
-
-    # Time contribution: earlier completion gets higher credit.
-    # Full score at start; fades toward 0 by target_seconds.
     time_score = max(0.0, 1.0 - (safe_elapsed / float(target_seconds)))
 
     unique_count = len(set(words))
@@ -301,49 +383,33 @@ def score_mission_response(
         response_key_set = set(words)
         overlap = len(title_key_set & response_key_set)
         relevance_score = overlap / float(len(title_key_set))
+        keyword_score = overlap / float(max(1, min(len(title_key_set), 3)))
+        keyword_score = max(0.0, min(1.0, keyword_score))
     else:
         relevance_score = 0.0
+        keyword_score = 0.0
 
-    # Hard gate requested: irrelevant response gets zero.
-    if relevance_score <= 0.0:
-        return {
-            "awarded_points": 0,
-            "max_points": safe_max,
-            "score_ratio": 0.0,
-            "breakdown": {
-                "word_count": wc,
-                "word_score": round(word_score, 4),
-                "elapsed_seconds": safe_elapsed,
-                "target_seconds": target_seconds,
-                "time_score": round(time_score, 4),
-                "relevance_score": 0.0,
-                "keyword_score": 0.0,
-                "unique_ratio": round(unique_ratio, 4),
-                "repetition_penalty": round(repetition_penalty, 4),
-                "syndicate_bonus": 0.0,
-            },
-        }
-
-    keyword_score = overlap / float(max(1, min(len(title_key_set), 3)))
-    keyword_score = max(0.0, min(1.0, keyword_score))
     syndicate_bonus = 0.08 if "syndicate" in set(words) else 0.0
 
-    # Priority requested:
-    # 1) relevance, 2) keyword, 3) words, 4) time, 5) syndicate bonus.
-    weighted = (
-        0.40 * relevance_score
-        + 0.24 * keyword_score
-        + 0.18 * word_score
-        + 0.12 * time_score
-        + 0.06 * unique_ratio
+    # Primary accuracy only — no time term.
+    accuracy_weighted = (
+        0.45 * relevance_score
+        + 0.28 * keyword_score
+        + 0.20 * word_score
+        + 0.07 * unique_ratio
     )
-    score_ratio = max(0.0, min(1.0, weighted - repetition_penalty + syndicate_bonus))
+    accuracy_ratio = max(0.0, min(1.0, accuracy_weighted - repetition_penalty + syndicate_bonus))
+
+    # Secondary: speed multiplies the accuracy base; when accuracy_ratio is 0, time has no effect.
+    time_multiplier = 1.0 + _TIME_SECONDARY_COEFF * time_score
+    score_ratio = min(1.0, accuracy_ratio * time_multiplier)
     awarded = int(round(safe_max * score_ratio))
     awarded = max(0, min(safe_max, awarded))
 
     return {
         "awarded_points": awarded,
         "max_points": safe_max,
+        "accuracy_ratio": round(accuracy_ratio, 4),
         "score_ratio": round(score_ratio, 4),
         "breakdown": {
             "word_count": wc,
@@ -351,6 +417,8 @@ def score_mission_response(
             "elapsed_seconds": safe_elapsed,
             "target_seconds": target_seconds,
             "time_score": round(time_score, 4),
+            "time_multiplier": round(time_multiplier, 4),
+            "accuracy_ratio": round(accuracy_ratio, 4),
             "relevance_score": round(relevance_score, 4),
             "keyword_score": round(keyword_score, 4),
             "unique_ratio": round(unique_ratio, 4),

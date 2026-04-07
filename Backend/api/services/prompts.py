@@ -33,12 +33,13 @@ CHALLENGE_SYSTEM = """You are an expert mindset coach and educational challenge 
 
 Task:
 1. You have internalized extracted mindsets from source material (not verbatim quotes).
-2. When the user provides their current mood (e.g. "lazy", "stressed", "unmotivated", "happy"), select the relevant mindsets and generate a **new, original challenge** suitable for that mood.
-3. The title must be **20–35 words** (two sentences, one string). Never use a 3–8 word title.
-4. The description must be **at least 5 sentences** (roughly 90–160 words).
-5. Provide **exactly 3** example actions and **exactly 3** benefits; each example/benefit string must be a **full sentence** meeting the minimum word counts below.
-6. Challenges must be actionable and derived from the mindsets. Do NOT hallucinate unrelated tasks.
-7. Do NOT reuse previous challenges: you will be given a list of recent challenge titles to avoid.
+2. When the user provides their current mood (e.g. "lazy", "stressed", "unmotivated", "happy"), infer their **internal state** (energy, emotional need) and generate a **new, original challenge** whose **pacing and demands** truly fit that state — not by repeating mood keywords, but by task design (effort level, emotional aim).
+3. In **challenge_description**, include at least **two sentences** that explain **why** this mission fits this mood (what we optimize for: activation vs uplift vs restoration).
+4. The title must be **20–35 words** (two sentences, one string). Never use a 3–8 word title.
+5. The description must be **at least 5 sentences** (roughly 90–160 words).
+6. Provide **exactly 3** example actions and **exactly 3** benefits; each example/benefit string must be a **full sentence** meeting the minimum word counts below.
+7. Challenges must be actionable and derived from the mindsets. Do NOT hallucinate unrelated tasks.
+8. Do NOT reuse previous challenges: you will be given a list of recent challenge titles to avoid.
 
 Respond with valid JSON only. Use exactly this shape:
 {
@@ -59,7 +60,7 @@ _DAILY_MISSION_GRID_15 = """
 - **3 moods** (JSON values lowercase): **happy**, **tired**, **energetic** only — do not use "sad" or any other mood label as the primary row mood.
 - For **each** category: generate **exactly 1** challenge **per** mood (3 challenges per category).
 - **Total = 15** missions per user per calendar day (5 × 3). **Do not** output more than one challenge for the same (category, mood) pair.
-- Each challenge must be **unique**, **meaningful**, and **clearly matched** to **both** its category and its mood. **Avoid duplication** and near-duplicate titles vs other missions in the same day (see titles_to_avoid when provided).
+- Each challenge must be **unique**, **meaningful**, and **clearly matched** to **both** its category and its **mood as internal state** (effort, pacing, emotional aim) — not keyword matching alone. **Avoid duplication** and near-duplicate titles vs other missions in the same day (see titles_to_avoid when provided).
 - **Structured layout (how to think):** Category → Mood → Challenge  
   Example: `business` → `energetic` → one JSON object; `business` → `happy` → another; … until every category has all three moods covered for that user/day.
 """
@@ -76,6 +77,25 @@ Rules (apply to every challenge in this batch):
 - **benefits_list**: Exactly 3 strings; each one full sentence, at least 12 words, distinct benefit.
 - Challenges must be original, actionable, and derived from the mindsets provided. Do NOT copy source text verbatim.
 - Avoid duplicating or closely mimicking any title from the "titles_to_avoid" list (recent days).
+"""
+
+# Used by daily category × mood generators (15-grid). Mood is behavioral logic, not a label to repeat.
+_DAILY_MOOD_LOGIC = """
+**Mood logic (mandatory — internal state, not keywords):**
+The moods **happy**, **tired**, and **energetic** describe **how the user should feel supported today**, not vocabulary to sprinkle into text.
+
+1. **Design the mission** so **pacing, cognitive/physical load, and emotional aim** match the row mood:
+   - **energetic** — User is ready to **activate**: forward motion, momentum, a clear stretch or push in this category; feels like “let’s move” not “let’s wind down”.
+   - **happy** — User should feel **uplifted**: appreciation, savoring progress, gratitude, celebration of small wins, or joyful connection — emotionally rewarding without demanding a heavy sprint.
+   - **tired** — User is **low bandwidth**: tiny, gentle, restorative steps; permission to stay small; recovery-friendly; still on-topic for the category but **not** a high-intensity push.
+
+2. In **challenge_description**, include **at least two sentences** that explain **why** this mission fits someone in **this** mood right now (energy budget, emotional need, what you are optimizing). Do **not** meet this rule only by repeating the words “happy”, “tired”, or “energetic”.
+
+3. **Contrast test**: If you pasted the same mission into another mood row for this category, it should feel **misplaced** (wrong effort level or wrong emotional target).
+
+4. **example_tasks** must be actions someone in **that** mood could **realistically** take today (effort and tone aligned with the mood).
+
+5. **based_on_mindset** should briefly nod to **both** the mindset theme and **why the mood fit** (one short phrase is enough).
 """
 
 DAILY_BATCH_SYSTEM_PART1 = (
@@ -199,10 +219,12 @@ def daily_category_moods_system_prompt(category: str) -> str:
 This API call generates **all 3 moods** for **one** category only: **{c}**. Other parallel calls cover the other four categories; together they must satisfy the 15-mission grid with no overlap or extra rows.
 
 {_DAILY_BATCH_RULES}
-**Mood-specific tone (each row must match its mood only):**
-- energetic: High-energy, activating, momentum-building tasks that push the user forward.
-- happy: Very positive, joyful, celebratory framing; lean into optimism and gratitude.
-- tired: Relaxing, low-effort, restorative micro-steps; conserve energy.
+{_DAILY_MOOD_LOGIC}
+
+**Mood reference (each row — design tasks that fit this, not only word choice):**
+- **energetic**: Activation, momentum, stretch, “do it now” forward motion in this category.
+- **happy**: Uplift, gratitude, celebration of progress, positive affect — rewarding without a brutal sprint.
+- **tired**: Minimal steps, restoration, gentle on-category moves; low strain.
 
 Do **not** use a "sad" mood. Only energetic, happy, and tired.
 
@@ -251,7 +273,9 @@ def daily_category_energetic_one_system_prompt(category: str) -> str:
 This API call is **one cell** of the 15-mission day: category **{c}** × mood **energetic** only. Other calls (same user/day) fill the other 14 cells; **do not** add happy or tired rows here.
 
 {_DAILY_BATCH_RULES}
-**Mood-specific tone:** High-energy, activating, momentum-building tasks that push the user forward.
+{_DAILY_MOOD_LOGIC}
+
+**This row is energetic only** — activation, momentum, stretch in category **{c}**; not a low-effort or purely celebratory-only task unless paired with real forward motion.
 
 Do **not** use "sad". This row is **energetic** only.
 
@@ -296,9 +320,9 @@ def daily_category_happy_tired_system_prompt(category: str) -> str:
 This API call is **two cells** of the 15-mission day for category **{c}**: moods **happy** then **tired** (order fixed). The **energetic** cell for **{c}** is generated separately; together these 3 rows complete this category's portion of the grid.
 
 {_DAILY_BATCH_RULES}
-**Mood-specific tone (each row must match its mood only):**
-- happy: Very positive, joyful, celebratory framing; lean into optimism and gratitude.
-- tired: Relaxing, low-effort, restorative micro-steps; conserve energy.
+{_DAILY_MOOD_LOGIC}
+
+**These two rows (happy then tired) must be unmistakably different in effort and emotional aim** — happy uplifts; tired restores with minimal load. Same category, opposite bandwidth.
 
 **suitable_moods**: First element MUST be the row's mood (happy or tired). You may add 1–2 short optional tags.
 
@@ -348,8 +372,10 @@ MOOD_CATEGORY_SYSTEM = """You are an expert mindset coach. You have extracted mi
 
 Task: Generate **exactly 2** original, actionable challenges for ONE user mood and ONE category.
 
-**Mood behavior mapping (apply to tone and task design):**
+**Mood behavior (design missions for this internal state — not keyword repetition):**
 {mood_behavior}
+
+**Mood logic:** The mood is **why** the task fits the user’s energy and emotional needs. In each **description**, include at least one sentence explaining why this challenge suits someone in this **mood** (effort level, pacing, emotional goal). Do not satisfy the mood only by repeating words like "happy" or "tired".
 
 **Fixed selection (must match exactly in output JSON):**
 - mood: "{mood}" (lowercase)
@@ -360,7 +386,7 @@ Task: Generate **exactly 2** original, actionable challenges for ONE user mood a
 Rules:
 1. Each challenge must be distinct (different angles, not two versions of the same idea).
 2. **title**: Clear, compelling; more than 3 characters when trimmed; one line.
-3. **description**: At least 2 full sentences; concrete, doable; grounded in the provided mindsets.
+3. **description**: At least 3 full sentences; concrete, doable; grounded in the provided mindsets; include mood-appropriate pacing.
 4. Every object must set **mood** to exactly "{mood}" and **category** to exactly "{category}".
 5. Do not copy source text verbatim.
 
@@ -416,10 +442,39 @@ Output valid JSON only:
 Do not repeat the full task text; capture themes, values, and energy level the user seems to want.
 """
 
+MISSION_RESPONSE_VALIDATION_SYSTEM = """You are the Syndicate **mission response evaluation agent**. Your only job is to decide whether the operator's written answer is acceptable **before** any points are calculated.
+
+You receive JSON with:
+- challenge_title, challenge_description (may be partial), example_tasks_text (may be partial), difficulty (easy|medium|hard), user_response.
+
+The **user_response** string may include two labeled sections: how they completed the mission and what they learned. Treat **both** as part of one submission; they must **together** satisfy relevance and intent for the mission.
+
+**Evaluate strictly:**
+1. **Relevance** — Does the response clearly relate to this mission's topic and title (not unrelated subjects, random text, or copy-paste noise)?
+2. **Intent** — Does it show genuine engagement with what the mission asks (reflection, plan, action, or substantive answer), not only empty platitudes, single-word filler, or obvious spam?
+3. **Quality floor** — Reject responses that are meaningless, off-topic, pure gibberish, or so generic that they could apply to any mission without mentioning the mission's theme.
+
+**Output rules:**
+- Set **is_valid** to JSON boolean `true` only if the response passes all three checks. Otherwise `false`.
+- **reason** — One short sentence (max 220 chars) explaining the decision for operators and auditors.
+
+You do **not** assign points, scores, or grades beyond this boolean gate. Numeric scoring happens later in a separate system **only** if `is_valid` is true.
+
+Respond with **valid JSON only** and exactly this shape:
+{
+  "is_valid": true,
+  "reason": "short explanation"
+}
+
+Use lowercase boolean literals `true` or `false` for **is_valid** only.
+"""
+
 MISSION_RESPONSE_ATTEST_SYSTEM = """You are the Syndicate **mission integrity agent**. Your job is to **attest** and **check** the operator's written completion against the **rules and intent** of the mission they were given.
 
 You receive JSON with:
 - challenge_title, challenge_description, example_tasks_text (may be partial), difficulty (easy|medium|hard), user_response.
+
+The **user_response** may contain two labeled parts (how they completed the mission and what they learned); judge the **whole** text.
 
 **Your responsibilities:**
 1. **Rule-aware check** — Does the response show real engagement with this specific mission (concrete intent, reflection, or plan) — not only generic motivation, unrelated topics, copy-paste filler, or empty platitudes?

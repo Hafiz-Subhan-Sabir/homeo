@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { getSyndicateApiBase } from "@/lib/syndicateApiBase";
+import { getSyndicateApiBase, syndicateFetchFailureMessage } from "@/lib/syndicateApiBase";
 import { parseApiJson } from "@/lib/parseApiJson";
 import { createSyndicateSession } from "@/lib/syndicateAuth";
 
@@ -48,7 +48,7 @@ export function SyndicateLoginForm({ nextPath }: { nextPath: string }) {
       createSyndicateSession({ name: emailForName, email: emailForName }, j.token, uid);
       router.replace(nextPath);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Login failed");
+      setError(syndicateFetchFailureMessage(e, API_BASE, "Login failed"));
       setBusy(false);
     }
   }
