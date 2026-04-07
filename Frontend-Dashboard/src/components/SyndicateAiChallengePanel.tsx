@@ -1754,10 +1754,13 @@ export function SyndicateAiChallengePanel() {
   }, [recordingAdminTaskId]);
 
   const goToBonusMissions = useCallback(() => {
+    // Mega mission lives under dashboard and is hidden while Stats & profile is open — close it first
+    // so the section mounts, then scroll after paint.
+    setShowStatsProfile(false);
     setSyndicateView("dashboard");
     window.setTimeout(() => {
       bonusMissionSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 100);
+    }, 200);
   }, []);
 
   const pieDailyData = useMemo(() => {
