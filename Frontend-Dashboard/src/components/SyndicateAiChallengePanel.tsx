@@ -1495,6 +1495,8 @@ export function SyndicateAiChallengePanel() {
   const [syndicateHelpPanel, setSyndicateHelpPanel] = useState<SyndicateHelpTopic | null>(null);
   const [adminTasks, setAdminTasks] = useState<AdminTaskRow[]>([]);
   const [adminTaskDrafts, setAdminTaskDrafts] = useState<Record<number, string>>({});
+  /** Latest drafts for MediaRecorder onstop (closure-safe). */
+  const adminTaskDraftsRef = useRef<Record<number, string>>({});
   const [adminTaskFiles, setAdminTaskFiles] = useState<Record<number, File | null>>({});
   const [adminTaskRecording, setAdminTaskRecording] = useState<Record<number, boolean>>({});
   const [adminTaskBusyId, setAdminTaskBusyId] = useState<number | null>(null);
@@ -1661,6 +1663,10 @@ export function SyndicateAiChallengePanel() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    adminTaskDraftsRef.current = adminTaskDrafts;
+  }, [adminTaskDrafts]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -2446,11 +2452,11 @@ export function SyndicateAiChallengePanel() {
     if (draft.length < 3) {
       if (file) {
         setAdminTaskMsg(
-          "Your video or file is attached. Please also write a short response in the text box above (at least 3 characters) — both are required — then press Submit again."
+          "Text is required: type at least 3 characters in the box above. Your video or file is already attached — then press Submit again."
         );
       } else {
         setAdminTaskMsg(
-          "Write a short written response in the text box above (at least 3 characters), then press Submit. You can add a video or file below if the task asks for it."
+          "Text is required: type at least 3 characters in the box above, then press Submit. Add a video or file below if needed."
         );
       }
       if (typeof document !== "undefined") {
@@ -2554,9 +2560,16 @@ export function SyndicateAiChallengePanel() {
             type: blob.type || outType
           });
           setAdminTaskFiles((prev) => ({ ...prev, [taskId]: file }));
-          setAdminTaskMsg(
-            "Video saved and attached. Add your written response above if you have not yet, then submit — both are sent together for admin review."
-          );
+          const written = (adminTaskDraftsRef.current[taskId] || "").trim();
+          if (written.length >= 3) {
+            setAdminTaskMsg(
+              "Video saved and attached. You can press Submit for admin review — your text and video will be sent together."
+            );
+          } else {
+            setAdminTaskMsg(
+              "Video saved and attached. Text is required: write at least 3 characters in the field above, then press Submit."
+            );
+          }
         } else {
           setAdminTaskMsg(
             "Recording had no data (try again, record a few seconds, or upload a file). Your written response can still be submitted without a video."
@@ -4013,7 +4026,7 @@ export function SyndicateAiChallengePanel() {
                               <div>
                                 <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-emerald-200/85">Your response</p>
                                 <p className="mt-1 text-[12px] text-white/55">
-                                  <span className="text-emerald-200/90">Written response is required.</span> Your text and any video/file below are sent together in one submission for admin review (max 50MB attachment).
+                                  <span className="text-emerald-200/90">Text is required</span> (at least 3 characters). Your text and any video/file below are sent together in one submission for admin review (max 50MB attachment).
                                 </p>
                               </div>
                               <div>
