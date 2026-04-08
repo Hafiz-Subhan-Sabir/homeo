@@ -494,7 +494,8 @@ type SyndicateHelpTopic =
   | "hud-streak"
   | "points-to-pounds"
   | "unlock"
-  | "mega-mission";
+  | "mega-mission"
+  | "mission-reminder";
 
 function SyndicateHelpMark({
   topic,
@@ -537,7 +538,9 @@ function SyndicateHelpOverlay({ topic, onClose }: { topic: SyndicateHelpTopic; o
             ? "Points to pounds"
             : topic === "unlock"
               ? "Unlock & redeem rewards"
-              : "Mega mission";
+              : topic === "mission-reminder"
+                ? "Mission reminders"
+                : "Mega mission";
 
   return (
     <div
@@ -607,6 +610,22 @@ function SyndicateHelpOverlay({ topic, onClose }: { topic: SyndicateHelpTopic; o
               </p>
               <p>
                 Each card shows the <strong className="text-white">points threshold</strong> for that tier and the <strong className="text-white">bonus points</strong> you get when you redeem. Redeeming adds those bonus points to your total.
+              </p>
+            </>
+          ) : topic === "mission-reminder" ? (
+            <>
+              <p>
+                A <strong className="text-cyan-100">mission reminder</strong> is optional. It lets you pick a <strong className="text-white">date and time</strong> (your device&apos;s local clock) so you remember to finish this mission. Nothing is saved until you press{" "}
+                <strong className="text-white">Done</strong> — then it appears on the <strong className="text-white">Missions</strong> tab and in <strong className="text-white">Reminders</strong> with a countdown to that target time.
+              </p>
+              <p>
+                The reminder does <strong className="text-white">not</strong> complete the mission for you. It only tracks the deadline you chose and surfaces actions (open the mission, mark done from the reminder flow, or dismiss).
+              </p>
+              <p>
+                <strong className="text-amber-100">Points:</strong> if the target time passes and this mission is <strong className="text-white">still incomplete</strong>, the server may deduct <strong className="text-amber-100">1 point once</strong> from your total for that reminder. Completing the mission removes the reminder and avoids that penalty for this entry.
+              </p>
+              <p>
+                Missions can roll off the daily board after 24 hours, but the reminder can stay until the target time. Use <strong className="text-white">Open mission</strong> while the mission is still on the board; later, use the options on the reminder card. You can clear the picker with <strong className="text-white">Clear reminder</strong> before saving.
               </p>
             </>
           ) : (
@@ -1341,7 +1360,8 @@ function DetailPane({
   onDraftPersist,
   missionReminderIso = null,
   onMissionReminderChange,
-  onMissionReminderDone
+  onMissionReminderDone,
+  onSyndicateHelpOpen
 }: {
   row: ChallengeRow;
   initialResponse: MissionResponseDraft;
@@ -1363,6 +1383,8 @@ function DetailPane({
   onMissionReminderChange?: (iso: string | null) => void;
   /** After user confirms date/time with Done: e.g. navigate to reminders list. */
   onMissionReminderDone?: () => void;
+  /** Opens syndicate help overlay (e.g. mission reminder explainer). */
+  onSyndicateHelpOpen?: (topic: SyndicateHelpTopic) => void;
 }) {
   const p = row.payload;
   const [how, setHow] = useState(initialResponse.how);
@@ -1590,16 +1612,27 @@ function DetailPane({
               />
               {onMissionReminderChange ? (
                 <div className="mb-6 rounded-lg border border-cyan-400/30 bg-[linear-gradient(180deg,rgba(0,45,70,0.35),rgba(0,0,0,0.25))] p-4 [box-shadow:inset_0_0_0_1px_rgba(120,200,255,0.08)]">
-                  <label
-                    className="mb-1.5 block text-[12px] font-bold uppercase tracking-[0.12em] text-cyan-200/85"
-                    htmlFor="syndicate-mission-reminder"
-                  >
-                    Reminder date &amp; time (optional)
-                  </label>
+                  <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                    <label
+                      className="text-[12px] font-bold uppercase tracking-[0.12em] text-cyan-200/85"
+                      htmlFor="syndicate-mission-reminder"
+                    >
+                      Reminder date &amp; time (optional)
+                    </label>
+                    {onSyndicateHelpOpen ? (
+                      <SyndicateHelpMark
+                        topic="mission-reminder"
+                        label="How mission reminders work and how points can change"
+                        onOpen={onSyndicateHelpOpen}
+                      />
+                    ) : null}
+                  </div>
                   <p className="mb-2 text-[11px] leading-snug text-white/50 sm:text-[12px]">
-                    Pick a date and time, then press <span className="font-semibold text-cyan-100/90">Done</span> to save the
-                    reminder. The Missions tab shows time left. When the countdown hits zero and this mission is still incomplete,{" "}
-                    <span className="font-semibold text-amber-200/90">1 point is deducted</span> once from your total (per reminder).
+                    Pick a date and time, then press <span className="font-semibold text-cyan-100/90">Done</span> to save. Tap{" "}
+                    <span className="font-semibold text-red-300/90" aria-hidden>
+                      ?
+                    </span>{" "}
+                    for what this reminder does and how points may be deducted.
                   </p>
                   <input
                     id="syndicate-mission-reminder"
@@ -3467,6 +3500,7 @@ export function SyndicateAiChallengePanel() {
                   }, 0);
                 }
           }
+          onSyndicateHelpOpen={setSyndicateHelpPanel}
         />
       </>
     );
@@ -3538,7 +3572,7 @@ export function SyndicateAiChallengePanel() {
           >
             Reminders
             {missionsTabReminders.length > 0 ? (
-              <span className="ml-1.5 inline-flex min-h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full bg-cyan-500/35 px-1 text-[10px] font-black tabular-nums leading-none text-cyan-50">
+              <span className="ml-1.5 inline-flex min-h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black tabular-nums leading-none text-white shadow-[0_0_10px_rgba(220,38,38,0.5)]">
                 {missionsTabReminders.length > 9 ? "9+" : missionsTabReminders.length}
               </span>
             ) : null}
