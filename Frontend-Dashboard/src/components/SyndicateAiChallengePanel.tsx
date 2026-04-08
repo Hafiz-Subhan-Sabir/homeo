@@ -645,6 +645,17 @@ function todayLocalISO(): string {
   return `${y}-${m}-${day}`;
 }
 
+/** Local calendar day `YYYY-MM-DD` from an ISO instant (for date filters). */
+function localDateKeyFromIso(iso: string): string {
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return "";
+  const d = new Date(t);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 /** `datetime-local` value from a Date in the user's local timezone. */
 function toDatetimeLocalValue(d: Date): string {
   const y = d.getFullYear();
@@ -661,6 +672,8 @@ type MissionReminderEntry = {
   penaltyApplied?: boolean;
   /** ISO instant when the mission row was created (24h board window). */
   missionCreatedAtIso?: string;
+  /** When the user last saved this reminder (ISO). Used for sort / “added on” date filter. */
+  addedAtIso?: string;
 };
 
 function loadMissionReminders(): Record<number, MissionReminderEntry> {
@@ -679,7 +692,14 @@ function loadMissionReminders(): Record<number, MissionReminderEntry> {
       if (!atIso || Number.isNaN(Date.parse(atIso))) continue;
       const penaltyApplied = o.penaltyApplied === true;
       const missionCreatedAtIso = typeof o.missionCreatedAtIso === "string" ? o.missionCreatedAtIso : undefined;
-      out[id] = { atIso, title, penaltyApplied, ...(missionCreatedAtIso ? { missionCreatedAtIso } : {}) };
+      const addedAtIso = typeof o.addedAtIso === "string" ? o.addedAtIso : undefined;
+      out[id] = {
+        atIso,
+        title,
+        penaltyApplied,
+        ...(missionCreatedAtIso ? { missionCreatedAtIso } : {}),
+        ...(addedAtIso ? { addedAtIso } : {})
+      };
     }
     return out;
   } catch {
@@ -1078,6 +1098,8 @@ export type MissionReminderListItem = {
   secLeft: number;
   penaltyApplied: boolean;
   howDraft: string;
+  /** When the reminder was saved; omitted on very old local data. */
+  addedAtIso?: string;
 };
 
 function MissionReminderCard({
@@ -1763,6 +1785,10 @@ export function SyndicateAiChallengePanel() {
   /** Inline stats + profile panel (not a modal). */
   const [showStatsProfile, setShowStatsProfile] = useState(false);
   const [syndicateView, setSyndicateView] = useState<"dashboard" | "challenges" | "reminders">("dashboard");
+  /** Reminders full-page list: sort by when the reminder was saved (newest / oldest). */
+  const [reminderPageSort, setReminderPageSort] = useState<"newest" | "oldest">("newest");
+  /** `YYYY-MM-DD` or empty — show reminders whose saved-on day matches (legacy rows use target day). */
+  const [reminderFilterDate, setReminderFilterDate] = useState<string>("");
   /** Filter missions inside Stats & profile by mood (default: energetic). */
   const [statsMood, setStatsMood] = useState<string>("energetic");
   const [customTitle, setCustomTitle] = useState("");
@@ -2113,7 +2139,8 @@ export function SyndicateAiChallengePanel() {
           atIso: iso,
           title: (selected.payload?.challenge_title ?? "Mission").trim() || "Mission",
           penaltyApplied: false,
-          missionCreatedAtIso: selected.created_at
+          missionCreatedAtIso: selected.created_at,
+          addedAtIso: new Date().toISOString()
         };
       }
       persistMissionReminders(next);
@@ -2347,6 +2374,7 @@ export function SyndicateAiChallengePanel() {
       penaltyApplied: boolean;
       /** Saved “how you completed it” draft for this mission (from mission detail). */
       howDraft: string;
+      addedAtIso?: string;
     }[] = [];
     for (const [key, entry] of Object.entries(missionReminders)) {
       const id = parseInt(key, 10);
@@ -2365,12 +2393,33 @@ export function SyndicateAiChallengePanel() {
         onBoard: !!row,
         secLeft,
         penaltyApplied: entry.penaltyApplied === true,
-        howDraft
+        howDraft,
+        ...(entry.addedAtIso ? { addedAtIso: entry.addedAtIso } : {})
       });
     }
     items.sort((a, b) => a.dueAt - b.dueAt);
     return items;
   }, [missionReminders, doneIds, rowsOnMissionBoard, nowTick, responseDraftsVersion]);
+
+  const remindersPageSortedFiltered = useMemo(() => {
+    const list = [...missionsTabReminders];
+    const day = reminderFilterDate.trim();
+    const filtered = day
+      ? list.filter((item) => {
+          const refIso = item.addedAtIso ?? item.atIso;
+          return localDateKeyFromIso(refIso) === day;
+        })
+      : list;
+    filtered.sort((a, b) => {
+      const aMs = a.addedAtIso ? Date.parse(a.addedAtIso) : NaN;
+      const bMs = b.addedAtIso ? Date.parse(b.addedAtIso) : NaN;
+      const av = Number.isNaN(aMs) ? a.dueAt : aMs;
+      const bv = Number.isNaN(bMs) ? b.dueAt : bMs;
+      return reminderPageSort === "newest" ? bv - av : av - bv;
+    });
+    return filtered;
+  }, [missionsTabReminders, reminderFilterDate, reminderPageSort]);
+
   const dayCountdownSec = useMemo(() => secondsUntilLocalMidnight(nowTick), [nowTick]);
   const completedAgentTodayCount = useMemo(
     () => rows.filter((r) => !r.user_created && doneIds.has(r.id)).length,
@@ -4975,7 +5024,7 @@ export function SyndicateAiChallengePanel() {
           ) : syndicateView === "reminders" ? (
           <>
             <div className="syndicate-readable mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h3 className="text-[21px] font-black uppercase tracking-[0.1em] text-[color:var(--gold)] sm:text-[24px]">
+              <h3 className="syndicate-readable text-[21px] font-black uppercase tracking-[0.1em] text-[color:var(--gold)] sm:text-[24px]">
                 Your mission reminders
               </h3>
               <button
@@ -4997,23 +5046,91 @@ export function SyndicateAiChallengePanel() {
                 No active reminders. Add one from any incomplete mission&apos;s detail view.
               </p>
             ) : (
-              <section
-                className="syndicate-readable w-full min-w-0 rounded-2xl border border-cyan-400/35 bg-[linear-gradient(165deg,rgba(0,40,64,0.55),rgba(10,8,6,0.92))] px-3 py-5 [box-shadow:0_0_0_1px_rgba(120,200,255,0.2),0_8px_32px_rgba(0,0,0,0.35)] sm:px-5 sm:py-6"
-                aria-label="All mission reminders"
-              >
-                <ul className="space-y-3">
-                  {missionsTabReminders.map((item) => (
-                    <MissionReminderCard
-                      key={`all-rem-${item.id}`}
-                      item={item}
-                      nowTick={nowTick}
-                      rows={rows}
-                      onOpenMission={openMissionDetail}
-                      onDismiss={dismissMissionReminder}
-                    />
-                  ))}
-                </ul>
-              </section>
+              <>
+                <div className="syndicate-readable mb-4 flex flex-col gap-3 rounded-xl border border-cyan-400/25 bg-black/25 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4 sm:px-4">
+                  <div className="flex min-w-0 flex-col gap-1.5">
+                    <label className="text-[11px] font-bold uppercase tracking-[0.12em] text-cyan-200/85" htmlFor="syndicate-reminder-sort">
+                      Sort by when set
+                    </label>
+                    <select
+                      id="syndicate-reminder-sort"
+                      value={reminderPageSort}
+                      onChange={(e) => setReminderPageSort(e.target.value === "oldest" ? "oldest" : "newest")}
+                      className={cn(
+                        SYNDICATE_DATE_INPUT,
+                        "max-w-full text-[14px] text-white [color-scheme:dark] sm:max-w-[16rem]"
+                      )}
+                    >
+                      <option value="newest">Newest first</option>
+                      <option value="oldest">Oldest first</option>
+                    </select>
+                  </div>
+                  <div className="flex min-w-0 flex-col gap-1.5 sm:items-end">
+                    <label className="text-[11px] font-bold uppercase tracking-[0.12em] text-cyan-200/85" htmlFor="syndicate-reminder-day-filter">
+                      Added on date
+                    </label>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input
+                        id="syndicate-reminder-day-filter"
+                        type="date"
+                        value={reminderFilterDate}
+                        onChange={(e) => setReminderFilterDate(e.target.value)}
+                        className={cn(SYNDICATE_DATE_INPUT, "text-[14px] text-white [color-scheme:dark]")}
+                      />
+                      {reminderFilterDate ? (
+                        <button
+                          type="button"
+                          onClick={() => setReminderFilterDate("")}
+                          className="min-h-[40px] shrink-0 rounded-md border border-white/20 px-3 py-2 text-[12px] font-semibold uppercase tracking-wide text-white/80 hover:bg-white/10"
+                        >
+                          Clear date
+                        </button>
+                      ) : null}
+                    </div>
+                    <p className="max-w-md text-[11px] leading-snug text-white/45 sm:text-right">
+                      Matches the day you saved the reminder. Older entries without that use the reminder&apos;s target day.
+                    </p>
+                  </div>
+                </div>
+                {remindersPageSortedFiltered.length === 0 ? (
+                  <p className="syndicate-readable rounded-lg border border-amber-400/30 bg-amber-500/10 px-4 py-8 text-center text-[14px] text-amber-100/90">
+                    No reminders for this date. Try another day or{" "}
+                    <button
+                      type="button"
+                      onClick={() => setReminderFilterDate("")}
+                      className="font-semibold text-cyan-200 underline-offset-2 hover:underline"
+                    >
+                      clear the date filter
+                    </button>
+                    .
+                  </p>
+                ) : (
+                  <section
+                    className="syndicate-readable w-full min-w-0 rounded-2xl border border-cyan-400/35 bg-[linear-gradient(165deg,rgba(0,40,64,0.55),rgba(10,8,6,0.92))] px-3 py-5 [box-shadow:0_0_0_1px_rgba(120,200,255,0.2),0_8px_32px_rgba(0,0,0,0.35)] sm:px-5 sm:py-6"
+                    aria-label="All mission reminders"
+                  >
+                    {reminderFilterDate ? (
+                      <p className="mb-4 text-[12px] text-white/55">
+                        Showing{" "}
+                        <span className="font-semibold tabular-nums text-cyan-200/95">{remindersPageSortedFiltered.length}</span> of{" "}
+                        <span className="tabular-nums text-white/75">{missionsTabReminders.length}</span>
+                      </p>
+                    ) : null}
+                    <ul className="space-y-3">
+                      {remindersPageSortedFiltered.map((item) => (
+                        <MissionReminderCard
+                          key={`all-rem-${item.id}`}
+                          item={item}
+                          nowTick={nowTick}
+                          rows={rows}
+                          onOpenMission={openMissionDetail}
+                          onDismiss={dismissMissionReminder}
+                        />
+                      ))}
+                    </ul>
+                  </section>
+                )}
+              </>
             )}
           </>
           ) : null}
