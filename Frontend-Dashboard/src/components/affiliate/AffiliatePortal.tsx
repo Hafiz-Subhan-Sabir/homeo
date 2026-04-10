@@ -229,6 +229,12 @@ export default function AffiliatePortal({ displayName, referralIds, onLogout, em
       if (!silent) showToast("Data loaded.", "good");
     } catch (e) {
       const message = e instanceof Error ? e.message : "Could not fetch affiliate data.";
+      if (/affiliate_id not found/i.test(message)) {
+        setError("This referral ID is not on this server (new database or stale login). Log in again to refresh.");
+        if (!silent) showToast("Affiliate session out of date — logging out.", "warn");
+        window.setTimeout(() => onLogout?.(), 400);
+        return;
+      }
       if (message.toLowerCase().includes("failed to fetch")) {
         setError(
           "Failed to fetch. Run the unified Django backend (same service as Syndicate API), set NEXT_PUBLIC_SYNDICATE_API_URL, and ensure CORS allows this origin if you use a LAN IP."
@@ -241,7 +247,7 @@ export default function AffiliatePortal({ displayName, referralIds, onLogout, em
     } finally {
       setLoading(false);
     }
-  }, [affiliateId]);
+  }, [affiliateId, onLogout]);
 
   useEffect(() => {
     void refreshData();

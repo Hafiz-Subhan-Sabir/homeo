@@ -21,6 +21,14 @@ const nextConfig = {
         {
           source: "/api/portal/:path*",
           destination: `${backendOrigin}/api/portal/:path*`
+        },
+        {
+          source: "/api/affiliate/:path*",
+          destination: `${backendOrigin}/api/affiliate/:path*`
+        },
+        {
+          source: "/api/track/:path*",
+          destination: `${backendOrigin}/api/track/:path*`
         }
       ]
     };

@@ -9,29 +9,39 @@ import type {
 import { getSyndicateApiBase } from "@/lib/syndicateApiBase";
 
 /**
- * Affiliate API lives on the same Django service as Syndicate (`/api/track/...`, `/api/affiliate/auth/...`).
- * Override with NEXT_PUBLIC_AFFILIATE_API_BASE_URL only if you still run a separate tracking server.
+ * Affiliate API lives on Django (`/api/track/...`, `/api/affiliate/auth/...`).
+ * In the browser, use same-origin `/api/...` so Next.js rewrites forward to Django (see next.config.js).
+ * Override with NEXT_PUBLIC_AFFILIATE_API_BASE_URL only for a separate tracking server.
  */
 function affiliateApiRoot(): string {
   const override = (process.env.NEXT_PUBLIC_AFFILIATE_API_BASE_URL ?? "").trim().replace(/\/+$/, "");
   if (override) {
     return override.endsWith("/api") ? override : `${override}/api`;
   }
+  if (typeof window !== "undefined") {
+    return `${window.location.origin.replace(/\/+$/, "")}/api`;
+  }
   return getSyndicateApiBase();
 }
 
 async function parseJson<T>(res: Response): Promise<T> {
+  const text = await res.text();
   if (!res.ok) {
     let message = "Request failed";
     try {
-      const body = await res.json();
-      message = body?.error ?? message;
+      const body = JSON.parse(text) as { error?: string; detail?: string };
+      message = (typeof body?.error === "string" && body.error) || (typeof body?.detail === "string" && body.detail) || message;
     } catch {
-      /* keep default */
+      if (res.status === 404 && text.includes("<!DOCTYPE")) {
+        message =
+          "API route not found (404). Restart Next.js after next.config changes, run Django on BACKEND_INTERNAL_URL, and ensure /api/affiliate is proxied.";
+      } else if (res.status === 404) {
+        message = "Not found (404).";
+      }
     }
     throw new Error(message);
   }
-  return (await res.json()) as T;
+  return JSON.parse(text) as T;
 }
 
 function authHeaders(): HeadersInit {
