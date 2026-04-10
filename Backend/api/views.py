@@ -1,23 +1,30 @@
-"""REST API for document upload, mindset ingest, and syndicate bootstrap."""
+"""REST API for document upload, mindset ingest, and syndicate bootstrap.
+
+Intended pipeline (also used from Django admin):
+  1) Upload → save file + extracted text on ``UploadedDocument`` (and optional object storage).
+  2) Ingest → OpenAI agent fills ``MindsetKnowledge.payload`` (mindsets, patterns, habits, benefits, themes).
+  3) Challenges app loads latest ``MindsetKnowledge`` and generates missions from that payload (not from the raw file).
+"""
 from __future__ import annotations
 
-import hashlib
 from pathlib import Path
 
 from django.conf import settings
+from django.core.files.storage import default_storage
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.challenges.models import GeneratedChallenge
-from apps.challenges.services import ensure_daily_challenges
+from apps.challenges.services import ensure_daily_challenges_for_device
 
 from .models import MindsetKnowledge, UploadedDocument
-from .services.document_extract import extract_text, file_sha256, truncate
-from .services.openai_client import extract_mindsets_from_document
-
-SUPPORTED_SUFFIXES = frozenset({".pdf", ".txt", ".md", ".markdown", ".docx"})
+from .services.document_extract import extract_text, extract_text_from_bytes, file_sha256, truncate
+from .services.openai_client import extract_mindsets_from_document, normalize_mindset_ingest_payload
+from .services.storage_urls import document_presigned_download_url
+from .services.upload_store import SUPPORTED_SUFFIXES, store_uploaded_file
 
 
 def _data_path(rel: str) -> Path:
@@ -47,18 +54,30 @@ def _register_file_from_disk(abs_path: Path) -> UploadedDocument:
 
 
 def run_ingest(doc: UploadedDocument) -> tuple[bool, dict | None, str | None]:
-    path = _data_path(doc.stored_path)
-    if not path.is_file():
-        return False, None, "Stored file missing"
-
-    raw = doc.text_extracted or extract_text(path)
-    if not doc.text_extracted:
+    """Ingest uses text_extracted when set; else local file under data/, else object storage (S3/Tigris)."""
+    raw = (doc.text_extracted or "").strip()
+    if not raw:
+        path = _data_path(doc.stored_path)
+        if path.is_file():
+            raw = extract_text(path)
+        elif getattr(settings, "USE_S3_OBJECT_STORAGE", False) and default_storage.exists(doc.stored_path):
+            with default_storage.open(doc.stored_path, "rb") as fh:
+                blob = fh.read()
+            suf = Path(doc.stored_path).suffix.lower() or Path(doc.original_name).suffix.lower()
+            if suf not in {".pdf", ".txt", ".md", ".markdown", ".docx"}:
+                suf = ".pdf"
+            raw = extract_text_from_bytes(blob, suf)
+        else:
+            return False, None, (
+                "No document text in database and source file is missing "
+                "(not on disk or object storage)."
+            )
         doc.text_extracted = raw
         doc.save(update_fields=["text_extracted"])
 
     text = truncate(raw)
     try:
-        payload = extract_mindsets_from_document(text)
+        payload = normalize_mindset_ingest_payload(extract_mindsets_from_document(text))
     except RuntimeError as e:
         return False, None, str(e)
     except Exception as e:
@@ -89,15 +108,21 @@ def health(_request):
 
 @api_view(["GET"])
 def mindset_status(_request):
-    """Whether mindsets are loaded and from which file."""
+    """Whether mindsets are loaded (upload → ingest → payload used for challenges)."""
     latest = MindsetKnowledge.objects.select_related("source").order_by("-updated_at").first()
     if not latest:
         return Response(
             {
                 "ready": False,
-                "message": "No document ingested yet. Add a file under data/uploads/ and sync, or upload in the UI.",
+                "message": (
+                    "No ingest yet. Flow: upload file (POST /api/documents/upload/ or admin) → "
+                    "run ingest (POST /api/documents/ingest/ or admin background job) → "
+                    "challenges read stored mindsets."
+                ),
             }
         )
+    p = latest.payload or {}
+    mindsets = p.get("mindsets") if isinstance(p.get("mindsets"), list) else []
     return Response(
         {
             "ready": True,
@@ -105,57 +130,73 @@ def mindset_status(_request):
             "content_hash": latest.source.content_hash,
             "updated_at": latest.updated_at.isoformat(),
             "model_used": latest.model_used,
+            "mindset_count": len(mindsets),
+            "theme_count": len(p.get("themes") or []) if isinstance(p.get("themes"), list) else 0,
         }
     )
 
 
 @api_view(["POST"])
 def upload_document(request):
-    """Multipart: field `file` (pdf, txt, md, docx)."""
+    """Multipart: field ``file`` (pdf, txt, md, docx). Saves document only; call ``/api/documents/ingest/`` to run the mindset agent."""
     f = request.FILES.get("file")
     if not f:
         return Response({"detail": "Missing file field."}, status=status.HTTP_400_BAD_REQUEST)
 
-    name = getattr(f, "name", "upload") or "upload"
-    suffix = Path(name).suffix.lower()
-    if suffix not in SUPPORTED_SUFFIXES:
+    doc, err = store_uploaded_file(f)
+    if err:
+        return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
+
+    body: dict = {
+        "id": doc.id,
+        "original_name": doc.original_name,
+        "content_hash": doc.content_hash,
+        "char_count": len(doc.text_extracted or ""),
+        "created_at": doc.created_at.isoformat(),
+    }
+    dl_url, dl_exp = document_presigned_download_url(doc)
+    if dl_url:
+        body["download_url"] = dl_url
+        body["download_url_expires_in"] = dl_exp
+    return Response(body, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def document_download_url(request, document_id: int):
+    """
+    Return a time-limited presigned GET URL for the raw file (private Railway/S3 bucket only).
+    Optional query: expires_in=seconds (60–604800, default from PRESIGNED_URL_EXPIRE_SECONDS).
+    """
+    try:
+        doc = UploadedDocument.objects.get(pk=document_id)
+    except UploadedDocument.DoesNotExist:
+        return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    raw = request.query_params.get("expires_in")
+    expires_req: int | None = None
+    if raw is not None and str(raw).strip() != "":
+        try:
+            expires_req = int(raw)
+        except ValueError:
+            return Response({"detail": "expires_in must be an integer."}, status=status.HTTP_400_BAD_REQUEST)
+
+    url, exp = document_presigned_download_url(doc, expires_in=expires_req)
+    if not url:
         return Response(
-            {"detail": f"Unsupported type. Use one of: {', '.join(sorted(SUPPORTED_SUFFIXES))}"},
-            status=status.HTTP_400_BAD_REQUEST,
+            {
+                "detail": "This document has no object-storage file (inline/local dev). Presigned URLs apply to private buckets only.",
+                "stored_path": doc.stored_path,
+            },
+            status=status.HTTP_404_NOT_FOUND,
         )
-
-    _uploads_dir().mkdir(parents=True, exist_ok=True)
-    digest = hashlib.sha256()
-    chunks: list[bytes] = []
-    for chunk in f.chunks():
-        digest.update(chunk)
-        chunks.append(chunk)
-    content_hash = digest.hexdigest()
-
-    rel = f"uploads/{content_hash}{suffix}"
-    path = Path(settings.SYNDICATE_DATA_DIR) / rel
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("wb") as out:
-        for c in chunks:
-            out.write(c)
-
-    text = extract_text(path)
-    doc = UploadedDocument.objects.create(
-        original_name=name,
-        stored_path=str(path.relative_to(settings.SYNDICATE_DATA_DIR)).replace("\\", "/"),
-        content_hash=content_hash,
-        text_extracted=text,
-    )
-
     return Response(
         {
-            "id": doc.id,
+            "url": url,
+            "expires_in": exp,
             "original_name": doc.original_name,
-            "content_hash": doc.content_hash,
-            "char_count": len(text),
-            "created_at": doc.created_at.isoformat(),
-        },
-        status=status.HTTP_201_CREATED,
+            "document_id": doc.id,
+        }
     )
 
 
@@ -257,7 +298,8 @@ def syndicate_bootstrap(request):
 
     if auto_challenge and mindset_ok:
         before = GeneratedChallenge.objects.filter(challenge_date=timezone.localdate()).count()
-        ok, rows, err = ensure_daily_challenges(force_regenerate=False)
+        device_key = f"user:{request.user.id}"
+        ok, rows, err = ensure_daily_challenges_for_device(device_key, force_regenerate=False, user=request.user)
         if not ok and err:
             return Response(
                 {

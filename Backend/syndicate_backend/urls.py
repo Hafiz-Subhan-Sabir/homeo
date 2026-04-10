@@ -6,36 +6,59 @@ The `urlpatterns` list routes URLs to views. For more information please see:
 Examples:
 Function views
     1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
+    2. Add a URL to the urlpatterns:  path('', views.home, name='home')
 Class-based views
     1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
+    2. Add a URL to the urlpatterns:  path('', Home.as_view(), name='home')
 Including another URLconf
     1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+    2. Add a URL to the urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
+from django.http import JsonResponse
+from django.urls import include, path, re_path
+from django.views.static import serve as static_serve
 
 from apps.portal import views as portal_views
 
+from syndicate_backend.admin_forms import EmailAsUsernameAdminLoginForm
+
+admin.site.login_form = EmailAsUsernameAdminLoginForm
+
+
+def api_root(_request):
+    """Helps verify the public Railway URL points at this Django app (not the Next.js service)."""
+    return JsonResponse(
+        {
+            "service": "syndicate-backend",
+            "health": "/api/health/",
+            "admin": "/admin/",
+        }
+    )
+
+
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    # Explicit routes (do not rely on include) so /api/auth/login/ always resolves.
-    path('api/auth/login/', portal_views.LoginView.as_view(), name='auth-login'),
-    path('api/auth/refresh/', portal_views.RefreshView.as_view(), name='auth-refresh'),
-    path('api/auth/logout/', portal_views.LogoutView.as_view(), name='auth-logout'),
-    path('api/auth/me/', portal_views.MeView.as_view(), name='auth-me'),
-    # No-trailing-slash aliases: proxies/clients sometimes POST to /api/auth/login (APPEND_SLASH cannot redirect POST).
-    path('api/auth/login', portal_views.LoginView.as_view(), name='auth-login-noslash'),
-    path('api/auth/refresh', portal_views.RefreshView.as_view(), name='auth-refresh-noslash'),
-    path('api/auth/logout', portal_views.LogoutView.as_view(), name='auth-logout-noslash'),
-    path('api/portal/', include('apps.portal.urls')),
-    path('api/challenges/', include('apps.challenges.urls')),
-    path('api/', include('api.urls')),
+    path("", api_root),
+    path("admin/", admin.site.urls),
+    # Explicit routes (do not rely on include) so /api/auth/login/ always resolves (JWT portal).
+    path("api/auth/login/", portal_views.LoginView.as_view(), name="auth-login"),
+    path("api/auth/refresh/", portal_views.RefreshView.as_view(), name="auth-refresh"),
+    path("api/auth/logout/", portal_views.LogoutView.as_view(), name="auth-logout"),
+    path("api/auth/me/", portal_views.MeView.as_view(), name="auth-me"),
+    path("api/auth/login", portal_views.LoginView.as_view(), name="auth-login-noslash"),
+    path("api/auth/refresh", portal_views.RefreshView.as_view(), name="auth-refresh-noslash"),
+    path("api/auth/logout", portal_views.LogoutView.as_view(), name="auth-logout-noslash"),
+    path("api/portal/", include("apps.portal.urls")),
+    path("api/challenges/", include("apps.challenges.urls")),
+    path("api/", include("api.urls")),
 ]
+
+if not settings.DEBUG:
+    urlpatterns += [
+        re_path(r"^static/(?P<path>.*)$", static_serve, {"document_root": settings.STATIC_ROOT}),
+    ]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

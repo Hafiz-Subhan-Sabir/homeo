@@ -23,6 +23,12 @@ out/
 Backend/data/uploads/*
 !Backend/data/uploads/.gitkeep
 
+# Django user uploads (admin attachments, etc.)
+Backend/media/
+
+# Collected static (build output; do not commit)
+Backend/staticfiles/
+
 # IDE / OS
 .idea/
 .vscode/

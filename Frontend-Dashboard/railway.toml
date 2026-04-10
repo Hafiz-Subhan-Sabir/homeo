@@ -1,0 +1,8 @@
+# Root directory: Frontend-Dashboard. Uses Dockerfile so Railway does not mount .next/cache via BuildKit
+# (fixes intermittent "runc ... error mounting ... .next/cache" failures).
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+# Start is defined by Dockerfile CMD (node server.js) for standalone output.

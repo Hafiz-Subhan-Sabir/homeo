@@ -421,7 +421,7 @@ export function MissionCommandDeckCard({
   const reminderNavSlotTargetIdRef = useRef<string | null>(null);
   /** True after user snoozes, edits time, or completes — stops auto-snooze. */
   const reminderUserAcknowledgedRef = useRef(false);
-  const reminderNavAutoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reminderNavAutoTimeoutRef = useRef<number | null>(null);
 
   const [timeEdit, setTimeEdit] = useState<DeckTimeEditTarget | null>(null);
   const [timeEditDate, setTimeEditDate] = useState("");

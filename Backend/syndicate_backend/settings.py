@@ -11,18 +11,21 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 import os
+import sys
 from datetime import timedelta
 from pathlib import Path
+from urllib.parse import quote_plus
 
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load .env from project root (handles UTF-8 BOM; also try cwd for alternate shells)
+# Load .env from project root (handles UTF-8 BOM; also try cwd for alternate shells).
+# override=False: real process env (e.g. Railway DATABASE_URL) must not be replaced by a stray .env.
 for _env_path in (BASE_DIR / ".env", Path.cwd() / ".env"):
     if _env_path.is_file():
-        load_dotenv(_env_path, override=True, encoding="utf-8-sig")
+        load_dotenv(_env_path, override=False, encoding="utf-8-sig")
         break
 else:
     load_dotenv(encoding="utf-8-sig")
@@ -35,44 +38,128 @@ else:
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-whr8w($+2y))zuz-azy2gr3897!ypihga1tzm$k06%m0&gaf-m")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() in ("1", "true", "yes")
+_default_debug = "false" if (os.environ.get("RAILWAY_ENVIRONMENT") or "").strip() else "true"
+DEBUG = os.environ.get("DJANGO_DEBUG", _default_debug).strip().lower() in ("1", "true", "yes")
 
 _extra_hosts = [h.strip() for h in (os.environ.get("DJANGO_ALLOWED_HOSTS") or "").split(",") if h.strip()]
+_allowed = ["localhost", "127.0.0.1", *_extra_hosts]
+for _h in (os.environ.get("ALLOWED_HOSTS") or "").split(","):
+    _h = _h.strip()
+    if _h and _h not in _allowed:
+        _allowed.append(_h)
+_railway_host = (os.environ.get("RAILWAY_PUBLIC_DOMAIN") or "").strip()
+if _railway_host and _railway_host not in _allowed:
+    _allowed.append(_railway_host)
 # In DEBUG, accept any Host (Next proxy, LAN IP, test client "testserver", etc.)
-ALLOWED_HOSTS = ["*"] if DEBUG else ["localhost", "127.0.0.1", *_extra_hosts]
+ALLOWED_HOSTS = ["*"] if DEBUG else _allowed
 
 OPENAI_API_KEY = (os.environ.get("OPENAI_API_KEY") or "").strip().strip("\ufeff")
 OPENAI_MODEL = (os.environ.get("OPENAI_MODEL") or "gpt-4o-mini").strip()
 
+USE_CLOUDINARY = bool(
+    (os.environ.get("CLOUDINARY_URL") or "").strip()
+    or (
+        (os.environ.get("CLOUDINARY_CLOUD_NAME") or "").strip()
+        and (os.environ.get("CLOUDINARY_API_KEY") or "").strip()
+        and (os.environ.get("CLOUDINARY_API_SECRET") or "").strip()
+    )
+)
+
+
+def _s3_object_storage_config() -> dict | None:
+    """S3-*compatible* object storage: Railway Bucket, R2, Tigris, AWS S3, etc. (endpoint chooses the host)."""
+    if (os.environ.get("USE_S3_OBJECT_STORAGE") or "").strip().lower() in ("0", "false", "no", "off"):
+        return None
+    # Railway Buckets: BUCKET, ACCESS_KEY_ID, SECRET_ACCESS_KEY, ENDPOINT, REGION (see railway.com/docs — Storage Buckets).
+    # AWS SDK preset on Railway maps many of these to AWS_*; we accept both.
+    railway_bucket = (os.environ.get("BUCKET") or "").strip()
+    bucket = (
+        (os.environ.get("AWS_STORAGE_BUCKET_NAME") or "").strip()
+        or (os.environ.get("S3_BUCKET_NAME") or "").strip()
+        or railway_bucket
+    )
+    access = (
+        (os.environ.get("AWS_ACCESS_KEY_ID") or "").strip().strip("\ufeff")
+        or (os.environ.get("ACCESS_KEY_ID") or "").strip().strip("\ufeff")
+    )
+    secret = (
+        (os.environ.get("AWS_SECRET_ACCESS_KEY") or "").strip().strip("\ufeff")
+        or (os.environ.get("SECRET_ACCESS_KEY") or "").strip().strip("\ufeff")
+    )
+    if not (bucket and access and secret):
+        return None
+    endpoint = (
+        (os.environ.get("AWS_S3_ENDPOINT_URL") or "").strip()
+        or (os.environ.get("S3_ENDPOINT_URL") or "").strip()
+        or (os.environ.get("ENDPOINT") or "").strip()
+    )
+    if not endpoint:
+        if access.startswith("tid_"):
+            endpoint = "https://t3.storage.dev"
+        elif railway_bucket and bucket == railway_bucket:
+            # Bucket name came from Railway's BUCKET — use Railway's S3 API host.
+            endpoint = "https://storage.railway.app"
+    region = (
+        (os.environ.get("AWS_S3_REGION_NAME") or "").strip()
+        or (os.environ.get("AWS_DEFAULT_REGION") or "").strip()
+        or (os.environ.get("REGION") or "").strip()
+    )
+    if not region:
+        region = "auto" if access.startswith("tid_") else "us-east-1"
+    return {
+        "bucket_name": bucket,
+        "access_key": access,
+        "secret_key": secret,
+        "endpoint_url": endpoint or None,
+        "region_name": region,
+    }
+
+
+_s3_object_storage_cfg = _s3_object_storage_config()
+USE_S3_OBJECT_STORAGE = _s3_object_storage_cfg is not None
 
 # Source docs + uploads (place files here or upload via API)
 SYNDICATE_DATA_DIR = BASE_DIR / "data"
 SYNDICATE_MAX_DOC_CHARS = 120_000
 
+# Admin/API multipart uploads (Django default ~2.5MB can reject larger PDFs before the view runs).
+_DATA_UPLOAD_MAX_MB = int((os.environ.get("DATA_UPLOAD_MAX_MB") or "32").strip() or "32")
+DATA_UPLOAD_MAX_MEMORY_SIZE = max(2_621_440, _DATA_UPLOAD_MAX_MB * 1024 * 1024)
+FILE_UPLOAD_MAX_MEMORY_SIZE = DATA_UPLOAD_MAX_MEMORY_SIZE
+
 
 # Application definition
 
-INSTALLED_APPS = [
+_django_contrib = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework',
-    'corsheaders',
-    'api',
-    'apps.challenges.apps.ChallengesConfig',
-    'apps.portal.apps.PortalConfig',
-    'apps.membership.apps.MembershipConfig',
 ]
 
+INSTALLED_APPS = []
+if USE_CLOUDINARY:
+    INSTALLED_APPS.append('cloudinary_storage')
+INSTALLED_APPS.extend(_django_contrib)
+if USE_CLOUDINARY:
+    INSTALLED_APPS.append('cloudinary')
+INSTALLED_APPS.extend(
+    [
+        'rest_framework',
+        'rest_framework.authtoken',
+        'corsheaders',
+        'api',
+        'apps.challenges.apps.ChallengesConfig',
+        'apps.portal.apps.PortalConfig',
+        'apps.membership.apps.MembershipConfig',
+    ]
+)
+
 # Optional: Redis for membership article search index (inverted index + short-lived result cache).
-# If unset, search uses the database only (substring match on title/description/content).
 REDIS_URL = (os.environ.get("REDIS_URL") or "").strip()
 
-# Membership list/search/tags/videos: allow GET without JWT when True (local dev).
-# Default: same as DEBUG — anonymous reads work on runserver; set to false in .env to force login.
 _mpr = (os.environ.get("MEMBERSHIP_ALLOW_ANONYMOUS_READ") or "").strip().lower()
 if _mpr in ("0", "false", "no"):
     MEMBERSHIP_ALLOW_ANONYMOUS_READ = False
@@ -83,8 +170,9 @@ else:
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -115,13 +203,53 @@ WSGI_APPLICATION = 'syndicate_backend.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+#
+# Local: SQLite (default). Production / Railway: set DATABASE_URL (Postgres plugin injects it),
+# or set PGHOST + PGPORT + PGUSER + PGPASSWORD + PGDATABASE. Optional DATABASE_PUBLIC_URL
+# is used if DATABASE_URL is empty (some templates expose only the public URL).
+
+
+def _resolved_postgres_url() -> str | None:
+    for key in ("DATABASE_URL", "DATABASE_PRIVATE_URL", "DATABASE_PUBLIC_URL"):
+        v = (os.environ.get(key) or "").strip()
+        if v:
+            return v
+    host = (os.environ.get("PGHOST") or "").strip()
+    if not host:
+        return None
+    user = quote_plus((os.environ.get("PGUSER") or "").strip())
+    password = quote_plus((os.environ.get("PGPASSWORD") or "").strip())
+    database = (os.environ.get("PGDATABASE") or "").strip()
+    port = (os.environ.get("PGPORT") or "5432").strip()
+    if not database:
+        return None
+    return f"postgresql://{user}:{password}@{host}:{port}/{database}"
+
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+        "OPTIONS": {
+            "timeout": 20,
+        },
     }
 }
+
+_pg_url = _resolved_postgres_url()
+if _pg_url:
+    import dj_database_url
+
+    _ssl = (os.environ.get("DATABASE_SSL_REQUIRE") or "true").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    DATABASES["default"] = dj_database_url.parse(
+        _pg_url,
+        conn_max_age=600,
+        ssl_require=_ssl,
+    )
 
 
 # Password validation
@@ -157,32 +285,117 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
-
-STATIC_URL = 'static/'
-
+#
+# Leading slash so /admin/ pages load CSS/JS from /static/... (not /admin/static/...).
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATIC_ROOT.mkdir(parents=True, exist_ok=True)
+# Explicit root for WhiteNoise (avoids edge cases where auto-detection disagrees with STATIC_ROOT).
+WHITENOISE_ROOT = str(STATIC_ROOT)
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    # Do not use WhiteNoise compressed/manifest storages: collectstatic post-processing fails on Railway.
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# django-storages/boto3 require these setting names; traffic goes to AWS_S3_ENDPOINT_URL
+# (e.g. Railway Bucket https://storage.railway.app — not necessarily Amazon AWS).
+if USE_S3_OBJECT_STORAGE and _s3_object_storage_cfg:
+    AWS_ACCESS_KEY_ID = _s3_object_storage_cfg["access_key"]
+    AWS_SECRET_ACCESS_KEY = _s3_object_storage_cfg["secret_key"]
+    AWS_STORAGE_BUCKET_NAME = _s3_object_storage_cfg["bucket_name"]
+    AWS_S3_REGION_NAME = _s3_object_storage_cfg["region_name"]
+    if _s3_object_storage_cfg.get("endpoint_url"):
+        AWS_S3_ENDPOINT_URL = _s3_object_storage_cfg["endpoint_url"]
+    AWS_DEFAULT_ACL = None
+    AWS_S3_FILE_OVERWRITE = True
+    # Private buckets: URLs from default_storage.url() are time-limited presigned GET links.
+    AWS_QUERYSTRING_AUTH = True
+    _presign = int((os.environ.get("PRESIGNED_URL_EXPIRE_SECONDS") or "3600").strip() or "3600")
+    AWS_QUERYSTRING_EXPIRE = max(60, min(_presign, 604800))
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+    }
+elif USE_CLOUDINARY:
+    STORAGES["default"] = {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    }
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+# --- Admin superuser (production): DJANGO_SUPERUSER_EMAIL / DJANGO_SUPERUSER_PASSWORD;
+# Railway: `railway_start.sh` runs `manage.py ensure_superuser` after migrate.
+
+_cors_env = (os.environ.get("CORS_ALLOWED_ORIGINS") or "").strip()
+if _cors_env:
+    CORS_ALLOWED_ORIGINS = [x.strip() for x in _cors_env.split(",") if x.strip()]
+else:
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
 _extra_cors = [o.strip() for o in (os.environ.get("CORS_EXTRA_ORIGINS") or "").split(",") if o.strip()]
-CORS_ALLOWED_ORIGINS = list(dict.fromkeys(CORS_ALLOWED_ORIGINS + _extra_cors))
-# Local dev: avoid CORS friction when using phone/LAN or odd ports
+if _extra_cors:
+    CORS_ALLOWED_ORIGINS = list(dict.fromkeys([*CORS_ALLOWED_ORIGINS, *_extra_cors]))
+
+CORS_ALLOW_METHODS = ("DELETE", "GET", "OPTIONS", "PATCH", "POST", "PUT")
+
+if DEBUG:
+    CORS_ALLOWED_ORIGIN_REGEXES = [
+        r"^http://localhost(?::\d+)?$",
+        r"^http://127\.0\.0\.1(?::\d+)?$",
+    ]
+else:
+    CORS_ALLOWED_ORIGIN_REGEXES = []
+
 if DEBUG and os.environ.get("CORS_ALLOW_ALL_IN_DEBUG", "true").lower() in ("1", "true", "yes"):
     CORS_ALLOW_ALL_ORIGINS = True
+
+_csrf_env = (os.environ.get("CSRF_TRUSTED_ORIGINS") or "").strip()
+if _csrf_env:
+    CSRF_TRUSTED_ORIGINS = [x.strip() for x in _csrf_env.split(",") if x.strip()]
+else:
+    CSRF_TRUSTED_ORIGINS = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        *_extra_cors,
+    ]
+
+_rail_csrf = (os.environ.get("RAILWAY_PUBLIC_DOMAIN") or "").strip()
+if _rail_csrf:
+    _rail_origin = _rail_csrf if _rail_csrf.startswith("http") else f"https://{_rail_csrf}"
+    _csrf_seen = {x.rstrip("/") for x in CSRF_TRUSTED_ORIGINS}
+    if _rail_origin.rstrip("/") not in _csrf_seen:
+        CSRF_TRUSTED_ORIGINS = [*CSRF_TRUSTED_ORIGINS, _rail_origin]
+        _csrf_seen.add(_rail_origin.rstrip("/"))
+
+_csrf_seen = {x.rstrip("/") for x in CSRF_TRUSTED_ORIGINS}
+for _host in ALLOWED_HOSTS:
+    if _host in ("localhost", "127.0.0.1", "*", ""):
+        continue
+    _origin = _host if "://" in _host else f"https://{_host}"
+    _key = _origin.rstrip("/")
+    if _key not in _csrf_seen:
+        CSRF_TRUSTED_ORIGINS = [*CSRF_TRUSTED_ORIGINS, _origin]
+        _csrf_seen.add(_key)
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "rest_framework.authentication.TokenAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
+    "EXCEPTION_HANDLER": "api.exception_handlers.drf_json_exception_handler",
 }
 
 SIMPLE_JWT = {
@@ -192,12 +405,22 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-CSRF_TRUSTED_ORIGINS = list(
-    dict.fromkeys(
-        [
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-            *_extra_cors,
-        ]
-    )
-)
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    USE_X_FORWARDED_HOST = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+if sys.version_info >= (3, 14):
+    from copy import copy as _copy_context_dicts
+
+    from django.template.context import BaseContext as _BaseContext
+
+    def _base_context_copy(self):
+        duplicate = _BaseContext()
+        duplicate.__class__ = self.__class__
+        duplicate.__dict__ = _copy_context_dicts(self.__dict__)
+        duplicate.dicts = self.dicts[:]
+        return duplicate
+
+    _BaseContext.__copy__ = _base_context_copy

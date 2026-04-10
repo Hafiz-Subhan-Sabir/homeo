@@ -1,0 +1,13 @@
+# Backend service: set Railway "Root Directory" to Backend.
+# Add PostgreSQL to this service — Railway sets DATABASE_URL; run migrate via releaseCommand.
+# Clear any custom Start Command in Railway UI so this (or nixpacks [start]) is used.
+
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+# Postgres migrations also run in syndicate_backend/wsgi.py (with gunicorn --preload in railway_start.sh).
+# Use python -m gunicorn so the app runs even when the gunicorn script dir is not on PATH (Railpack/slim images).
+startCommand = "sh railway_start.sh"
+# Ensure cwd is Backend (Railway Root Directory). mkdir avoids empty STATIC_ROOT edge cases before collectstatic.
+releaseCommand = "mkdir -p staticfiles && python manage.py migrate --noinput && python manage.py collectstatic --noinput"

@@ -2,7 +2,7 @@ from django.db import models
 
 
 class UploadedDocument(models.Model):
-    """User-uploaded PDF or text file on disk."""
+    """Uploaded document; text in DB. stored_path is inline/... when no file is kept on disk (Railway)."""
 
     original_name = models.CharField(max_length=512)
     stored_path = models.CharField(max_length=1024)
@@ -18,7 +18,10 @@ class UploadedDocument(models.Model):
 
 
 class MindsetKnowledge(models.Model):
-    """Latest extracted mindset graph (replaced on re-ingest)."""
+    """
+    Structured output from the ingest agent (OpenAI): mindsets with patterns, habits, benefits,
+    plus themes and anti_patterns. Challenge generation reads this JSON, not the source file.
+    """
 
     source = models.OneToOneField(
         UploadedDocument,

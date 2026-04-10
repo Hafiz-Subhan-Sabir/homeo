@@ -1,0 +1,74 @@
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+
+/**
+ * Django admin and collectstatic serve assets under /static/ (e.g. /static/admin/css/base.css).
+ * This Next.js app does not contain those files. If the browser requests /static/* on the
+ * frontend hostname, we proxy to the Django service when configured.
+ *
+ * Prefer SYNDICATE_DJANGO_ORIGIN (runtime, no rebuild) e.g. https://your-backend.up.railway.app
+ * Or derive origin from NEXT_PUBLIC_SYNDICATE_API_URL (…/api → strip /api).
+ */
+function djangoOriginFromEnv(): string | null {
+  const direct = (process.env.SYNDICATE_DJANGO_ORIGIN || "").trim();
+  if (direct && /^https?:\/\//i.test(direct)) {
+    return direct.replace(/\/+$/, "");
+  }
+  const api = (process.env.NEXT_PUBLIC_SYNDICATE_API_URL || "").trim();
+  if (!api || !/^https?:\/\//i.test(api)) return null;
+  try {
+    const u = new URL(api);
+    let p = u.pathname.replace(/\/+$/, "");
+    if (p.endsWith("/api")) p = p.slice(0, -4);
+    return `${u.origin}${p}`.replace(/\/+$/, "");
+  } catch {
+    return null;
+  }
+}
+
+const sameHostHint =
+  "This hostname is the Next.js frontend. Django admin CSS is served by the backend service. " +
+  "In Railway, set SYNDICATE_DJANGO_ORIGIN (recommended) or NEXT_PUBLIC_SYNDICATE_API_URL to your Django URL " +
+  "(e.g. https://your-django-service.up.railway.app), then redeploy if you changed NEXT_PUBLIC_*). " +
+  "Or open /static/admin/css/base.css on your Django service URL directly.";
+
+export function middleware(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+  if (!path.startsWith("/static/")) {
+    return NextResponse.next();
+  }
+
+  const origin = djangoOriginFromEnv();
+  const reqHost = (request.headers.get("host") || "").split(":")[0];
+
+  if (!origin) {
+    if (path.startsWith("/static/admin") && process.env.NODE_ENV === "production") {
+      return new NextResponse(
+        `Django static URL is not configured. ${sameHostHint}`,
+        { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } }
+      );
+    }
+    return NextResponse.next();
+  }
+
+  let apiHost: string;
+  try {
+    apiHost = new URL(origin).host;
+  } catch {
+    return NextResponse.next();
+  }
+
+  if (apiHost === reqHost) {
+    return new NextResponse(
+      `Django static proxy is misconfigured (API/backend URL points at this same host). ${sameHostHint}`,
+      { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } }
+    );
+  }
+
+  const dest = `${origin}${path}${request.nextUrl.search}`;
+  return NextResponse.rewrite(new URL(dest));
+}
+
+export const config = {
+  matcher: ["/static/:path*"],
+};
