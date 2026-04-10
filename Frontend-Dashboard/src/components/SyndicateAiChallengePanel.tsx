@@ -592,7 +592,11 @@ function SyndicateHelpOverlay({ topic, onClose }: { topic: SyndicateHelpTopic; o
               <p>
                 <strong className="text-fuchsia-100">Streak</strong> is your <strong className="text-white">run of consecutive calendar days</strong> where you completed at least one qualifying mission. The server tracks your last activity date; starting a new day with a completion extends the count.
               </p>
-              <p>If you miss a day, the streak can reset to zero. When you are inside the restore window, use <strong className="text-white">Restore streak</strong> on this card (referral invite or redeem a friend&apos;s code) to bring it back, as described in that block.</p>
+              <p>
+                If you miss a day, the streak can reset to <strong className="text-white">zero</strong>. For the next{" "}
+                <strong className="text-white">seven calendar days</strong> (counting from that break day), you can use{" "}
+                <strong className="text-white">Restore streak</strong> with a referral invite or friend code; the dashboard shows how many of those days are left.
+              </p>
             </>
           ) : topic === "points-to-pounds" ? (
             <>
@@ -1240,26 +1244,41 @@ function friendlyAdminTaskError(e: unknown): string {
   return msg;
 }
 
-function withinRestoreWindow(): boolean {
-  if (typeof window === "undefined") return false;
+/** Referral streak restore: exactly this many local **calendar** days from `streak_break_date` (day 0 = break day). */
+const RESTORE_WINDOW_CALENDAR_DAYS = 7;
+
+function streakBreakLocalMidnight(): Date | null {
+  if (typeof window === "undefined") return null;
   const br = window.localStorage.getItem(ls("streak_break_date"));
-  if (!br) return false;
-  const start = new Date(br + "T12:00:00");
-  const deadline = new Date(start);
-  deadline.setDate(deadline.getDate() + 7);
-  return new Date() <= deadline;
+  if (!br || !/^\d{4}-\d{2}-\d{2}$/.test(br.trim())) return null;
+  const [ys, ms, ds] = br.trim().split("-");
+  const y = parseInt(ys, 10);
+  const m = parseInt(ms, 10) - 1;
+  const d = parseInt(ds, 10);
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+  return new Date(y, m, d);
 }
 
-function restoreDaysLeft(): number {
-  if (typeof window === "undefined") return 0;
-  const br = window.localStorage.getItem(ls("streak_break_date"));
-  if (!br) return 0;
-  const start = new Date(br + "T12:00:00");
-  const deadline = new Date(start);
-  deadline.setDate(deadline.getDate() + 7);
-  const ms = deadline.getTime() - Date.now();
-  if (ms <= 0) return 0;
-  return Math.max(1, Math.ceil(ms / 86400000));
+/** Whole local calendar days since break day (0 on the break day). */
+function calendarDaysSinceStreakBreak(nowMs: number = Date.now()): number | null {
+  const breakStart = streakBreakLocalMidnight();
+  if (!breakStart) return null;
+  const today = new Date(nowMs);
+  const t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  return Math.floor((t0 - breakStart.getTime()) / 86400000);
+}
+
+function withinRestoreWindow(nowMs: number = Date.now()): boolean {
+  const days = calendarDaysSinceStreakBreak(nowMs);
+  if (days === null) return false;
+  return days >= 0 && days < RESTORE_WINDOW_CALENDAR_DAYS;
+}
+
+function restoreDaysLeft(nowMs: number = Date.now()): number {
+  const days = calendarDaysSinceStreakBreak(nowMs);
+  if (days === null || days < 0) return 0;
+  if (days >= RESTORE_WINDOW_CALENDAR_DAYS) return 0;
+  return RESTORE_WINDOW_CALENDAR_DAYS - days;
 }
 
 function difficultyStyle(d: string) {
@@ -3310,8 +3329,11 @@ export function SyndicateAiChallengePanel() {
         ? selectedScorePreview.awarded_points
         : null;
 
-  const showRestore = mounted && streak === 0 && withinRestoreWindow();
-  const restoreDaysLeftCount = useMemo(() => (showRestore ? restoreDaysLeft() : 0), [showRestore, nowTick]);
+  const showRestore = mounted && streak === 0 && withinRestoreWindow(nowTick);
+  const restoreDaysLeftCount = useMemo(
+    () => (showRestore ? restoreDaysLeft(nowTick) : 0),
+    [showRestore, nowTick]
+  );
   const openStreakRestoreSection = useCallback(() => {
     setShowStatsProfile(true);
     window.setTimeout(() => {
@@ -3846,7 +3868,8 @@ export function SyndicateAiChallengePanel() {
                 </p>
                 {showRestore ? (
                   <p className="mt-2 text-[14px] font-semibold text-amber-200/95">
-                    {restoreDaysLeftCount} day{restoreDaysLeftCount === 1 ? "" : "s"} left to restore your streak.
+                    Your streak is 0. You can restore it in the next {restoreDaysLeftCount}{" "}
+                    {restoreDaysLeftCount === 1 ? "day" : "days"} (max {RESTORE_WINDOW_CALENDAR_DAYS} days from the break).
                   </p>
                 ) : null}
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -4254,14 +4277,28 @@ export function SyndicateAiChallengePanel() {
                   <div className="mt-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-fuchsia-200/80">Consecutive days</div>
                   <div className="mt-auto flex flex-1 flex-col justify-end gap-1.5 pt-2">
                     <p className="text-[10px] leading-snug text-fuchsia-100/78">
-                      Complete at least one mission per day to keep the streak alive.
+                      {streak === 0 ? (
+                        showRestore ? (
+                          <>
+                            Your streak is <span className="font-semibold text-fuchsia-50/95">0</span>. You can restore it in the next{" "}
+                            <span className="font-black tabular-nums text-fuchsia-100">{restoreDaysLeftCount}</span>{" "}
+                            {restoreDaysLeftCount === 1 ? "day" : "days"}.
+                          </>
+                        ) : (
+                          <>
+                            Your streak is <span className="font-semibold text-fuchsia-50/95">0</span>. Complete a mission today to start a new run.
+                          </>
+                        )
+                      ) : (
+                        <>Complete at least one mission per day to keep the streak alive.</>
+                      )}
                     </p>
                     <button
                       type="button"
                       onClick={openStreakRestoreSection}
                       className="mx-auto text-[10px] font-bold uppercase tracking-[0.12em] text-fuchsia-200 underline decoration-fuchsia-400/50 underline-offset-2 transition hover:text-white hover:decoration-white"
                     >
-                      {showRestore ? `Restore streak (${restoreDaysLeftCount}d left)` : "Restore streak"}
+                      {showRestore ? `Restore · ${restoreDaysLeftCount}d left` : "Restore streak"}
                     </button>
                   </div>
                 </div>
