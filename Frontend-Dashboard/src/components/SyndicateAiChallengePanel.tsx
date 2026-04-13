@@ -251,6 +251,33 @@ const PIE_COLORS = ["#ffd54a", "#4fd1b8", "#7b9cff", "#ff7ab8", "#c792ea", "#ff9
 /** One color per day in the weekly bar chart (7 bars). */
 const WEEK_BAR_COLORS = ["#ff6b9d", "#ffd54a", "#4fd1b8", "#7b9cff", "#c792ea", "#ff9f43", "#69f0ae"];
 
+/** Stats & profile pie: custom tooltip so “points” stays white; when all slices are placeholder, show 0. */
+function SyndicateStatsPieTooltip({
+  active,
+  payload,
+  pieDailyData,
+  allZero
+}: {
+  active?: boolean;
+  payload?: ReadonlyArray<{ name?: string; value?: number; payload?: { name?: string } }>;
+  pieDailyData: Array<{ name: string; value: number }>;
+  allZero: boolean;
+}) {
+  if (!active || !payload?.length) return null;
+  const row = payload[0];
+  const name = String(row?.name ?? row?.payload?.name ?? "");
+  const pts = allZero ? 0 : pieDailyData.find((d) => d.name === name)?.value ?? 0;
+  return (
+    <div
+      className="rounded-lg border border-[rgba(255,215,0,0.35)] bg-[#141414] px-3 py-2 text-[15px] leading-snug text-white shadow-lg"
+      style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.5)" }}
+    >
+      <div className="font-semibold text-white">{name}</div>
+      <div className="text-white">points: {pts}</div>
+    </div>
+  );
+}
+
 /** Native `<select>`: colors from globals.css (`.syndicate-select--*`) so options stay legible on Windows. */
 const SYNDICATE_SELECT_BASE =
   "syndicate-select syndicate-readable min-h-[40px] min-w-0 w-full max-w-full cursor-pointer rounded-lg px-3 py-2 text-[14px] font-medium outline-none transition focus:outline-none focus:ring-2 sm:w-auto sm:min-w-[132px] sm:max-w-none";
@@ -268,6 +295,8 @@ const MAX_AGENT_COMPLETIONS_PER_DAY = 4;
 const MAX_CUSTOM_COMPLETIONS_PER_DAY = 2;
 /** Matches backend `create_user_custom_challenge` limit message for create-mission UI. */
 const CREATE_MISSION_DAILY_LIMIT_MSG = `Maximum ${MAX_CUSTOM_COMPLETIONS_PER_DAY} custom missions per calendar day.`;
+/** Forge UI no longer exposes difficulty; backend still requires a value. */
+const CUSTOM_MISSION_DEFAULT_DIFFICULTY = "medium" as const;
 const POINTS_PER_10_POUNDS = 100;
 const POUNDS_PER_100_POINTS = 10;
 const DEFAULT_PROFILE_NAME = "Operator";
@@ -533,10 +562,10 @@ function SyndicateHelpContent({ topic }: { topic: SyndicateHelpTopic }) {
           {topic === "custom-mission" ? (
             <>
               <p>
-                <strong className="text-white">Create own mission</strong> opens the forge: you type a short title and pick a difficulty. Use it when you want extra missions you define yourself on top of the daily board.
+                <strong className="text-white">Create own mission</strong> opens the forge: you type a short title. Use it when you want extra missions you define yourself on top of the daily board.
               </p>
               <p>
-                You can create up to <strong className="text-white">two custom missions per calendar day</strong> (resets at local midnight with your other daily data). Each needs a title (at least three characters) and a difficulty you choose.
+                You can create up to <strong className="text-white">two custom missions per calendar day</strong> (resets at local midnight with your other daily data). Each needs a title (at least three characters).
               </p>
               <p>
                 The server fills in points in the <strong className="text-white">3–5</strong> range, plus description, examples, and benefits, and stores a short mindset note that can shape your next{" "}
@@ -1993,7 +2022,6 @@ export function SyndicateAiChallengePanel() {
   /** Filter missions inside Stats & profile by mood (default: energetic). */
   const [statsMood, setStatsMood] = useState<string>("energetic");
   const [customTitle, setCustomTitle] = useState("");
-  const [customDifficulty, setCustomDifficulty] = useState<"easy" | "medium" | "hard">("medium");
   /** “Create your mission” form — modal on Missions tab only (not inline). */
   const [createMissionModalOpen, setCreateMissionModalOpen] = useState(false);
   /** Shown inside the create-mission modal (global `error` sits under the overlay and is easy to miss). */
@@ -2357,6 +2385,19 @@ export function SyndicateAiChallengePanel() {
     }));
   }, [pointsTotal]);
 
+  const pieDailyPointsSum = useMemo(
+    () => pieDailyData.reduce((s, d) => s + (typeof d.value === "number" ? d.value : 0), 0),
+    [pieDailyData]
+  );
+
+  /** Equal placeholder slices when today has no points so the pie (and legend) always render. */
+  const pieDailyChartData = useMemo(() => {
+    if (pieDailyPointsSum <= 0) {
+      return pieDailyData.map((d) => ({ ...d, value: 1 }));
+    }
+    return pieDailyData;
+  }, [pieDailyData, pieDailyPointsSum]);
+
   /** Lifetime points per category — used on main Syndicate dashboard pie. */
   const pieLifetimeCategoryData = useMemo(() => {
     const h = loadHistory();
@@ -2660,14 +2701,14 @@ export function SyndicateAiChallengePanel() {
     () => (
       <div className="min-w-0 space-y-10">
         <div>
-          <h3 className="mb-3 text-[15px] font-bold uppercase tracking-[0.12em] text-white/80 sm:text-[16px]">
+          <h3 className="mb-3 text-[15px] font-bold uppercase tracking-[0.12em] text-white sm:text-[16px]">
             Today · mission points by category (pie)
           </h3>
           <div className="h-[300px] w-full overflow-hidden rounded-lg sm:h-[420px] md:h-[480px] lg:h-[520px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
                 <Pie
-                  data={pieDailyData}
+                  data={pieDailyChartData}
                   dataKey="value"
                   nameKey="name"
                   cx="50%"
@@ -2678,26 +2719,32 @@ export function SyndicateAiChallengePanel() {
                   labelLine={false}
                   label={false}
                 >
-                  {pieDailyData.map((e, i) => (
+                  {pieDailyChartData.map((e, i) => (
                     <Cell key={e.name} stroke="rgba(0,0,0,0.35)" strokeWidth={1} fill={e.fill ?? PIE_COLORS[i % PIE_COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip
-                  contentStyle={{
-                    background: "#141414",
-                    border: "1px solid rgba(255,215,0,0.35)",
-                    borderRadius: 8,
-                    fontSize: 15
-                  }}
-                  labelStyle={{ color: "#fff", fontSize: 15 }}
+                  content={(props) => (
+                    <SyndicateStatsPieTooltip
+                      active={props.active}
+                      payload={props.payload}
+                      pieDailyData={pieDailyData}
+                      allZero={pieDailyPointsSum <= 0}
+                    />
+                  )}
                 />
-                <Legend wrapperStyle={{ fontSize: 15, paddingTop: 12 }} iconType="circle" verticalAlign="bottom" />
+                <Legend
+                  wrapperStyle={{ fontSize: 15, paddingTop: 12, color: "#ffffff" }}
+                  formatter={(value: string) => <span className="text-white">{value}</span>}
+                  iconType="circle"
+                  verticalAlign="bottom"
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
         <div>
-          <h3 className="mb-3 text-[15px] font-bold uppercase tracking-[0.12em] text-white/80 sm:text-[16px]">
+          <h3 className="mb-3 text-[15px] font-bold uppercase tracking-[0.12em] text-white sm:text-[16px]">
             Weekly · mission points (bar)
           </h3>
           <div className="h-[220px] w-full min-h-[200px] overflow-hidden rounded-lg sm:h-[260px] md:h-[280px]">
@@ -2711,9 +2758,11 @@ export function SyndicateAiChallengePanel() {
                     background: "#141414",
                     border: "1px solid rgba(255,215,0,0.35)",
                     borderRadius: 8,
-                    fontSize: 15
+                    fontSize: 15,
+                    color: "#fff"
                   }}
                   labelStyle={{ color: "#fff", fontSize: 15 }}
+                  itemStyle={{ color: "#fff", fontSize: 15 }}
                 />
                 <Bar dataKey="points" radius={[6, 6, 0, 0]}>
                   {weeklyBarData.map((entry, i) => (
@@ -2725,7 +2774,7 @@ export function SyndicateAiChallengePanel() {
           </div>
         </div>
         <div>
-          <h3 className="mb-3 text-[15px] font-bold uppercase tracking-[0.12em] text-white/80 sm:text-[16px]">
+          <h3 className="mb-3 text-[15px] font-bold uppercase tracking-[0.12em] text-white sm:text-[16px]">
             Monthly · daily mission points (line)
           </h3>
           <div className="h-[220px] w-full min-h-[200px] overflow-hidden rounded-lg sm:h-[260px] md:h-[300px]">
@@ -2749,9 +2798,11 @@ export function SyndicateAiChallengePanel() {
                     background: "#141414",
                     border: "1px solid rgba(255,215,0,0.35)",
                     borderRadius: 8,
-                    fontSize: 15
+                    fontSize: 15,
+                    color: "#fff"
                   }}
                   labelStyle={{ color: "#fff", fontSize: 15 }}
+                  itemStyle={{ color: "#fff", fontSize: 15 }}
                 />
                 <Line
                   type="monotone"
@@ -2767,7 +2818,7 @@ export function SyndicateAiChallengePanel() {
         </div>
       </div>
     ),
-    [pieDailyData, weeklyBarData, monthlyLineData, lineGradientUid]
+    [pieDailyData, pieDailyChartData, pieDailyPointsSum, weeklyBarData, monthlyLineData, lineGradientUid]
   );
 
   const loadFast = useCallback(async () => {
@@ -3012,7 +3063,7 @@ export function SyndicateAiChallengePanel() {
     setCreateMissionError(null);
     setBusy("custom");
     try {
-      const { result } = await postUserCustomChallenge(getDeviceId(), t, customDifficulty);
+      const { result } = await postUserCustomChallenge(getDeviceId(), t, CUSTOM_MISSION_DEFAULT_DIFFICULTY);
       setCreateMissionError(null);
       setRows((prev) => [...prev, result]);
       setCustomTitle("");
@@ -3025,7 +3076,7 @@ export function SyndicateAiChallengePanel() {
     } finally {
       setBusy(null);
     }
-  }, [customTitle, customDifficulty, userCustomCount, openMissionDetail]);
+  }, [customTitle, userCustomCount, openMissionDetail]);
 
   useEffect(() => {
     if (syndicateView !== "challenges" || showStatsProfile) {
@@ -4632,9 +4683,11 @@ export function SyndicateAiChallengePanel() {
                           background: "#141414",
                           border: "1px solid rgba(120,200,255,0.35)",
                           borderRadius: 8,
-                          fontSize: 12
+                          fontSize: 12,
+                          color: "#fff"
                         }}
                         labelStyle={{ color: "#fff", fontSize: 12 }}
+                        itemStyle={{ color: "#fff", fontSize: 12 }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -5235,12 +5288,12 @@ export function SyndicateAiChallengePanel() {
                               </div>
                             ) : null}
                             <p className="syndicate-readable mt-2 max-w-[56rem] text-[13px] leading-relaxed text-white/78 sm:text-[14px]">
-                              Up to <strong className="text-[#fde047]/95">two</strong> per day. You set the title and difficulty; the server fills in{" "}
+                              Up to <strong className="text-[#fde047]/95">two</strong> per day. You set the title; the server fills in{" "}
                               <strong className="text-white/88">random points from 3–5</strong>, description, examples, and benefits, and keeps a short mindset note for your next{" "}
                               <strong className="text-white/88">custom missions</strong> and <strong className="text-white/88">mood + category</strong> picks.
                             </p>
-                            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_10.5rem_auto] sm:items-end sm:gap-3">
-                              <div className="min-w-0">
+                            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-3">
+                              <div className="min-w-0 flex-1">
                                 <label htmlFor="syndicate-custom-title" className="syndicate-missions-hud__label">
                                   Title
                                 </label>
@@ -5251,30 +5304,14 @@ export function SyndicateAiChallengePanel() {
                                   maxLength={220}
                                   placeholder="What you want to accomplish today…"
                                   disabled={busy !== null || userCustomCount >= MAX_CUSTOM_COMPLETIONS_PER_DAY}
-                                  className="syndicate-readable syndicate-missions-hud__input"
+                                  className="syndicate-readable syndicate-missions-hud__input w-full"
                                 />
-                              </div>
-                              <div className="syndicate-missions-hud__forge-diff min-w-0">
-                                <label htmlFor="syndicate-custom-diff" className="syndicate-missions-hud__label">
-                                  Difficulty
-                                </label>
-                                <select
-                                  id="syndicate-custom-diff"
-                                  value={customDifficulty}
-                                  onChange={(e) => setCustomDifficulty(e.target.value as "easy" | "medium" | "hard")}
-                                  disabled={busy !== null || userCustomCount >= MAX_CUSTOM_COMPLETIONS_PER_DAY}
-                                  className={cn(SYNDICATE_SELECT_STATUS, "mt-1.5 w-full min-w-0")}
-                                >
-                                  <option value="easy">Easy</option>
-                                  <option value="medium">Medium</option>
-                                  <option value="hard">Hard</option>
-                                </select>
                               </div>
                               <button
                                 type="button"
                                 disabled={busy !== null || userCustomCount >= MAX_CUSTOM_COMPLETIONS_PER_DAY || customTitle.trim().length < 3}
                                 onClick={() => void createUserCustomTask()}
-                                className="syndicate-readable syndicate-cyber-card__cta min-h-[48px] px-4 py-3 text-[11px] sm:min-h-[44px] sm:text-[12px]"
+                                className="syndicate-readable syndicate-cyber-card__cta w-full min-h-[48px] shrink-0 px-4 py-3 text-[11px] sm:w-auto sm:min-h-[44px] sm:text-[12px]"
                               >
                                 {busy === "custom" ? "Creating…" : "Create mission"}
                               </button>
