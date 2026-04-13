@@ -33,8 +33,17 @@ const sameHostHint =
   "Or open /static/admin/css/base.css on your Django service URL directly.";
 
 export function middleware(request: NextRequest) {
-  const path = request.nextUrl.pathname;
-  if (!path.startsWith("/static/")) {
+  const pathname = request.nextUrl.pathname;
+  const syndicatePath = pathname.replace(/\/+$/, "") || "/";
+  if (
+    syndicatePath === "/syndicate/login" ||
+    syndicatePath === "/syndicate/signup" ||
+    syndicatePath.startsWith("/syndicate/login/") ||
+    syndicatePath.startsWith("/syndicate/signup/")
+  ) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+  if (!pathname.startsWith("/static/")) {
     return NextResponse.next();
   }
 
@@ -42,7 +51,7 @@ export function middleware(request: NextRequest) {
   const reqHost = (request.headers.get("host") || "").split(":")[0];
 
   if (!origin) {
-    if (path.startsWith("/static/admin") && process.env.NODE_ENV === "production") {
+    if (pathname.startsWith("/static/admin") && process.env.NODE_ENV === "production") {
       return new NextResponse(
         `Django static URL is not configured. ${sameHostHint}`,
         { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } }
@@ -65,10 +74,10 @@ export function middleware(request: NextRequest) {
     );
   }
 
-  const dest = `${origin}${path}${request.nextUrl.search}`;
+  const dest = `${origin}${pathname}${request.nextUrl.search}`;
   return NextResponse.rewrite(new URL(dest));
 }
 
 export const config = {
-  matcher: ["/static/:path*"],
+  matcher: ["/static/:path*", "/syndicate/login", "/syndicate/login/:path*", "/syndicate/signup", "/syndicate/signup/:path*"]
 };
