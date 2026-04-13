@@ -27,13 +27,7 @@ export function ensureSyndicateSessionOrRedirect(r: Response, hadAuthToken: bool
   if (r.status !== 401 || !hadAuthToken) return;
   logoutSyndicateSession();
   if (typeof window !== "undefined") {
-    const p = window.location.pathname;
-    if (p.startsWith("/syndicate/login")) {
-      window.location.reload();
-    } else {
-      const next = `${window.location.pathname}${window.location.search}` || "/";
-      window.location.replace(`/syndicate/login?next=${encodeURIComponent(next)}`);
-    }
+    window.location.replace("/");
   }
   throw new SyndicateSessionLostError();
 }

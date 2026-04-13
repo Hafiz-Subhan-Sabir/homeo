@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -46,8 +45,7 @@ import {
   getSyndicateAuthHeaders,
   getSyndicateAuthToken,
   getSyndicateProfileAvatarUrl,
-  getSyndicateUser,
-  logoutSyndicateSession
+  getSyndicateUser
 } from "@/lib/syndicateAuth";
 import { applySyncedStateFromServer, collectSyncedState, onSyndicatePersist } from "@/lib/syndicateProgressSync";
 import { getSyndicateApiBase } from "@/lib/syndicateApiBase";
@@ -264,7 +262,7 @@ const SYNDICATE_SELECT_CATEGORY = `${SYNDICATE_SELECT_BASE} syndicate-select--ca
 const SYNDICATE_SELECT_STATUS = `${SYNDICATE_SELECT_BASE} syndicate-select--status focus:ring-[rgba(72,220,180,0.35)]`;
 
 const SYNDICATE_DATE_INPUT =
-  "syndicate-date-input syndicate-readable mt-1.5 block w-full rounded-lg border border-[rgba(255,215,0,0.4)] bg-[#0a0e14] px-3 py-2.5 text-[15px] font-medium text-white/95 outline-none focus:border-[rgba(255,215,0,0.7)] focus:ring-2 focus:ring-[rgba(255,215,0,0.12)]";
+  "syndicate-date-input syndicate-readable mt-1.5 block w-full rounded-lg border border-cyan-400/35 bg-[#0a0e14] px-3 py-2.5 text-[15px] font-medium text-white/95 outline-none focus:border-cyan-300/55 focus:ring-2 focus:ring-cyan-400/15";
 /** Max agent-generated missions completable per day (not how many appear on the board). */
 const MAX_AGENT_COMPLETIONS_PER_DAY = 4;
 const MAX_CUSTOM_COMPLETIONS_PER_DAY = 2;
@@ -295,13 +293,8 @@ function avatarFromSavedProfileImage(saved: string, fallback: string): string {
   return t;
 }
 
-/** Nav / secondary: dark gold frame — reads “arcade HUD”, not corporate blue chrome */
-const GAME_BTN =
-  "rounded-md border border-[rgba(255,215,0,0.42)] bg-[linear-gradient(180deg,rgba(42,32,12,0.96)_0%,rgba(14,10,6,0.98)_100%)] text-[#f5e6a8] [box-shadow:inset_0_1px_0_rgba(255,220,140,0.24),0_0_16px_rgba(255,160,0,0.1)] transition hover:brightness-110";
-const GAME_BTN_NAV_IDLE =
-  "border-white/18 text-white/62 [box-shadow:inset_0_1px_0_rgba(255,255,255,0.05)] hover:border-[rgba(255,215,0,0.35)] hover:text-white/88";
 const CTA_BTN =
-  "rounded-md border border-[#fede00] bg-[linear-gradient(180deg,#fff06a_0%,#fede00_45%,#d5b900_100%)] text-black [box-shadow:inset_0_1px_0_rgba(255,250,180,0.92),inset_0_-2px_0_rgba(120,104,0,0.72),0_0_16px_rgba(254,222,0,0.48)] hover:brightness-110";
+  "syndicate-hud-cta rounded-md border border-[#fede00] bg-[linear-gradient(180deg,#fff06a_0%,#fede00_45%,#d5b900_100%)] text-black [box-shadow:inset_0_1px_0_rgba(255,250,180,0.92),inset_0_-2px_0_rgba(120,104,0,0.72),0_0_16px_rgba(254,222,0,0.48)] hover:brightness-110";
 const HUD_LABEL = "text-[10px] font-black uppercase tracking-[0.1em] text-[color:var(--gold)]/48";
 const HUD_VALUE = "mt-1 font-mono font-black text-[#fefce8]/94";
 
@@ -525,7 +518,7 @@ function SyndicateHelpMark({
       type="button"
       onClick={(e) => onOpen(topic, e.currentTarget)}
       aria-label={label}
-      className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-red-400/60 bg-[radial-gradient(circle_at_35%_30%,rgba(254,202,202,0.22),rgba(60,10,14,0.96)_62%)] text-[10px] font-black leading-none text-red-50 shadow-[0_0_6px_rgba(248,113,113,0.4),inset_0_1px_0_rgba(254,226,226,0.2)] transition hover:scale-[1.05] hover:border-red-300/90 hover:text-white hover:shadow-[0_0_10px_rgba(248,113,113,0.55)] focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/65 sm:h-5 sm:w-5 sm:text-[10px]"
+      className="syndicate-help-mark inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-red-400/60 bg-[radial-gradient(circle_at_35%_30%,rgba(254,202,202,0.22),rgba(60,10,14,0.96)_62%)] text-[10px] font-black leading-none text-red-50 shadow-[0_0_6px_rgba(248,113,113,0.4),inset_0_1px_0_rgba(254,226,226,0.2)] transition hover:scale-[1.05] hover:border-red-300/90 hover:text-white hover:shadow-[0_0_10px_rgba(248,113,113,0.55)] focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/65 sm:h-5 sm:w-5 sm:text-[10px]"
     >
       ?
     </button>
@@ -538,7 +531,10 @@ function SyndicateHelpContent({ topic }: { topic: SyndicateHelpTopic }) {
           {topic === "custom-mission" ? (
             <>
               <p>
-                You can create up to <strong className="text-white">two custom missions per calendar day</strong>. Each needs a title (at least three characters) and a difficulty you choose.
+                <strong className="text-white">Create own mission</strong> opens the forge: you type a short title and pick a difficulty. Use it when you want extra missions you define yourself on top of the daily board.
+              </p>
+              <p>
+                You can create up to <strong className="text-white">two custom missions per calendar day</strong> (resets at local midnight with your other daily data). Each needs a title (at least three characters) and a difficulty you choose.
               </p>
               <p>
                 The server fills in points in the <strong className="text-white">0–9</strong> range, plus description, examples, and benefits, and stores a short mindset summary that can shape your next{" "}
@@ -692,7 +688,7 @@ function SyndicateHelpAnchoredPopover({
         role="dialog"
         aria-modal="true"
         aria-labelledby="syndicate-help-title"
-        className="syndicate-readable fixed z-[180] overflow-x-hidden overflow-y-auto rounded-2xl border border-[rgba(255,215,0,0.35)] bg-[linear-gradient(180deg,rgba(24,18,10,0.98),rgba(8,6,4,0.99))] p-5 shadow-[0_12px_48px_rgba(0,0,0,0.65)] sm:p-6"
+        className="syndicate-mood-context syndicate-readable fixed z-[180] overflow-x-hidden overflow-y-auto rounded-2xl border border-[rgba(255,215,0,0.35)] bg-[linear-gradient(180deg,rgba(24,18,10,0.98),rgba(8,6,4,0.99))] p-5 shadow-[0_12px_48px_rgba(0,0,0,0.65)] sm:p-6"
         style={{
           top: pos.top,
           left: pos.left,
@@ -723,11 +719,15 @@ function SyndicateHelpAnchoredPopover({
 /** Scroll the dashboard shell and window so mission detail opens at the top (not the list bottom). */
 function scrollSyndicateShellToTop() {
   if (typeof window === "undefined") return;
-  window.scrollTo({ top: 0, behavior: "auto" });
+  window.scrollTo({ top: 0, behavior: "instant" });
   document.documentElement.scrollTop = 0;
   document.body.scrollTop = 0;
-  document.querySelectorAll("[data-syndicate-scroll-root]").forEach((el) => {
-    (el as HTMLElement).scrollTop = 0;
+  document.querySelectorAll("[data-syndicate-scroll-root], [data-main-shell-scroll]").forEach((el) => {
+    const node = el as HTMLElement;
+    node.scrollTop = 0;
+    if (typeof node.scrollTo === "function") {
+      node.scrollTo({ top: 0, behavior: "instant" });
+    }
   });
 }
 
@@ -1227,98 +1227,131 @@ function MissionReminderCard({
   onDismiss: (id: number) => void;
 }) {
   const secPast = Math.max(0, (nowTick - item.dueAt) / 1000);
+  const statusTag = item.penaltyApplied ? "Closed" : item.overdue ? "Due" : "Active";
+
   return (
-    <li
-      className={cn(
-        "flex flex-col gap-3 rounded-xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between",
-        item.penaltyApplied
-          ? "border-rose-400/35 bg-rose-500/10"
-          : item.overdue
-            ? "border-amber-400/45 bg-amber-500/10"
-            : "border-cyan-400/25 bg-black/25"
-      )}
-    >
-      <div className="min-w-0 flex-1">
-        <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/50">
-          {item.penaltyApplied ? "Deadline passed" : !item.overdue ? "Time left" : "Due now"}
-        </div>
-        <div className="mt-1 text-[16px] font-bold leading-snug text-white">{item.title}</div>
-        {item.howDraft ? (
-          <div className="mt-2 rounded-lg border border-cyan-400/20 bg-black/35 p-2.5 sm:p-3">
-            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-200/70">How you completed it</div>
-            <p className="mt-1.5 max-h-[140px] overflow-y-auto whitespace-pre-wrap break-words text-[13px] leading-relaxed text-white/88 sm:text-[14px]">
-              {item.howDraft}
-            </p>
-          </div>
-        ) : null}
-        {item.penaltyApplied ? (
-          <>
-            <p className="mt-2 font-mono text-[13px] tabular-nums text-rose-200/95">−1 pt applied · reminder closed for scoring</p>
-            <div className="mt-1 font-mono text-[14px] tabular-nums leading-snug text-amber-100/85">
-              Overdue by {formatReminderOverduePast(secPast)}
-            </div>
-          </>
-        ) : (
-          <div className="mt-1 space-y-1">
-            <div className="font-mono text-[14px] tabular-nums leading-snug text-cyan-100/90">
-              {item.secLeft > 0 ? (
-                <>
-                  <span className="text-cyan-200/95">{formatReminderTimeLeft(item.secLeft)}</span>
-                  <span className="text-[12px] font-semibold text-white/55"> · remaining</span>
-                </>
-              ) : (
-                <span className="text-amber-100/90">0:00:00 · time&apos;s up</span>
-              )}
-            </div>
-            {item.overdue ? (
-              <div className="font-mono text-[14px] tabular-nums leading-snug text-amber-100/85">
-                Overdue by {formatReminderOverduePast(secPast)}
+    <li className="list-none">
+      <article className="syndicate-readable syndicate-cyber-card syndicate-cyber-card--reminder">
+        <div className="syndicate-cyber-card__shell">
+          <div
+            className={cn(
+              "syndicate-cyber-card__body",
+              item.penaltyApplied && "syndicate-cyber-card__body--reminder-penalty",
+              !item.penaltyApplied && item.overdue && "syndicate-cyber-card__body--reminder-overdue"
+            )}
+          >
+            <div className="syndicate-cyber-card__bokeh" aria-hidden />
+            <div className="syndicate-cyber-card__grid" aria-hidden />
+            <div className="syndicate-cyber-card__content syndicate-cyber-card__content--reminder">
+              <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                <div className="min-w-0 flex-1">
+                  <div className="syndicate-cyber-card__meta syndicate-cyber-card__meta--reminder">
+                    <span className="syndicate-cyber-card__tag text-[0.58rem]">{statusTag}</span>
+                    <span className="syndicate-cyber-card__mood">Reminder</span>
+                    {item.penaltyApplied ? (
+                      <span className="rounded-full border border-rose-400/55 bg-black/55 px-2 py-0.5 font-mono text-[0.58rem] font-extrabold tabular-nums text-rose-200/95">
+                        −1 PT
+                      </span>
+                    ) : (
+                      <span
+                        className={cn(
+                          "syndicate-cyber-card__timer tabular-nums",
+                          item.overdue && item.secLeft <= 0 && "border-amber-400/55 text-amber-200 shadow-[0_0_14px_rgba(251,191,36,0.2)]"
+                        )}
+                      >
+                        {item.secLeft > 0 ? formatReminderTimeLeft(item.secLeft) : "0:00:00"}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/50">
+                    {item.penaltyApplied ? "Deadline passed" : !item.overdue ? "Time left" : "Due now"}
+                  </div>
+                  <h4 className="syndicate-cyber-card__title syndicate-cyber-card__title--reminder">{item.title}</h4>
+                  {item.howDraft ? (
+                    <div className="mt-2 rounded-md border border-white/12 bg-black/40 p-2.5 sm:p-3">
+                      <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-200/75">
+                        How you completed it
+                      </div>
+                      <p className="mt-1.5 max-h-[140px] overflow-y-auto whitespace-pre-wrap break-words text-[13px] leading-relaxed text-white/88 sm:text-[14px]">
+                        {item.howDraft}
+                      </p>
+                    </div>
+                  ) : null}
+                  {item.penaltyApplied ? (
+                    <>
+                      <p className="mt-2 font-mono text-[13px] tabular-nums text-rose-200/95">
+                        −1 pt applied · reminder closed for scoring
+                      </p>
+                      <div className="mt-1 font-mono text-[14px] tabular-nums leading-snug text-amber-100/85">
+                        Overdue by {formatReminderOverduePast(secPast)}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="mt-1 space-y-1">
+                      <div className="font-mono text-[14px] tabular-nums leading-snug text-cyan-100/90">
+                        {item.secLeft > 0 ? (
+                          <>
+                            <span className="text-cyan-200/95">{formatReminderTimeLeft(item.secLeft)}</span>
+                            <span className="text-[12px] font-semibold text-white/55"> · remaining</span>
+                          </>
+                        ) : (
+                          <span className="text-amber-100/90">0:00:00 · time&apos;s up</span>
+                        )}
+                      </div>
+                      {item.overdue ? (
+                        <div className="font-mono text-[14px] tabular-nums leading-snug text-amber-100/85">
+                          Overdue by {formatReminderOverduePast(secPast)}
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+                  <div className="mt-1 text-[12px] text-white/55">
+                    Target:{" "}
+                    {new Date(item.atIso).toLocaleString(undefined, {
+                      dateStyle: "medium",
+                      timeStyle: "short"
+                    })}
+                  </div>
+                  {!item.onBoard ? (
+                    <p className="mt-1 text-[11px] text-amber-200/80">
+                      This mission is no longer on the board (24h window). The reminder stays until the target time.
+                    </p>
+                  ) : null}
+                </div>
+                <div className="flex w-full shrink-0 flex-wrap gap-2 sm:w-auto sm:flex-col sm:items-stretch">
+                  {item.onBoard ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const r = rows.find((x) => x.id === item.id);
+                        if (r) onOpenMission(r);
+                      }}
+                      className="syndicate-cyber-card__cta min-h-[44px] flex-1 px-4 py-2 text-[11px] sm:min-h-0 sm:flex-none"
+                    >
+                      Open mission
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onDismiss(item.id)}
+                      className="syndicate-cyber-card__cta min-h-[44px] flex-1 px-4 py-2 text-[11px] sm:min-h-0 sm:flex-none"
+                    >
+                      Done
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => onDismiss(item.id)}
+                    className="min-h-[44px] rounded-md border border-white/20 bg-black/35 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.12em] text-white/80 transition hover:border-white/35 hover:bg-black/50 sm:min-h-0"
+                  >
+                    Dismiss
+                  </button>
+                </div>
               </div>
-            ) : null}
+            </div>
           </div>
-        )}
-        <div className="mt-1 text-[12px] text-white/55">
-          Target:{" "}
-          {new Date(item.atIso).toLocaleString(undefined, {
-            dateStyle: "medium",
-            timeStyle: "short"
-          })}
         </div>
-        {!item.onBoard ? (
-          <p className="mt-1 text-[11px] text-amber-200/80">
-            This mission is no longer on the board (24h window). The reminder stays until the target time.
-          </p>
-        ) : null}
-      </div>
-      <div className="flex shrink-0 flex-wrap gap-2">
-        {item.onBoard ? (
-          <button
-            type="button"
-            onClick={() => {
-              const r = rows.find((x) => x.id === item.id);
-              if (r) onOpenMission(r);
-            }}
-            className={cn("min-h-[44px] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.08em]", CTA_BTN)}
-          >
-            Open mission
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => onDismiss(item.id)}
-            className={cn("min-h-[44px] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.08em]", CTA_BTN)}
-          >
-            Done
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={() => onDismiss(item.id)}
-          className="min-h-[44px] rounded-lg border border-white/25 px-4 py-2 text-[12px] font-semibold uppercase tracking-wide text-white/75 hover:bg-white/5"
-        >
-          Dismiss
-        </button>
-      </div>
+      </article>
     </li>
   );
 }
@@ -1401,6 +1434,24 @@ function difficultyStyle(d: string) {
   return "border-[rgba(255,215,0,0.45)] bg-[rgba(255,215,0,0.08)] text-[color:var(--gold)]";
 }
 
+/** Visual accent for mission cards: cyan/blue vs lime/green (matches reference board). */
+function categoryCyberTheme(category: string): "cyan" | "lime" {
+  const c = category.toLowerCase();
+  if (c === "fitness" || c === "grooming") return "lime";
+  return "cyan";
+}
+
+function moodLabelForMissionCard(mood: string | undefined): string {
+  const key = (mood ?? "").toLowerCase();
+  if (key && STATS_MOOD_LABEL[key]) return STATS_MOOD_LABEL[key];
+  if (!mood || !mood.trim()) return "Daily";
+  return mood
+    .trim()
+    .split(/\s+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
 function CompactCard({
   row,
   done,
@@ -1415,55 +1466,48 @@ function CompactCard({
   const p = row.payload;
   const title = p?.challenge_title ?? "Mission";
   const pts = row.points ?? p?.points ?? 0;
+  const theme = categoryCyberTheme(row.category ?? "");
+  const moodLine = moodLabelForMissionCard(row.mood);
 
   return (
-    <div className="syndicate-readable relative flex min-h-[220px] flex-col justify-between overflow-hidden rounded-lg border border-[rgba(0,255,255,0.28)] bg-[linear-gradient(160deg,rgba(4,14,24,0.92),rgba(0,0,0,0.84)_52%,rgba(40,12,56,0.72))] p-4 [box-shadow:0_0_0_1px_rgba(255,215,0,0.2),0_0_26px_rgba(0,255,255,0.12)] sm:min-h-[240px] sm:p-5">
-      <div className="pointer-events-none absolute inset-0 opacity-35 [background:repeating-linear-gradient(0deg,rgba(255,255,255,0.03)_0px,rgba(255,255,255,0.03)_1px,transparent_1px,transparent_4px)]" />
-      <div>
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <span className="rounded border border-[rgba(255,215,0,0.45)] bg-[rgba(255,215,0,0.08)] px-2.5 py-0.5 text-[11px] font-bold tabular-nums uppercase tracking-wide text-[color:var(--gold)]">
-            {pts} pts
-          </span>
-          <span className="rounded border border-white/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/75">
-            Mood: {row.mood || "daily"}
-          </span>
-          {row.user_created ? (
-            <span className="rounded border border-[rgba(120,200,255,0.45)] bg-[rgba(0,80,120,0.25)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#a8d8ff]">
-              Yours
-            </span>
-          ) : null}
-          {done ? (
-            <span className="rounded border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-200">
-              Complete
-            </span>
-          ) : (
-            <span className="rounded border border-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/45">
-              Incomplete
-            </span>
-          )}
-          {!done ? (
-            <span className="rounded border border-cyan-400/40 bg-cyan-500/15 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-cyan-200">
-              {formatCountdown(dayCountdownSec)}
-            </span>
-          ) : null}
+    <article
+      className={cn(
+        "syndicate-readable syndicate-cyber-card",
+        theme === "lime" && "syndicate-cyber-card--lime",
+        done && "syndicate-cyber-card--done"
+      )}
+    >
+      <div className="syndicate-cyber-card__shell">
+        <div className="syndicate-cyber-card__body">
+          <div className="syndicate-cyber-card__bokeh" aria-hidden />
+          <div className="syndicate-cyber-card__grid" aria-hidden />
+          <div className="syndicate-cyber-card__content">
+            <div>
+              <div className="syndicate-cyber-card__meta">
+                <span className="syndicate-cyber-card__pts tabular-nums">
+                  {pts} PTS
+                </span>
+                <span className="syndicate-cyber-card__mood">Mood: {moodLine}</span>
+                {done ? (
+                  <span className="syndicate-cyber-card__timer syndicate-cyber-card__timer--complete">COMPLETE</span>
+                ) : (
+                  <span className="syndicate-cyber-card__timer tabular-nums">{formatCountdown(dayCountdownSec)}</span>
+                )}
+              </div>
+              {row.user_created ? (
+                <div className="syndicate-cyber-card__tags">
+                  <span className="syndicate-cyber-card__tag syndicate-cyber-card__tag--yours">Yours</span>
+                </div>
+              ) : null}
+              <h4 className="syndicate-cyber-card__title">{title}</h4>
+            </div>
+            <button type="button" onClick={onView} className="syndicate-cyber-card__cta min-h-[44px] touch-manipulation sm:min-h-0">
+              View mission
+            </button>
+          </div>
         </div>
-        <h4 className="min-h-[3.25rem] text-[17px] font-semibold leading-[1.32] tracking-tight text-white [text-shadow:0_0_18px_rgba(120,200,255,0.2)] sm:min-h-[4.5rem] sm:text-[19px] md:min-h-[5.25rem] md:text-[21px] lg:min-h-[5.75rem] lg:text-[23px] lg:leading-[1.3] xl:text-[24px]">
-          {title}
-        </h4>
       </div>
-      <div className="mt-4 grid grid-cols-1 gap-2">
-        <button
-          type="button"
-          onClick={onView}
-          className={cn(
-            "syndicate-readable min-h-[44px] w-full touch-manipulation py-2.5 text-[13px] font-bold uppercase tracking-[0.08em] transition sm:min-h-0",
-            CTA_BTN
-          )}
-        >
-          View mission
-        </button>
-      </div>
-    </div>
+    </article>
   );
 }
 
@@ -1488,7 +1532,6 @@ function DetailPane({
   taskTimerStartMs,
   onBack,
   onSubmit,
-  onLogout,
   onDraftPersist,
   missionReminderIso = null,
   onMissionReminderChange,
@@ -1507,7 +1550,6 @@ function DetailPane({
   taskTimerStartMs?: number | null;
   onBack: () => void;
   onSubmit: (draft: MissionResponseDraft) => Promise<void>;
-  onLogout?: () => void;
   /** Persist draft to localStorage while typing (incomplete missions only). */
   onDraftPersist?: (draft: MissionResponseDraft) => void;
   /** Optional reminder (local time picker); stored as ISO on the parent. */
@@ -1580,27 +1622,18 @@ function DetailPane({
   return (
     <div
       id="syndicate-mission-detail-top"
-      className="syndicate-readable syndicate-detail-pane mx-auto w-full min-w-0 max-w-[min(100%,48rem)] scroll-mt-24 px-2 sm:px-3 md:px-4"
+      className="syndicate-readable syndicate-detail-pane mx-auto w-full min-w-0 max-w-[min(100%,64rem)] scroll-mt-[max(6.5rem,calc(env(safe-area-inset-top,0px)+4.5rem))] px-2 pb-2 pt-1 sm:px-4 sm:pb-3 sm:pt-2 md:px-5"
     >
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="sticky top-0 z-20 -mx-2 mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-[linear-gradient(180deg,rgba(8,8,10,0.97),rgba(6,6,8,0.92))] px-3 py-3 shadow-[0_10px_28px_rgba(0,0,0,0.55)] backdrop-blur-md sm:-mx-4 sm:px-4 md:-mx-5 md:mb-4 md:px-5">
         <button
           type="button"
           onClick={onBack}
-          className="text-[14px] font-semibold text-[color:var(--gold)] underline-offset-4 hover:underline"
+          className="syndicate-link-skip min-h-[44px] px-1 py-2 text-left text-[14px] font-semibold text-[color:var(--gold)] underline-offset-4 hover:underline sm:min-h-0"
         >
           ← Back to missions
         </button>
-        {onLogout ? (
-          <button
-            type="button"
-            onClick={onLogout}
-            className="text-[13px] font-semibold uppercase tracking-wide text-red-400 underline-offset-4 transition hover:text-red-300 hover:underline"
-          >
-            Log out
-          </button>
-        ) : null}
       </div>
-      <div className="rounded-lg border border-[rgba(0,255,255,0.3)] bg-[linear-gradient(165deg,rgba(5,14,24,0.94),rgba(0,0,0,0.84)_52%,rgba(46,10,58,0.64))] p-4 [box-shadow:0_0_0_1px_rgba(255,215,0,0.2),0_0_28px_rgba(0,255,255,0.1)] sm:p-6 md:p-7">
+      <div className="rounded-lg border border-[rgba(0,255,255,0.3)] bg-[linear-gradient(165deg,rgba(5,14,24,0.94),rgba(0,0,0,0.84)_52%,rgba(46,10,58,0.64))] p-4 [box-shadow:0_0_28px_rgba(0,255,255,0.1)] sm:p-6 md:p-7">
         <div className="mb-3 flex flex-wrap items-center gap-1.5">
           <span className="rounded border border-white/25 px-1.5 py-0.5 text-[9px] font-semibold uppercase leading-tight tracking-wide text-white/80 sm:text-[10px]">
             {row.category}
@@ -1624,7 +1657,7 @@ function DetailPane({
         </div>
         {!done && taskTimerStartMs != null ? (
           <div
-            className="mb-3 w-full max-w-[min(24rem,100%)] rounded-md border border-[rgba(255,215,0,0.5)] bg-[rgba(255,215,0,0.08)] px-2.5 py-2 sm:px-3 sm:py-2"
+            className="mb-3 w-full max-w-[min(24rem,100%)] rounded-md border border-white/12 bg-black/30 px-2.5 py-2 sm:px-3 sm:py-2"
             title="Mission and daily window timers"
           >
             <p className="syndicate-nav-headline text-[clamp(0.82rem,2.9vw,1.05rem)] leading-tight sm:text-[clamp(0.88rem,2.4vw,1.15rem)] md:text-[clamp(0.95rem,2vw,1.2rem)]">
@@ -1660,7 +1693,7 @@ function DetailPane({
             <ul className="mt-3 list-none space-y-3">
               {examples.map((line, i) => (
                 <li key={i} className="flex gap-3 text-[15px] leading-relaxed text-white/90 antialiased md:text-[16px]">
-                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[rgba(255,215,0,0.5)] text-[12px] font-bold text-[color:var(--gold)]">
+                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/20 text-[12px] font-bold text-white/90">
                     {i + 1}
                   </span>
                   <span>{line}</span>
@@ -1705,7 +1738,7 @@ function DetailPane({
                     <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-[color:var(--gold)]/75">
                       How you completed it
                     </div>
-                    <div className="syndicate-readable whitespace-pre-wrap break-words rounded-md border border-[rgba(255,215,0,0.35)] bg-black/60 px-3 py-2.5 text-[15px] leading-relaxed text-white/95">
+                    <div className="syndicate-readable whitespace-pre-wrap break-words rounded-md border border-white/15 bg-black/50 px-3 py-2.5 text-[15px] leading-relaxed text-white/95">
                       {how.trim() || "—"}
                     </div>
                   </div>
@@ -1713,13 +1746,13 @@ function DetailPane({
                     <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-[color:var(--gold)]/75">
                       What you learned from it
                     </div>
-                    <div className="syndicate-readable whitespace-pre-wrap break-words rounded-md border border-[rgba(255,215,0,0.35)] bg-black/60 px-3 py-2.5 text-[15px] leading-relaxed text-white/95">
+                    <div className="syndicate-readable whitespace-pre-wrap break-words rounded-md border border-white/15 bg-black/50 px-3 py-2.5 text-[15px] leading-relaxed text-white/95">
                       {learned.trim()}
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="syndicate-readable rounded-md border border-[rgba(255,215,0,0.35)] bg-black/60 px-3 py-2.5 text-[15px] leading-relaxed text-white/95">
+                <div className="syndicate-readable rounded-md border border-white/15 bg-black/50 px-3 py-2.5 text-[15px] leading-relaxed text-white/95">
                   <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white/45">Your response</div>
                   <p className="whitespace-pre-wrap break-words">{how.trim()}</p>
                 </div>
@@ -1740,7 +1773,7 @@ function DetailPane({
                 onChange={(e) => setHow(e.target.value)}
                 rows={4}
                 placeholder="Describe what you did to complete this mission…"
-                className="syndicate-readable mb-4 min-h-[112px] w-full resize-y rounded-md border border-[rgba(255,215,0,0.35)] bg-black/60 px-3 py-3 text-[16px] leading-relaxed text-white/95 outline-none placeholder:text-white/35 focus:border-[rgba(255,215,0,0.65)] sm:text-[15px]"
+                className="syndicate-readable mb-4 min-h-[112px] w-full resize-y rounded-md border border-white/18 bg-black/50 px-3 py-3 text-[16px] leading-relaxed text-white/95 outline-none placeholder:text-white/35 focus:border-cyan-400/45 focus:ring-1 focus:ring-cyan-400/20 sm:text-[15px]"
               />
               {onMissionReminderChange ? (
                 <div className="mb-6 rounded-lg border border-cyan-400/30 bg-[linear-gradient(180deg,rgba(0,45,70,0.35),rgba(0,0,0,0.25))] p-4 [box-shadow:inset_0_0_0_1px_rgba(120,200,255,0.08)]">
@@ -1797,7 +1830,7 @@ function DetailPane({
                           setReminderLocal("");
                           onMissionReminderChange(null);
                         }}
-                        className="min-h-[44px] text-[12px] font-semibold uppercase tracking-wide text-cyan-200/80 underline-offset-4 hover:text-cyan-100 hover:underline"
+                        className="syndicate-link-skip min-h-[44px] text-[12px] font-semibold uppercase tracking-wide text-cyan-200/80 underline-offset-4 hover:text-cyan-100 hover:underline"
                       >
                         Clear reminder
                       </button>
@@ -1814,7 +1847,7 @@ function DetailPane({
                 onChange={(e) => setLearned(e.target.value)}
                 rows={4}
                 placeholder="Reflect on insights, skills, or takeaways from doing this mission…"
-                className="syndicate-readable min-h-[112px] w-full resize-y rounded-md border border-[rgba(255,215,0,0.35)] bg-black/60 px-3 py-3 text-[16px] leading-relaxed text-white/95 outline-none placeholder:text-white/35 focus:border-[rgba(255,215,0,0.65)] sm:text-[15px]"
+                className="syndicate-readable min-h-[112px] w-full resize-y rounded-md border border-white/18 bg-black/50 px-3 py-3 text-[16px] leading-relaxed text-white/95 outline-none placeholder:text-white/35 focus:border-cyan-400/45 focus:ring-1 focus:ring-cyan-400/20 sm:text-[15px]"
               />
               <p className="mt-2 text-[11px] leading-snug text-white/50 sm:text-[12px]">
                 Both fields are required before you can submit. Scoring uses them together.
@@ -1926,7 +1959,6 @@ function DetailPane({
 }
 
 export function SyndicateAiChallengePanel() {
-  const router = useRouter();
   const [rows, setRows] = useState<ChallengeRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>("load");
@@ -1960,6 +1992,8 @@ export function SyndicateAiChallengePanel() {
   const [statsMood, setStatsMood] = useState<string>("energetic");
   const [customTitle, setCustomTitle] = useState("");
   const [customDifficulty, setCustomDifficulty] = useState<"easy" | "medium" | "hard">("medium");
+  /** “Create your mission” form — modal on Missions tab only (not inline). */
+  const [createMissionModalOpen, setCreateMissionModalOpen] = useState(false);
   const [profileName, setProfileName] = useState(DEFAULT_PROFILE_NAME);
   const [profileImageSaved, setProfileImageSaved] = useState("");
   const [profileImageDraft, setProfileImageDraft] = useState("");
@@ -2037,17 +2071,6 @@ export function SyndicateAiChallengePanel() {
       window.setTimeout(tryPlay, 250);
     }
   }, []);
-
-  const handleSyndicateLogout = useCallback(() => {
-    void fetch(`${API_BASE}/syndicate-auth/logout/`, {
-      method: "POST",
-      headers: getSyndicateAuthHeaders(true),
-      body: "{}"
-    }).catch(() => null).finally(() => {
-      logoutSyndicateSession();
-      router.replace("/syndicate/login?next=/");
-    });
-  }, [router]);
 
   const saveProfile = useCallback(() => {
     const accountEmail = getSyndicateUser()?.email?.trim() || "";
@@ -2636,7 +2659,7 @@ export function SyndicateAiChallengePanel() {
           <h3 className="mb-3 text-[15px] font-bold uppercase tracking-[0.12em] text-white/80 sm:text-[16px]">
             Today · mission points by category (pie)
           </h3>
-          <div className="h-[300px] w-full sm:h-[420px] md:h-[480px] lg:h-[520px]">
+          <div className="h-[300px] w-full overflow-hidden rounded-lg sm:h-[420px] md:h-[480px] lg:h-[520px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
                 <Pie
@@ -2649,7 +2672,7 @@ export function SyndicateAiChallengePanel() {
                   outerRadius="78%"
                   paddingAngle={2}
                   labelLine={false}
-                  label={({ name, value }) => (value > 0 ? `${name}: ${value}` : "")}
+                  label={false}
                 >
                   {pieDailyData.map((e, i) => (
                     <Cell key={e.name} stroke="rgba(0,0,0,0.35)" strokeWidth={1} fill={e.fill ?? PIE_COLORS[i % PIE_COLORS.length]} />
@@ -2673,7 +2696,7 @@ export function SyndicateAiChallengePanel() {
           <h3 className="mb-3 text-[15px] font-bold uppercase tracking-[0.12em] text-white/80 sm:text-[16px]">
             Weekly · mission points (bar)
           </h3>
-          <div className="h-[220px] w-full min-h-[200px] sm:h-[260px] md:h-[280px]">
+          <div className="h-[220px] w-full min-h-[200px] overflow-hidden rounded-lg sm:h-[260px] md:h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={weeklyBarData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
@@ -2701,7 +2724,7 @@ export function SyndicateAiChallengePanel() {
           <h3 className="mb-3 text-[15px] font-bold uppercase tracking-[0.12em] text-white/80 sm:text-[16px]">
             Monthly · daily mission points (line)
           </h3>
-          <div className="h-[220px] w-full min-h-[200px] sm:h-[260px] md:h-[300px]">
+          <div className="h-[220px] w-full min-h-[200px] overflow-hidden rounded-lg sm:h-[260px] md:h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={monthlyLineData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <defs>
@@ -2989,6 +3012,7 @@ export function SyndicateAiChallengePanel() {
       setRows((prev) => [...prev, result]);
       setCustomTitle("");
       setChallengeLogVersion((v) => v + 1);
+      setCreateMissionModalOpen(false);
       openMissionDetail(result);
     } catch (e) {
       if (e instanceof SyndicateSessionLostError) return;
@@ -2997,6 +3021,19 @@ export function SyndicateAiChallengePanel() {
       setBusy(null);
     }
   }, [customTitle, customDifficulty, userCustomCount, openMissionDetail]);
+
+  useEffect(() => {
+    if (syndicateView !== "challenges" || showStatsProfile) setCreateMissionModalOpen(false);
+  }, [syndicateView, showStatsProfile]);
+
+  useEffect(() => {
+    if (!createMissionModalOpen || typeof document === "undefined") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && busy !== "custom") setCreateMissionModalOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [createMissionModalOpen, busy]);
 
   async function createInviteCode() {
     setReferralMsg(null);
@@ -3299,6 +3336,8 @@ export function SyndicateAiChallengePanel() {
   useLayoutEffect(() => {
     if (!selected) return;
     scrollSyndicateShellToTop();
+    const top = document.getElementById("syndicate-mission-detail-top");
+    top?.scrollIntoView({ behavior: "instant", block: "start" });
   }, [selected]);
 
   async function handleSubmit(draft: MissionResponseDraft) {
@@ -3657,7 +3696,7 @@ export function SyndicateAiChallengePanel() {
     typeof document !== "undefined"
       ? createPortal(
           <div
-            className="pointer-events-auto fixed inset-0 z-[2147483646] grid min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] bg-black touch-none [isolation:isolate]"
+            className="syndicate-mood-context syndicate-admin-recording-shell pointer-events-auto fixed inset-0 z-[2147483646] grid min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] bg-black touch-none [isolation:isolate]"
             style={{
               minHeight: "100dvh",
               height: "100dvh",
@@ -3735,7 +3774,6 @@ export function SyndicateAiChallengePanel() {
           taskTimerStartMs={doneIds.has(selected.id) ? null : missionStartMap[selected.id] ?? null}
           onBack={() => setSelected(null)}
           onSubmit={handleSubmit}
-          onLogout={handleSyndicateLogout}
           onDraftPersist={doneIds.has(selected.id) ? undefined : persistMissionDraft}
           missionReminderIso={missionReminders[selected.id]?.atIso ?? null}
           onMissionReminderChange={doneIds.has(selected.id) ? undefined : setMissionReminderForSelected}
@@ -3762,19 +3800,24 @@ export function SyndicateAiChallengePanel() {
       {adminTaskRecordingPortal}
       {completionToast}
       {syndicateHelpModal}
-      <div className="syndicate-dash-outer relative mx-auto w-full min-w-0 max-w-[min(100%,100rem)] space-y-5 border px-0 py-3 sm:py-5 max-md:space-y-4 max-md:border-0 max-md:bg-[linear-gradient(168deg,#050508_0%,#0d0818_44%,#0a0610_100%)] max-md:px-0 max-md:pb-3 max-md:pt-0 max-md:shadow-none">
+      <div className="syndicate-dash-outer relative mx-auto w-full min-w-0 max-w-[min(100%,100rem)] space-y-2 border px-0 pb-1.5 pt-0 sm:space-y-3 sm:pb-2 sm:pt-0 max-md:space-y-2 max-md:border-0 max-md:bg-[linear-gradient(168deg,#050508_0%,#0d0818_44%,#0a0610_100%)] max-md:px-0 max-md:pb-1.5 max-md:pt-0 max-md:shadow-none">
       <div className="pointer-events-none absolute inset-0 -z-10 syndicate-dash-scanlines max-md:opacity-35" />
-      <div className="syndicate-dash-header mb-2 flex w-full min-w-0 flex-col gap-4 rounded-2xl border px-3 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-4 max-md:mb-0 max-md:rounded-none max-md:border-x-0 max-md:border-t-0 max-md:border-b-[rgba(255,215,0,0.24)] max-md:px-2 max-md:py-3">
-        <div className="min-w-0 flex flex-col gap-2">
-          <div className="flex items-center gap-2.5 text-[13px] font-extrabold uppercase tracking-[0.18em] text-[color:var(--gold)]/88 sm:text-[14px]">
-            <span className="inline-flex h-3 w-3 shrink-0 animate-pulse rounded-full bg-[color:var(--gold)] shadow-[0_0_14px_rgba(255,215,0,0.85)]" />
+      <div className="syndicate-dash-header mb-1 flex w-full flex-col gap-2 rounded-2xl border px-2 py-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3 sm:px-2.5 sm:py-2 max-md:mb-0 max-md:rounded-none max-md:border-x-0 max-md:border-t-0 max-md:border-b-[rgba(255,215,0,0.24)] max-md:px-2 max-md:py-1.5">
+        <div className="min-w-0 w-full sm:flex-1 sm:min-w-0">
+          <div className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.16em] text-[color:var(--gold)]/88 sm:text-[12px]">
+            <span className="inline-flex h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-[color:var(--gold)] shadow-[0_0_10px_rgba(255,215,0,0.85)] sm:h-3 sm:w-3" />
             On the board
           </div>
-          <h3 className="syndicate-nav-headline text-[22px] sm:text-[28px] md:text-[34px] lg:text-[38px]">
-            Syndicate Mode: Missions
+          <h3 className="m-0 mt-1 w-full min-w-0 overflow-x-auto overflow-y-hidden [-webkit-overflow-scrolling:touch]">
+            <span className="syndicate-nav-headline block w-max max-w-none whitespace-nowrap text-[clamp(1rem,3.2vw+0.55rem,1.95rem)] leading-none tracking-[0.06em] sm:text-[clamp(1.15rem,2.2vw+0.55rem,2.2rem)]">
+              Syndicate Mode
+            </span>
+            <span className="syndicate-nav-tagline mt-1 block w-max max-w-none whitespace-nowrap text-[clamp(0.48rem,1.65vw+0.26rem,0.78rem)] font-black italic uppercase leading-none tracking-[0.08em] text-[color:var(--gold-neon)] [text-shadow:0_0_12px_rgba(250,204,21,0.26),0_0_22px_rgba(212,175,55,0.1)] sm:mt-1 sm:tracking-[0.12em]">
+              Money, Power, Freedom, Honour
+            </span>
           </h3>
         </div>
-        <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:flex sm:max-w-none sm:flex-wrap sm:items-center sm:justify-end sm:gap-2">
+        <div className="grid w-full shrink-0 grid-cols-2 gap-1.5 sm:w-auto sm:grid-cols-2 sm:gap-2 sm:pt-0.5">
           <button
             type="button"
             onClick={() => {
@@ -3782,11 +3825,8 @@ export function SyndicateAiChallengePanel() {
               setShowStatsProfile(false);
             }}
             className={cn(
-              "min-h-[44px] min-w-0 touch-manipulation px-3 py-2.5 text-[11px] font-bold uppercase tracking-[0.06em] transition sm:min-w-[140px] sm:px-4 sm:py-3 sm:text-[12px] sm:tracking-[0.08em]",
-              GAME_BTN,
-              syndicateView === "dashboard"
-                ? "border-[rgba(255,215,0,0.78)] text-[color:var(--gold)] [text-shadow:0_0_14px_rgba(255,215,0,0.28)]"
-                : GAME_BTN_NAV_IDLE
+              "syndicate-nav-action min-h-[40px] min-w-0 touch-manipulation px-2.5 py-2 text-[10px] font-bold uppercase tracking-[0.06em] sm:min-w-[128px] sm:px-3 sm:py-2.5 sm:text-[11px] sm:tracking-[0.08em] md:min-w-[136px] md:text-[12px]",
+              syndicateView === "dashboard" && !showStatsProfile && "syndicate-nav-action--active-gold"
             )}
           >
             Dashboard
@@ -3798,11 +3838,8 @@ export function SyndicateAiChallengePanel() {
               setShowStatsProfile(false);
             }}
             className={cn(
-              "min-h-[44px] min-w-0 touch-manipulation px-3 py-2.5 text-[11px] font-bold uppercase tracking-[0.06em] transition sm:min-w-[140px] sm:px-4 sm:py-3 sm:text-[12px] sm:tracking-[0.08em]",
-              GAME_BTN,
-              syndicateView === "challenges"
-                ? "border-[rgba(244,114,182,0.65)] text-[#fce7f3] [text-shadow:0_0_14px_rgba(244,114,182,0.35)]"
-                : GAME_BTN_NAV_IDLE
+              "syndicate-nav-action min-h-[40px] min-w-0 touch-manipulation px-2.5 py-2 text-[10px] font-bold uppercase tracking-[0.06em] sm:min-w-[128px] sm:px-3 sm:py-2.5 sm:text-[11px] sm:tracking-[0.08em] md:min-w-[136px] md:text-[12px]",
+              syndicateView === "challenges" && !showStatsProfile && "syndicate-nav-action--active-rose"
             )}
           >
             Missions
@@ -3814,11 +3851,8 @@ export function SyndicateAiChallengePanel() {
               setShowStatsProfile(false);
             }}
             className={cn(
-              "min-h-[44px] min-w-0 touch-manipulation px-3 py-2.5 text-[11px] font-bold uppercase tracking-[0.06em] transition sm:min-w-[140px] sm:px-4 sm:py-3 sm:text-[12px] sm:tracking-[0.08em]",
-              GAME_BTN,
-              syndicateView === "reminders"
-                ? "border-cyan-400/55 text-cyan-100 [text-shadow:0_0_14px_rgba(34,211,238,0.28)]"
-                : GAME_BTN_NAV_IDLE
+              "syndicate-nav-action min-h-[40px] min-w-0 touch-manipulation px-2.5 py-2 text-[10px] font-bold uppercase tracking-[0.06em] sm:min-w-[128px] sm:px-3 sm:py-2.5 sm:text-[11px] sm:tracking-[0.08em] md:min-w-[136px] md:text-[12px]",
+              syndicateView === "reminders" && !showStatsProfile && "syndicate-nav-action--active-cyan"
             )}
           >
             Reminders
@@ -3834,21 +3868,11 @@ export function SyndicateAiChallengePanel() {
             aria-controls="syndicate-stats-profile"
             onClick={() => setShowStatsProfile(true)}
             className={cn(
-              "min-h-[44px] min-w-0 touch-manipulation px-3 py-2.5 text-[11px] font-bold uppercase tracking-[0.06em] transition sm:min-w-[140px] sm:px-4 sm:py-3 sm:text-[12px] sm:tracking-[0.08em]",
-              GAME_BTN,
-              showStatsProfile
-                ? "border-[rgba(168,85,247,0.72)] text-[#ede9fe] [text-shadow:0_0_14px_rgba(167,139,250,0.35)]"
-                : GAME_BTN_NAV_IDLE
+              "syndicate-nav-action min-h-[40px] min-w-0 touch-manipulation px-2.5 py-2 text-[10px] font-bold uppercase tracking-[0.06em] sm:min-w-[128px] sm:px-3 sm:py-2.5 sm:text-[11px] sm:tracking-[0.08em] md:min-w-[136px] md:text-[12px]",
+              showStatsProfile && "syndicate-nav-action--active-violet"
             )}
           >
             Stats & profile
-          </button>
-          <button
-            type="button"
-            onClick={handleSyndicateLogout}
-            className="col-span-2 min-h-[44px] w-full touch-manipulation rounded-md border border-red-500/70 bg-[linear-gradient(180deg,rgba(185,28,28,0.45)_0%,rgba(127,29,29,0.55)_100%)] px-4 py-2.5 text-[12px] font-bold uppercase tracking-[0.08em] text-red-50 shadow-[inset_0_1px_0_rgba(254,202,202,0.35),0_0_14px_rgba(239,68,68,0.25)] transition hover:brightness-110 sm:col-span-1 sm:w-auto sm:min-w-[100px]"
-          >
-            Log out
           </button>
         </div>
       </div>
@@ -3857,7 +3881,7 @@ export function SyndicateAiChallengePanel() {
         <button
           type="button"
           onClick={goToBonusMissions}
-          className="syndicate-readable group mb-3 flex w-full flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-xl border border-[rgba(255,215,0,0.5)] bg-[linear-gradient(92deg,rgba(255,215,0,0.12),rgba(0,220,255,0.06),rgba(255,215,0,0.1))] px-4 py-3 text-left shadow-[0_0_22px_rgba(255,215,0,0.18)] transition hover:border-[rgba(255,215,0,0.75)] hover:shadow-[0_0_28px_rgba(255,215,0,0.28)] sm:text-center"
+          className="syndicate-readable group mb-2 flex w-full flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-xl border border-cyan-400/35 bg-[linear-gradient(92deg,rgba(6,182,212,0.1),rgba(255,215,0,0.08),rgba(6,182,212,0.06))] px-3 py-2.5 text-left shadow-[0_0_20px_rgba(6,182,212,0.14)] ring-1 ring-[rgba(250,204,21,0.12)] transition hover:border-cyan-300/55 hover:shadow-[0_0_26px_rgba(250,204,21,0.22)] sm:px-4 sm:py-3 sm:text-center"
         >
           <span className="inline-flex items-center gap-2">
             <span
@@ -3887,21 +3911,24 @@ export function SyndicateAiChallengePanel() {
             <div className="order-2 min-w-0 lg:order-1">{statsProfileChartsLeftColumn}</div>
 
             <div className="order-1 min-w-0 space-y-7 lg:order-2 lg:border-l lg:border-white/10 lg:pl-10">
-              <div className="rounded-2xl border border-white/14 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(0,0,0,0.28))] p-5 sm:p-6 [box-shadow:inset_0_0_0_1px_rgba(255,255,255,0.06)]">
+              <div className="syndicate-day-points-card relative overflow-hidden rounded-2xl p-5 sm:p-6">
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6">
-                  <div className="min-w-0 border-b border-white/10 pb-5 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-6">
-                    <div className="text-[13px] font-bold uppercase tracking-[0.14em] text-cyan-200/75">Day ends</div>
+                  <div className="relative z-[1] min-w-0 border-b border-white/10 pb-5 sm:border-b-0 sm:border-r sm:border-white/10 sm:pb-0 sm:pr-6">
+                    <div className="text-[12px] font-bold uppercase tracking-[0.14em] text-cyan-200/80 sm:text-[13px]">Day ends</div>
                     <div
-                      className="mt-2 font-mono text-[clamp(1.75rem,5vw,2.5rem)] font-black tabular-nums leading-none tracking-tight text-cyan-200 [text-shadow:0_0_16px_rgba(34,211,238,0.4),0_1px_0_rgba(0,0,0,0.85)] sm:text-[clamp(2rem,4vw,2.75rem)]"
+                      className="mt-2 select-none font-mono text-[1.05rem] font-black tabular-nums leading-none tracking-tight text-cyan-200 [text-shadow:0_0_12px_rgba(34,211,238,0.38),0_1px_0_rgba(0,0,0,0.88)] sm:text-[1.2rem]"
                       title="Time until local midnight (daily mission window)"
+                      aria-live="polite"
                     >
                       {formatCountdown(dayCountdownSec)}
                     </div>
                     <p className="mt-2 text-[11px] font-medium leading-snug text-white/45">Resets with the local day.</p>
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[13px] font-bold uppercase tracking-[0.14em] text-white/60">Total points</div>
-                    <div className="mt-2 text-[36px] font-black tabular-nums leading-none text-[color:var(--gold)] sm:text-[42px]">{pointsTotal}</div>
+                    <div className="text-[12px] font-bold uppercase tracking-[0.14em] text-white/65 sm:text-[13px]">Total points</div>
+                    <div className="mt-2 text-[1.5rem] font-black tabular-nums leading-none text-[color:var(--gold)] [text-shadow:0_0_14px_rgba(255,215,0,0.22)] sm:text-[1.75rem]">
+                      {pointsTotal}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -4354,7 +4381,7 @@ export function SyndicateAiChallengePanel() {
                           document.getElementById("syndicate-profile-settings")?.scrollIntoView({ behavior: "smooth", block: "start" });
                         }, 50);
                       }}
-                      className="mt-2 text-[12px] font-bold uppercase tracking-[0.12em] text-cyan-200/90 underline decoration-cyan-400/40 underline-offset-2 hover:text-white"
+                      className="syndicate-link-skip mt-2 text-[12px] font-bold uppercase tracking-[0.12em] text-cyan-200/90 underline decoration-cyan-400/40 underline-offset-2 hover:text-white"
                     >
                       Edit name &amp; photo
                     </button>
@@ -4366,21 +4393,25 @@ export function SyndicateAiChallengePanel() {
                 </div>
                 <div className="hidden sm:block" aria-hidden />
               </div>
-              <div className="mt-4 grid grid-cols-1 items-stretch gap-3 min-[420px]:grid-cols-3">
-                <div className="flex min-h-[150px] flex-col border border-sky-300/70 bg-[linear-gradient(135deg,rgba(56,189,248,0.38),rgba(59,130,246,0.28)_45%,rgba(10,20,60,0.92)_100%)] px-3 py-3 text-center [clip-path:polygon(8%_0,100%_0,92%_100%,0_100%)] [box-shadow:0_0_16px_rgba(56,189,248,0.3),inset_0_1px_0_rgba(210,240,255,0.45)] min-[420px]:min-h-[182px] sm:px-3 sm:py-3">
-                  <div className={cn(HUD_LABEL, "text-[11px] text-sky-100/90 sm:text-[12px]")}>Level</div>
-                  <div className="mt-0.5 text-[28px] font-black tabular-nums leading-none text-sky-50 sm:text-[34px]">
-                    {syndicateProgressHud.syndicateLevel}
+              <div className="mt-4 grid grid-cols-1 items-start gap-4 min-[420px]:grid-cols-3">
+                <div className="flex min-w-0 flex-col gap-2">
+                  <div className="syndicate-stat-card syndicate-stat-card--cyan flex flex-col px-4 py-4 text-center">
+                    <div className={cn(HUD_LABEL, "text-[11px] text-sky-100 sm:text-[12px]")}>Level</div>
+                    <div className="mt-1 text-[28px] font-black tabular-nums leading-none text-sky-50 sm:text-[34px]">
+                      {syndicateProgressHud.syndicateLevel}
+                    </div>
+                    <div className="mt-2 text-[11px] font-bold uppercase leading-tight tracking-[0.1em] text-sky-200 sm:text-[12px]">
+                      Syndicate level
+                    </div>
                   </div>
-                  <div className="mt-2 text-[11px] font-bold uppercase leading-tight tracking-[0.1em] text-sky-200/90 sm:text-[12px]">
-                    Syndicate level
-                  </div>
-                  <div className="mt-2 flex flex-1 flex-col justify-end space-y-1 text-[12px] font-semibold leading-snug text-sky-100/92 sm:text-[13px]">
+                  <div className="space-y-1.5 px-0.5 text-center">
                     {syndicateProgressHud.atMaxTier ? (
-                      <p>Highest syndicate level — all reward tiers reached.</p>
+                      <p className="text-[12px] font-semibold leading-snug text-sky-100/90 sm:text-[13px]">
+                        Highest syndicate level — all reward tiers reached.
+                      </p>
                     ) : syndicateProgressHud.nextLevelNumber != null && syndicateProgressHud.nextTierTotalPoints != null ? (
                       <>
-                        <p>
+                        <p className="text-[12px] font-semibold leading-snug text-sky-100/92 sm:text-[13px]">
                           <span className="font-black tabular-nums text-sky-50">
                             {syndicateProgressHud.ptsToNextLevel === 1
                               ? "1 pt"
@@ -4389,7 +4420,7 @@ export function SyndicateAiChallengePanel() {
                           to reach{" "}
                           <span className="font-black text-sky-50">Level {syndicateProgressHud.nextLevelNumber}</span>
                         </p>
-                        <p className="text-[11px] font-medium leading-snug text-sky-200/88 sm:text-[12px]">
+                        <p className="text-[11px] font-medium leading-snug text-sky-200/90 sm:text-[12px]">
                           Level {syndicateProgressHud.nextLevelNumber} unlocks at{" "}
                           <span className="font-bold tabular-nums text-sky-100">
                             {syndicateProgressHud.nextTierTotalPoints}
@@ -4400,31 +4431,37 @@ export function SyndicateAiChallengePanel() {
                     ) : null}
                   </div>
                 </div>
-                <div className="flex min-h-[150px] flex-col border border-amber-300/75 bg-[linear-gradient(135deg,rgba(251,191,36,0.38),rgba(245,158,11,0.3)_45%,rgba(66,32,2,0.92)_100%)] px-3 py-3 text-center [clip-path:polygon(8%_0,100%_0,92%_100%,0_100%)] [box-shadow:0_0_16px_rgba(245,158,11,0.32),inset_0_1px_0_rgba(255,237,170,0.45)] min-[420px]:min-h-[182px]">
-                  <div className="flex items-center justify-center gap-2">
-                    <div className={cn(HUD_LABEL, "text-amber-100/85")}>Points</div>
-                    <SyndicateHelpMark topic="hud-points" label="How points work" onOpen={openSyndicateHelp} />
+                <div className="flex min-w-0 flex-col gap-2">
+                  <div className="syndicate-stat-card syndicate-stat-card--amber flex flex-col px-4 py-4 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className={cn(HUD_LABEL, "text-amber-100")}>Points</div>
+                      <SyndicateHelpMark topic="hud-points" label="How points work" onOpen={openSyndicateHelp} />
+                    </div>
+                    <div className="mt-1 text-[22px] font-black tabular-nums text-amber-50 sm:text-[24px]">{pointsTotal}</div>
+                    <div className="mt-2 text-[10px] font-bold uppercase tracking-[0.08em] text-amber-200 sm:text-[11px]">Total earned</div>
                   </div>
-                  <div className="mt-1 text-[22px] font-black tabular-nums text-amber-50 sm:text-[24px]">{pointsTotal}</div>
-                  <div className="mt-2 text-[10px] font-bold uppercase tracking-[0.08em] text-amber-200/85 sm:text-[11px]">Total earned</div>
-                  <div className="mt-auto flex flex-1 flex-col justify-end pt-2">
-                    <p className="text-[10px] leading-snug text-amber-100/82">
+                  <div className="space-y-1 px-0.5 text-center">
+                    <p className="text-[11px] leading-snug text-amber-100/88 sm:text-[12px]">
                       Lifetime points from missions, bonus tasks, and reward bonuses.
                     </p>
-                    <p className="mt-1 text-[10px] leading-snug text-amber-200/70">Spend milestones in Unlock &amp; rewards.</p>
+                    <p className="text-[11px] leading-snug text-amber-200/75 sm:text-[12px]">Spend milestones in Unlock &amp; rewards.</p>
                   </div>
                 </div>
-                <div className="flex min-h-[150px] flex-col border border-fuchsia-300/70 bg-[linear-gradient(135deg,rgba(244,114,182,0.36),rgba(168,85,247,0.28)_45%,rgba(48,11,62,0.9)_100%)] px-3 py-3 text-center [clip-path:polygon(8%_0,100%_0,92%_100%,0_100%)] [box-shadow:0_0_16px_rgba(217,70,239,0.28),inset_0_1px_0_rgba(245,208,254,0.4)] min-[420px]:min-h-[182px]">
-                  <div className="flex items-center justify-center gap-2">
-                    <div className={cn(HUD_LABEL, "text-fuchsia-100/85")}>Streak 🔥</div>
-                    <SyndicateHelpMark topic="hud-streak" label="How streak works" onOpen={openSyndicateHelp} />
+                <div className="flex min-w-0 flex-col gap-2">
+                  <div className="syndicate-stat-card syndicate-stat-card--fuchsia flex flex-col px-4 py-4 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className={cn(HUD_LABEL, "text-fuchsia-100")}>Streak 🔥</div>
+                      <SyndicateHelpMark topic="hud-streak" label="How streak works" onOpen={openSyndicateHelp} />
+                    </div>
+                    <div className="mt-1 text-[20px] font-black tabular-nums text-fuchsia-100">
+                      🔥 {streak} {streak === 1 ? "day" : "days"}
+                    </div>
+                    <div className="mt-2 text-[10px] font-bold uppercase tracking-[0.08em] text-fuchsia-200 sm:text-[11px]">
+                      Consecutive days
+                    </div>
                   </div>
-                  <div className="mt-1 text-[20px] font-black text-fuchsia-100">
-                    🔥 {streak} {streak === 1 ? "day" : "days"}
-                  </div>
-                  <div className="mt-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-fuchsia-200/80">Consecutive days</div>
-                  <div className="mt-auto flex flex-1 flex-col justify-end gap-1.5 pt-2">
-                    <p className="text-[10px] leading-snug text-fuchsia-100/78">
+                  <div className="flex flex-col gap-2 px-0.5 text-center">
+                    <p className="text-[11px] leading-snug text-fuchsia-100/85 sm:text-[12px]">
                       {streak === 0 ? (
                         showRestore ? (
                           streakBeforeBreakCount != null ? (
@@ -4453,7 +4490,7 @@ export function SyndicateAiChallengePanel() {
                     <button
                       type="button"
                       onClick={openStreakRestoreSection}
-                      className="mx-auto max-w-[95%] text-center text-[10px] font-bold leading-snug tracking-wide text-fuchsia-200 underline decoration-fuchsia-400/50 underline-offset-2 transition hover:text-white hover:decoration-white sm:text-[11px]"
+                      className="syndicate-link-skip mx-auto max-w-[95%] text-center text-[11px] font-bold leading-snug tracking-wide text-fuchsia-200 underline decoration-fuchsia-400/55 underline-offset-2 transition hover:text-white hover:decoration-white sm:text-[12px]"
                     >
                       {showRestore ? (
                         <>
@@ -4491,12 +4528,12 @@ export function SyndicateAiChallengePanel() {
             <div className="grid grid-cols-1 gap-4">
               {missionsTabReminders.length > 0 ? (
                 <section
-                  className="syndicate-readable w-full min-w-0 rounded-2xl border border-cyan-400/35 bg-[linear-gradient(165deg,rgba(0,40,64,0.55),rgba(10,8,6,0.92))] px-3 py-4 [box-shadow:0_0_0_1px_rgba(120,200,255,0.2),0_8px_32px_rgba(0,0,0,0.35)] sm:px-5 sm:py-5"
+                  className="syndicate-readable w-full min-w-0 rounded-2xl border border-[rgba(250,204,21,0.38)] bg-[linear-gradient(165deg,rgba(32,26,10,0.72),rgba(6,6,10,0.96))] px-3 py-4 [box-shadow:0_0_0_1px_rgba(250,204,21,0.12),0_8px_36px_rgba(0,0,0,0.45),0_0_28px_rgba(250,204,21,0.08)] sm:px-5 sm:py-5"
                   aria-label="Mission reminders dashboard"
                 >
                   <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <h3 className="text-[13px] font-black uppercase tracking-[0.18em] text-cyan-200/95">Next reminder</h3>
+                      <h3 className="text-[13px] font-black uppercase tracking-[0.18em] text-[color:var(--gold)]/92">Next reminder</h3>
                       <p className="mt-1 text-[11px] text-white/55">
                         {missionsTabReminders.length} active · nearest target first
                       </p>
@@ -4516,15 +4553,15 @@ export function SyndicateAiChallengePanel() {
                       {missionsTabReminders.length > 1 ? ` (${missionsTabReminders.length})` : ""}
                     </button>
                   </div>
-                  <div className="mb-4 flex items-center gap-2 rounded-lg border border-cyan-400/25 bg-black/25 px-3 py-2">
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-white/68">Reminder rules</span>
+                  <div className="mb-4 flex items-center gap-2 rounded-lg border border-white/12 bg-black/35 px-3 py-2">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-white/72">Reminder rules</span>
                     <SyndicateHelpMark
                       topic="mission-reminder"
                       label="How mission reminders work and how points can change"
                       onOpen={openSyndicateHelp}
                     />
                   </div>
-                  <ul className="space-y-3">
+                  <ul className="list-none space-y-4 p-0">
                     {missionsTabReminders[0] ? (
                       <MissionReminderCard
                         key={`dashboard-rem-${missionsTabReminders[0].id}`}
@@ -4660,20 +4697,32 @@ export function SyndicateAiChallengePanel() {
 
       <>
           {!showStatsProfile && syndicateView === "dashboard" ? (
-          <section className="syndicate-readable mt-5 w-full min-w-0 rounded-2xl border border-[rgba(255,215,0,0.28)] bg-[linear-gradient(180deg,rgba(255,200,80,0.06),rgba(20,12,8,0.35))] px-2 py-4 sm:mt-6 sm:px-3 sm:py-5 [box-shadow:inset_0_0_0_1px_rgba(255,215,0,0.08)] max-md:mt-4 max-md:rounded-none max-md:border-0 max-md:bg-transparent max-md:px-2 max-md:shadow-none">
-            <div className="text-center">
-              <h3 className="flex flex-wrap items-center justify-center gap-2 text-[20px] font-black uppercase tracking-[0.14em] text-[color:var(--gold)] sm:text-[24px]">
-                <span>Unlock & redeem rewards</span>
-                <SyndicateHelpMark topic="unlock" label="How unlock and redeem rewards work" onOpen={openSyndicateHelp} />
-              </h3>
-              <p className="mt-1 text-[14px] font-semibold text-white/70 sm:text-[15px]">
-                Redeem in order: Level 1, then 2, then 3… Meet each points threshold and redeem before the next tier opens.
-              </p>
-            </div>
-            <p className="mt-3 text-center text-[17px] font-extrabold text-cyan-100 sm:text-[20px]">
-              Earn points to unlock these rewards and get more points.
-            </p>
-            <div className="mt-5 grid w-full min-w-0 grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-6">
+          <section className="syndicate-readable syndicate-hud-deck syndicate-game-vault mt-3 w-full min-w-0 max-md:mt-3 max-md:rounded-none max-md:border-0 max-md:px-0 max-md:py-0 sm:mt-4">
+            <div className="syndicate-hud-deck-inner syndicate-game-brackets px-3 py-3 sm:px-4 sm:py-4">
+              <div className="syndicate-game-header-rail border-b border-cyan-400/20 pb-3 lg:border-b-0 lg:pb-0">
+                <div className="syndicate-game-header-main min-w-0 border-l-[3px] border-[color:var(--gold-neon)] pl-3 sm:pl-4">
+                  <p className="font-mono text-[9px] font-bold uppercase tracking-[0.32em] text-cyan-300/80 sm:text-[10px]">
+                    Tier matrix · sequential unlock
+                  </p>
+                  <h3 className="mt-1.5 flex flex-wrap items-center gap-2 text-left text-[clamp(1rem,2.8vw+0.4rem,1.35rem)] font-black uppercase leading-tight tracking-[0.12em] text-[color:var(--gold)] [text-shadow:0_0_18px_rgba(250,204,21,0.25)] sm:text-[1.4rem] sm:tracking-[0.14em]">
+                    <span>Unlock &amp; redeem rewards</span>
+                    <SyndicateHelpMark topic="unlock" label="How unlock and redeem rewards work" onOpen={openSyndicateHelp} />
+                  </h3>
+                  <p className="mt-2 max-w-[42rem] text-[12px] font-medium leading-snug text-white/72 sm:text-[13px]">
+                    Redeem in order: Level 1, then 2, then 3… Meet each points threshold and redeem before the next tier opens.
+                  </p>
+                </div>
+                <div className="syndicate-game-header-side syndicate-game-data-slab mt-3 px-3 py-2.5 lg:mt-0 lg:self-stretch lg:px-3.5 lg:py-3">
+                  <p className="font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-cyan-400/90">Signal</p>
+                  <p className="mt-1 text-[12px] font-semibold leading-snug text-cyan-100/92 sm:text-[13px]">
+                    Earn points to unlock tiers — each redeem adds bonus points to your total.
+                  </p>
+                </div>
+              </div>
+
+            <div className="syndicate-game-deck-rail">
+              <div className="syndicate-game-deck-spine" aria-hidden />
+              <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-6">
               {REWARD_MILESTONES.map((rw, levelIndex) => {
                 const level = levelIndex + 1;
                 const prevRedeemed = levelIndex === 0 || redeemedRewards.has(REWARD_MILESTONES[levelIndex - 1]!.id);
@@ -4688,12 +4737,14 @@ export function SyndicateAiChallengePanel() {
                   <div
                     key={rw.id}
                     className={cn(
-                      "flex min-h-[188px] flex-col rounded-xl border px-1.5 pb-2.5 pt-2.5 text-center [box-shadow:0_0_0_1px_rgba(255,215,0,0.12),0_0_12px_rgba(255,180,0,0.1)] sm:min-h-[280px] sm:px-3 sm:pb-3 sm:pt-3 md:min-h-[300px]",
-                      redeemed
-                        ? "border-emerald-300/70 bg-emerald-500/10 [box-shadow:0_0_14px_rgba(52,211,153,0.38)]"
-                        : readyToRedeem
-                          ? "border-[rgba(255,215,0,0.8)] bg-[rgba(255,215,0,0.09)] [box-shadow:0_0_14px_rgba(255,215,0,0.38)]"
-                          : "border-[rgba(255,215,0,0.32)] bg-black/45 [box-shadow:0_0_12px_rgba(255,200,80,0.12)]",
+                      "syndicate-reward-tile flex min-h-[188px] flex-col px-1.5 pb-2.5 pt-2.5 text-center sm:min-h-[280px] sm:px-3 sm:pb-3 sm:pt-3 md:min-h-[300px]",
+                      redeemed && "syndicate-reward-tile--cleared bg-emerald-950/35",
+                      !redeemed &&
+                        readyToRedeem &&
+                        "syndicate-reward-tile--hot bg-[linear-gradient(165deg,rgba(255,200,80,0.16),rgba(8,12,20,0.9))]",
+                      !redeemed &&
+                        !readyToRedeem &&
+                        "bg-[linear-gradient(180deg,rgba(10,20,30,0.95),rgba(4,8,14,0.96))]",
                       sequentialBlocked && "opacity-[0.82] [filter:grayscale(0.45)]"
                     )}
                   >
@@ -4768,9 +4819,12 @@ export function SyndicateAiChallengePanel() {
                 );
               })}
             </div>
-            <p className="mt-3 text-[11px] text-white/45">
-              Reward art lives in <code className="text-white/70">public/assets/rewards/</code> — swap files there and update <code className="text-white/70">REWARD_MILESTONES</code> if filenames change.
+            </div>
+            <p className="mt-3 border-t border-cyan-500/15 pt-3 font-mono text-[10px] leading-relaxed text-white/40 sm:text-[11px]">
+              Reward art: <code className="text-cyan-200/70">public/assets/rewards/</code> · config:{" "}
+              <code className="text-cyan-200/70">REWARD_MILESTONES</code>
             </p>
+            </div>
           </section>
           ) : null}
 
@@ -4778,52 +4832,70 @@ export function SyndicateAiChallengePanel() {
           <section
             id="syndicate-bonus-missions"
             ref={bonusMissionSectionRef}
-            className="syndicate-readable mt-10 w-full min-w-0 scroll-mt-8 space-y-6 max-md:mt-6"
+            className="syndicate-readable syndicate-hud-deck syndicate-hud-deck--mega syndicate-game-vault syndicate-game-vault--mega mt-5 w-full min-w-0 scroll-mt-6 space-y-0 max-md:mt-4 max-md:rounded-none max-md:border-0"
           >
-            <header className="w-full px-1 text-center sm:px-2">
-              <h2 className="flex flex-wrap items-center justify-center gap-3 font-black uppercase leading-[1.02] tracking-[0.1em] text-[color:var(--gold)] [text-shadow:0_0_28px_rgba(255,215,0,0.45),0_0_64px_rgba(34,211,238,0.12)] text-[clamp(2rem,9vw,4rem)] sm:tracking-[0.14em] md:text-[clamp(2.5rem,6vw,4.25rem)]">
-                <span>Mega mission</span>
-                <SyndicateHelpMark topic="mega-mission" label="How mega missions work" onOpen={openSyndicateHelp} />
-              </h2>
-              <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200/70 sm:mt-3 sm:text-xs sm:tracking-[0.28em]">
-                Bonus track · admin-reviewed payouts
-              </p>
-            </header>
+            <div className="syndicate-hud-deck-inner syndicate-game-brackets px-3 py-3 sm:px-4 sm:py-4">
+              <header className="syndicate-game-header-rail border-b border-amber-400/15 pb-3 lg:border-b-0 lg:pb-0">
+                <div className="syndicate-game-header-main min-w-0 border-l-[3px] border-cyan-400/55 pl-3 sm:pl-4">
+                  <p className="font-mono text-[9px] font-bold uppercase tracking-[0.3em] text-cyan-300/85 sm:text-[10px]">
+                    Bonus track · high-yield
+                  </p>
+                  <h2 className="mt-1.5 flex flex-wrap items-center gap-2 text-left text-[clamp(1.25rem,4vw+0.35rem,2.15rem)] font-black uppercase leading-none tracking-[0.1em] text-[color:var(--gold)] [text-shadow:0_0_20px_rgba(250,204,21,0.35),0_0_40px_rgba(34,211,238,0.12)] sm:tracking-[0.12em]">
+                    <span>Mega mission</span>
+                    <SyndicateHelpMark topic="mega-mission" label="How mega missions work" onOpen={openSyndicateHelp} />
+                  </h2>
+                  <p className="mt-2 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-200/75 sm:text-[11px] sm:tracking-[0.26em]">
+                    Admin-reviewed payouts · timed visibility
+                  </p>
+                </div>
+                <div className="syndicate-game-header-side syndicate-game-data-slab mt-3 border-amber-400/25 px-3 py-2.5 lg:mt-0 lg:self-stretch lg:border-cyan-400/35 lg:px-3.5 lg:py-3">
+                  <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-amber-200/95">Protocol</p>
+                  <p className="mt-1 max-w-[16rem] text-[11px] font-medium leading-snug text-white/82 sm:text-[12px]">
+                    Submit text + optional file. One entry per device per task. Claim after approval.
+                  </p>
+                </div>
+              </header>
 
-            <div className="flex flex-col overflow-hidden rounded-2xl border border-[rgba(255,215,0,0.28)] bg-[linear-gradient(165deg,rgba(32,24,10,0.94),rgba(10,8,6,0.92))] [box-shadow:0_0_0_1px_rgba(255,215,0,0.1),0_12px_40px_rgba(0,0,0,0.45)] max-md:rounded-xl max-md:border max-md:shadow-[0_0_0_1px_rgba(255,215,0,0.08)] lg:flex-row">
-              <div className="min-w-0 flex-1 border-b border-white/10 p-4 sm:p-5 lg:border-b-0 lg:border-r lg:py-6 lg:pl-6 lg:pr-8">
-                <p className="text-center text-[13px] font-bold uppercase tracking-[0.18em] text-[color:var(--gold)]/85 sm:text-[14px] lg:text-left">
-                  Bonus missions
-                </p>
-                <h3 className="mt-2 text-center text-[26px] font-black uppercase tracking-[0.07em] text-[#fde68a] [text-shadow:0_0_24px_rgba(255,215,0,0.22)] sm:text-[28px] lg:text-left lg:text-[32px]">
-                  Admin review
-                </h3>
-                <p className="mt-4 text-[17px] font-medium leading-[1.65] text-white/90 sm:text-[18px] lg:text-left">
-                  When an admin posts a bonus task, it appears below. Submit your <span className="font-semibold text-white">written response</span> and
-                  optionally an <span className="font-semibold text-white">attachment</span> — both are stored and visible to staff in Django admin.
-                </p>
-                <ul className="mt-5 space-y-3 text-left text-[16px] font-medium leading-snug text-white/85 sm:text-[17px] sm:leading-relaxed">
-                  <li className="flex gap-3">
-                    <span className="mt-0.5 shrink-0 text-[20px] font-bold leading-none text-cyan-300">·</span>
-                    <span>One submission per device per task. After approval, use Claim reviewed points.</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="mt-0.5 shrink-0 text-[20px] font-bold leading-none text-amber-300">·</span>
-                    <span className="text-amber-50/95">Task visibility uses admin-set hours from post time — submit before the countdown ends.</span>
-                  </li>
-                </ul>
-              </div>
-              <div className="flex shrink-0 flex-col justify-center gap-2 border-t border-white/5 bg-black/20 p-4 sm:p-5 lg:w-[min(100%,280px)] lg:border-l lg:border-t-0 lg:px-5">
-                <p className="text-center text-[13px] font-bold uppercase tracking-[0.12em] text-white/75 sm:text-left">After review</p>
-                <p className="text-center text-[13px] leading-snug text-cyan-100/85 sm:text-left">
-                  Claim buttons appear under each reviewed result.
-                </p>
-                {adminTaskMsg ? <p className="text-center text-[14px] leading-snug text-cyan-100 sm:text-left">{adminTaskMsg}</p> : null}
+              <div className="syndicate-game-briefing mt-4">
+                <div className="syndicate-game-briefing__main p-3 sm:p-4 lg:p-5 lg:pr-7">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex h-1.5 w-1.5 shrink-0 rounded-sm bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" aria-hidden />
+                    <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[color:var(--gold)]/88 sm:text-[12px]">
+                      Field briefing
+                    </p>
+                  </div>
+                  <h3 className="mt-2 text-[1.1rem] font-black uppercase tracking-[0.08em] text-[#fde68a] [text-shadow:0_0_18px_rgba(255,215,0,0.22)] sm:text-[1.3rem]">
+                    Admin review lane
+                  </h3>
+                  <p className="mt-3 text-[14px] font-medium leading-relaxed text-white/88 sm:text-[15px]">
+                    When an admin posts a bonus task, it appears below. Submit your{" "}
+                    <span className="font-semibold text-cyan-100">written response</span> and optionally an{" "}
+                    <span className="font-semibold text-cyan-100">attachment</span> — both are stored and visible to staff in Django admin.
+                  </p>
+                  <ul className="mt-4 grid gap-2.5 text-left sm:gap-3">
+                    <li className="flex gap-2 border-l-[3px] border-cyan-400/50 bg-black/25 py-2 pl-3 pr-2 [clip-path:polygon(0_0,100%_0,100%_100%,6px_100%,0_calc(100%-8px))] sm:text-[14px]">
+                      <span className="text-[13px] font-medium leading-snug text-white/85 sm:leading-relaxed">
+                        One submission per device per task. After approval, use Claim reviewed points.
+                      </span>
+                    </li>
+                    <li className="flex gap-2 border-l-[3px] border-amber-400/55 bg-black/25 py-2 pl-3 pr-2 [clip-path:polygon(0_0,100%_0,100%_100%,6px_100%,0_calc(100%-8px))] sm:text-[14px]">
+                      <span className="text-[13px] font-medium leading-snug text-amber-50/95 sm:leading-relaxed">
+                        Task visibility uses admin-set hours from post time — submit before the countdown ends.
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+                <aside className="syndicate-game-briefing__side flex flex-col justify-center gap-1.5 p-3 sm:p-4">
+                  <p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-amber-200/85">Post-review</p>
+                  <p className="text-[12px] leading-snug text-cyan-100/88 sm:text-[13px]">Claim buttons appear under each reviewed result.</p>
+                  {adminTaskMsg ? <p className="text-[12px] leading-snug text-amber-100/95 sm:text-[13px]">{adminTaskMsg}</p> : null}
+                </aside>
               </div>
             </div>
 
+            <div className="syndicate-hud-deck-inner border-t border-cyan-400/12 px-3 pb-3 pt-2 sm:px-4 sm:pb-4">
             {visibleAdminTasks.length === 0 ? (
-              <div className="rounded-2xl border border-[rgba(255,215,0,0.28)] bg-[linear-gradient(180deg,rgba(255,200,80,0.05),rgba(0,0,0,0.2))] px-5 py-8 text-center [box-shadow:0_0_20px_rgba(255,200,80,0.1)]">
+              <div className="syndicate-game-data-slab mx-auto max-w-lg border-amber-400/20 px-4 py-6 text-center sm:px-5 sm:py-8">
                 <p className="text-[17px] font-semibold text-[#fef3c7]/95">No bonus tasks right now</p>
                 <p className="mt-2 w-full min-w-0 text-[15px] leading-relaxed text-white/70">
                   When an admin creates a task, it will show here. Complete daily missions and check back.
@@ -4853,7 +4925,7 @@ export function SyndicateAiChallengePanel() {
                   return (
                     <article
                       key={t.id}
-                      className="overflow-hidden rounded-2xl border border-cyan-300/40 bg-[linear-gradient(180deg,rgba(0,32,52,0.55),rgba(0,0,0,0.72))] [box-shadow:0_8px_32px_rgba(0,0,0,0.45)]"
+                      className="syndicate-game-ops-card overflow-hidden"
                     >
                       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-black/30 px-4 py-3 sm:px-5 sm:py-4">
                         <div className="min-w-0 flex-1">
@@ -5051,133 +5123,211 @@ export function SyndicateAiChallengePanel() {
                 })}
               </div>
             )}
+            </div>
           </section>
           ) : null}
 
-          {syndicateView === "challenges" ? (
+          {!showStatsProfile && syndicateView === "challenges" ? (
           <>
-          <h3 className="syndicate-readable mt-2 text-[21px] font-black uppercase tracking-[0.1em] text-[color:var(--gold)] sm:text-[24px]">
-            Today&apos;s missions
-          </h3>
-          <div className="syndicate-readable mt-3 w-full min-w-0 border-t border-[rgba(120,200,255,0.45)] px-2 py-3 sm:px-3 sm:py-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="text-[18px] font-black uppercase tracking-[0.1em] text-[#a8d8ff] sm:text-[20px]">Create your mission</div>
-              <SyndicateHelpMark topic="custom-mission" label="How creating your own mission works" onOpen={openSyndicateHelp} />
-            </div>
-            <p className="mt-2 w-full min-w-0 text-[15px] leading-relaxed text-white/80 sm:text-[16px]">
-              Up to <strong className="text-white/80">two</strong> per day. You set the title and difficulty; the server fills in{" "}
-              <strong className="text-white/80">random points from 0–9</strong>, description, examples, and benefits, and keeps a short mindset summary for your next{" "}
-              <strong className="text-white/80">custom missions</strong> and <strong className="text-white/80">mood + category</strong> picks.
-            </p>
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-              <div className="min-w-0 flex-1 sm:min-w-[220px]">
-                <label htmlFor="syndicate-custom-title" className="text-[12px] font-bold uppercase tracking-[0.1em] text-white/70">
-                  Title
-                </label>
-                <input
-                  id="syndicate-custom-title"
-                  value={customTitle}
-                  onChange={(e) => setCustomTitle(e.target.value)}
-                  maxLength={220}
-                  placeholder="What you want to accomplish today…"
-                  disabled={busy !== null || userCustomCount >= MAX_CUSTOM_COMPLETIONS_PER_DAY}
-                  className="syndicate-readable mt-1.5 w-full rounded-lg border border-white/25 bg-black/50 px-3 py-2.5 text-[16px] text-white placeholder:text-white/45 disabled:opacity-45"
-                />
+          <section className="syndicate-readable syndicate-missions-hud mt-2 w-full min-w-0 px-0" aria-label="Today's missions board">
+            <div className="syndicate-missions-hud__shell max-md:rounded-none max-md:[clip-path:none] max-md:p-px">
+              <div className="syndicate-missions-hud__body max-md:[clip-path:none]">
+                <header className="syndicate-missions-hud__head">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h3 className="syndicate-nav-headline m-0 leading-tight">Today&apos;s missions</h3>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        disabled={busy !== null || userCustomCount >= MAX_CUSTOM_COMPLETIONS_PER_DAY}
+                        aria-label="Create own mission. Tap the red question mark on this button for what it does, how it works, and the two-per-day limit."
+                        onClick={(e) => {
+                          const helpEl = (e.target as HTMLElement).closest("[data-custom-mission-help]");
+                          if (helpEl) {
+                            openSyndicateHelp("custom-mission", helpEl as HTMLElement);
+                            return;
+                          }
+                          setCreateMissionModalOpen(true);
+                        }}
+                        className={cn(
+                          "syndicate-nav-action syndicate-nav-action--hud-primary inline-flex min-h-[40px] min-w-0 touch-manipulation items-center justify-center gap-2 px-2.5 py-2 text-[10px] font-bold uppercase tracking-[0.06em] sm:min-w-[148px] sm:gap-2.5 sm:px-3.5 sm:py-2.5 sm:text-[11px] sm:tracking-[0.08em]",
+                          (busy !== null || userCustomCount >= MAX_CUSTOM_COMPLETIONS_PER_DAY) && "pointer-events-none opacity-45"
+                        )}
+                      >
+                        <span className="min-w-0 text-center leading-tight" aria-hidden>
+                          Create own mission
+                        </span>
+                        <span
+                          data-custom-mission-help
+                          className="inline-flex h-[1.125rem] w-[1.125rem] shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-[#ff0000] bg-black/90 text-[9px] font-black leading-none text-[#ff0000] shadow-[0_0_10px_rgba(255,0,0,0.5)] transition hover:scale-105 sm:h-5 sm:w-5 sm:text-[10px]"
+                          aria-hidden
+                        >
+                          ?
+                        </span>
+                      </button>
+                      <span className="syndicate-missions-hud__slots tabular-nums">
+                        {userCustomCount >= MAX_CUSTOM_COMPLETIONS_PER_DAY
+                          ? "Forge locked"
+                          : `${MAX_CUSTOM_COMPLETIONS_PER_DAY - userCustomCount} forge slot${MAX_CUSTOM_COMPLETIONS_PER_DAY - userCustomCount === 1 ? "" : "s"}`}
+                      </span>
+                    </div>
+                  </div>
+                </header>
+
+                {mounted && createMissionModalOpen && syndicateView === "challenges"
+                  ? createPortal(
+                      <>
+                        <div
+                          className="fixed inset-0 z-[181] bg-black/60 backdrop-blur-[2px]"
+                          onClick={() => {
+                            if (busy !== "custom") setCreateMissionModalOpen(false);
+                          }}
+                          aria-hidden
+                        />
+                        <div
+                          role="dialog"
+                          aria-modal="true"
+                          aria-labelledby="syndicate-create-mission-title"
+                          className="syndicate-mood-context syndicate-readable fixed left-1/2 top-1/2 z-[182] w-[min(calc(100vw-1.25rem),40rem)] max-h-[min(90vh,calc(100dvh-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto overscroll-contain shadow-[0_24px_80px_rgba(0,0,0,0.78)]"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="syndicate-missions-hud__forge m-0 p-4 sm:p-5">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                <span id="syndicate-create-mission-title" className="syndicate-missions-hud__forge-title">
+                                  Create your mission
+                                </span>
+                                <SyndicateHelpMark
+                                  topic="custom-mission"
+                                  label="How creating your own mission works"
+                                  onOpen={openSyndicateHelp}
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                disabled={busy === "custom"}
+                                onClick={() => setCreateMissionModalOpen(false)}
+                                className="shrink-0 rounded-md border border-white/25 px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white/85 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                Close
+                              </button>
+                            </div>
+                            <p className="syndicate-readable mt-2 max-w-[56rem] text-[13px] leading-relaxed text-white/78 sm:text-[14px]">
+                              Up to <strong className="text-[#fde047]/95">two</strong> per day. You set the title and difficulty; the server fills in{" "}
+                              <strong className="text-white/88">random points from 0–9</strong>, description, examples, and benefits, and keeps a short mindset summary for your next{" "}
+                              <strong className="text-white/88">custom missions</strong> and <strong className="text-white/88">mood + category</strong> picks.
+                            </p>
+                            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_10.5rem_auto] sm:items-end sm:gap-3">
+                              <div className="min-w-0">
+                                <label htmlFor="syndicate-custom-title" className="syndicate-missions-hud__label">
+                                  Title
+                                </label>
+                                <input
+                                  id="syndicate-custom-title"
+                                  value={customTitle}
+                                  onChange={(e) => setCustomTitle(e.target.value)}
+                                  maxLength={220}
+                                  placeholder="What you want to accomplish today…"
+                                  disabled={busy !== null || userCustomCount >= MAX_CUSTOM_COMPLETIONS_PER_DAY}
+                                  className="syndicate-readable syndicate-missions-hud__input"
+                                />
+                              </div>
+                              <div className="syndicate-missions-hud__forge-diff min-w-0">
+                                <label htmlFor="syndicate-custom-diff" className="syndicate-missions-hud__label">
+                                  Difficulty
+                                </label>
+                                <select
+                                  id="syndicate-custom-diff"
+                                  value={customDifficulty}
+                                  onChange={(e) => setCustomDifficulty(e.target.value as "easy" | "medium" | "hard")}
+                                  disabled={busy !== null || userCustomCount >= MAX_CUSTOM_COMPLETIONS_PER_DAY}
+                                  className={cn(SYNDICATE_SELECT_STATUS, "mt-1.5 w-full min-w-0")}
+                                >
+                                  <option value="easy">Easy</option>
+                                  <option value="medium">Medium</option>
+                                  <option value="hard">Hard</option>
+                                </select>
+                              </div>
+                              <button
+                                type="button"
+                                disabled={busy !== null || userCustomCount >= MAX_CUSTOM_COMPLETIONS_PER_DAY || customTitle.trim().length < 3}
+                                onClick={() => void createUserCustomTask()}
+                                className="syndicate-readable syndicate-cyber-card__cta min-h-[48px] px-4 py-3 text-[11px] sm:min-h-[44px] sm:text-[12px]"
+                              >
+                                {busy === "custom" ? "Creating…" : "Create mission"}
+                              </button>
+                            </div>
+                            <p className="syndicate-readable mt-3 text-[12px] font-medium text-white/62 sm:text-[13px]">
+                              {userCustomCount >= MAX_CUSTOM_COMPLETIONS_PER_DAY
+                                ? "You’ve used both custom mission slots for today."
+                                : `${MAX_CUSTOM_COMPLETIONS_PER_DAY - userCustomCount} custom mission slot${MAX_CUSTOM_COMPLETIONS_PER_DAY - userCustomCount === 1 ? "" : "s"} left today.`}
+                            </p>
+                          </div>
+                        </div>
+                      </>,
+                      document.body
+                    )
+                  : null}
+
+                <div className="syndicate-missions-hud-filters syndicate-readable">
+                  <div className="flex min-w-0 flex-col">
+                    <label htmlFor="syndicate-dashboard-mood" className="syndicate-missions-hud__label">
+                      Mood
+                    </label>
+                    <select
+                      id="syndicate-dashboard-mood"
+                      value={statsMood}
+                      onChange={(e) => setStatsMood(e.target.value)}
+                      className={cn(SYNDICATE_SELECT_MOOD, "mt-1.5 w-full min-w-0")}
+                      aria-label="Filter missions by mood"
+                    >
+                      {STATS_MOODS.map((m) => (
+                        <option key={m} value={m}>
+                          {STATS_MOOD_LABEL[m]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex min-w-0 flex-col">
+                    <label htmlFor="syndicate-dashboard-category" className="syndicate-missions-hud__label">
+                      Category
+                    </label>
+                    <select
+                      id="syndicate-dashboard-category"
+                      value={catFilter}
+                      onChange={(e) =>
+                        setCatFilter(e.target.value as "all" | (typeof CATEGORIES)[number])
+                      }
+                      className={cn(SYNDICATE_SELECT_CATEGORY, "mt-1.5 w-full min-w-0")}
+                      aria-label="Filter missions by category"
+                    >
+                      <option value="all">All</option>
+                      {CATEGORIES.map((c) => (
+                        <option key={c} value={c}>
+                          {CAT_LABEL[c]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex min-w-0 flex-col">
+                    <label htmlFor="syndicate-dashboard-status" className="syndicate-missions-hud__label">
+                      Status
+                    </label>
+                    <select
+                      id="syndicate-dashboard-status"
+                      value={doneFilter}
+                      onChange={(e) => setDoneFilter(e.target.value as typeof doneFilter)}
+                      className={cn(SYNDICATE_SELECT_STATUS, "mt-1.5 w-full min-w-0")}
+                      aria-label="Filter missions by completion status"
+                    >
+                      <option value="all">All</option>
+                      <option value="complete">Complete</option>
+                      <option value="incomplete">Incomplete</option>
+                    </select>
+                  </div>
+                </div>
               </div>
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="syndicate-custom-diff" className="text-[12px] font-bold uppercase tracking-[0.1em] text-white/70">
-                  Difficulty
-                </label>
-                <select
-                  id="syndicate-custom-diff"
-                  value={customDifficulty}
-                  onChange={(e) => setCustomDifficulty(e.target.value as "easy" | "medium" | "hard")}
-                  disabled={busy !== null || userCustomCount >= MAX_CUSTOM_COMPLETIONS_PER_DAY}
-                  className={cn(SYNDICATE_SELECT_STATUS, "w-full min-w-0 sm:w-auto")}
-                >
-                  <option value="easy">Easy</option>
-                  <option value="medium">Medium</option>
-                  <option value="hard">Hard</option>
-                </select>
-              </div>
-              <button
-                type="button"
-                disabled={busy !== null || userCustomCount >= MAX_CUSTOM_COMPLETIONS_PER_DAY || customTitle.trim().length < 3}
-                onClick={() => void createUserCustomTask()}
-                className="rounded-lg border border-[rgba(120,200,255,0.55)] bg-[rgba(0,100,160,0.2)] px-5 py-2.5 text-[14px] font-bold uppercase tracking-wide text-[#b5e8ff] transition hover:bg-[rgba(0,100,160,0.35)] disabled:cursor-not-allowed disabled:opacity-45"
-              >
-                {busy === "custom" ? "Creating…" : "Create mission"}
-              </button>
             </div>
-            <p className="mt-3 text-[14px] font-medium text-white/70">
-              {userCustomCount >= MAX_CUSTOM_COMPLETIONS_PER_DAY
-                ? "You’ve used both custom mission slots for today."
-                : `${MAX_CUSTOM_COMPLETIONS_PER_DAY - userCustomCount} custom mission slot${MAX_CUSTOM_COMPLETIONS_PER_DAY - userCustomCount === 1 ? "" : "s"} left today.`}
-            </p>
-          </div>
-          <div
-            className={cn(
-              "syndicate-readable grid grid-cols-1 gap-3 rounded-xl border border-[rgba(255,215,0,0.4)] bg-[linear-gradient(180deg,rgba(20,20,24,0.94)_0%,rgba(6,8,14,0.98)_100%)] px-4 py-3.5 [box-shadow:0_0_0_1px_rgba(255,215,0,0.14),0_0_24px_rgba(0,0,0,0.52)]",
-              "md:grid-cols-3 md:items-end md:gap-3",
-              "max-md:rounded-none max-md:border-x-0 max-md:px-3"
-            )}
-          >
-            <div className="flex min-w-0 flex-col gap-1.5">
-              <label htmlFor="syndicate-dashboard-mood" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white/55">
-                Mood
-              </label>
-              <select
-                id="syndicate-dashboard-mood"
-                value={statsMood}
-                onChange={(e) => setStatsMood(e.target.value)}
-                className={cn(SYNDICATE_SELECT_MOOD, "w-full min-w-0")}
-                aria-label="Filter missions by mood"
-              >
-                {STATS_MOODS.map((m) => (
-                  <option key={m} value={m}>
-                    {STATS_MOOD_LABEL[m]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex min-w-0 flex-col gap-1.5">
-              <label htmlFor="syndicate-dashboard-category" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white/55">
-                Category
-              </label>
-              <select
-                id="syndicate-dashboard-category"
-                value={catFilter}
-                onChange={(e) =>
-                  setCatFilter(e.target.value as "all" | (typeof CATEGORIES)[number])
-                }
-                className={cn(SYNDICATE_SELECT_CATEGORY, "w-full min-w-0")}
-                aria-label="Filter missions by category"
-              >
-                <option value="all">All</option>
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {CAT_LABEL[c]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex min-w-0 flex-col gap-1.5">
-              <label htmlFor="syndicate-dashboard-status" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white/55">
-                Status
-              </label>
-              <select
-                id="syndicate-dashboard-status"
-                value={doneFilter}
-                onChange={(e) => setDoneFilter(e.target.value as typeof doneFilter)}
-                className={cn(SYNDICATE_SELECT_STATUS, "w-full min-w-0")}
-                aria-label="Filter missions by completion status"
-              >
-                <option value="all">All</option>
-                <option value="complete">Complete</option>
-                <option value="incomplete">Incomplete</option>
-              </select>
-            </div>
-          </div>
+          </section>
 
           {error ? (
             <div className="syndicate-readable rounded-md border border-[rgba(255,59,59,0.55)] bg-[linear-gradient(180deg,rgba(255,59,59,0.16),rgba(255,59,59,0.08))] px-3 py-2 text-[13px] text-[#ffc9c9]">{error}</div>
@@ -5237,7 +5387,7 @@ export function SyndicateAiChallengePanel() {
             </div>
           ) : null}
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
+          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
             {CATEGORIES.map((cat) => {
               const list = byCategoryFiltered[cat] ?? [];
               if (list.length === 0) return null;
@@ -5281,9 +5431,9 @@ export function SyndicateAiChallengePanel() {
           </div>
 
           {missionsTabReminders.length > 0 ? (
-            <div className="syndicate-readable mt-8 flex flex-col gap-3 rounded-xl border border-cyan-400/35 bg-[linear-gradient(165deg,rgba(0,40,64,0.45),rgba(10,8,6,0.88))] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="syndicate-readable mt-8 flex flex-col gap-3 rounded-xl border border-[rgba(250,204,21,0.35)] bg-[linear-gradient(165deg,rgba(32,26,10,0.65),rgba(8,8,10,0.92))] px-4 py-4 [box-shadow:0_0_24px_rgba(250,204,21,0.08)] sm:flex-row sm:items-center sm:justify-between">
               <p className="text-[14px] text-white/82">
-                <span className="font-black tabular-nums text-cyan-200/95">{missionsTabReminders.length}</span> mission reminder
+                <span className="font-black tabular-nums text-[color:var(--gold)]">{missionsTabReminders.length}</span> mission reminder
                 {missionsTabReminders.length === 1 ? "" : "s"} — open the full list to manage them.
               </p>
               <button
@@ -5299,7 +5449,7 @@ export function SyndicateAiChallengePanel() {
             </div>
           ) : null}
           </>
-          ) : syndicateView === "reminders" ? (
+          ) : !showStatsProfile && syndicateView === "reminders" ? (
           <>
             <div className="syndicate-readable mb-4 flex flex-wrap items-center justify-between gap-3">
               <h3 className="syndicate-readable text-[21px] font-black uppercase tracking-[0.1em] text-[color:var(--gold)] sm:text-[24px]">
@@ -5313,7 +5463,7 @@ export function SyndicateAiChallengePanel() {
                 Back to dashboard
               </button>
             </div>
-            <p className="syndicate-readable mb-6 max-w-3xl text-[13px] leading-relaxed text-white/70 sm:text-[14px]">
+            <p className="syndicate-readable mb-3 max-w-3xl text-[13px] leading-relaxed text-white/70 sm:mb-4 sm:text-[14px]">
               Set date &amp; time under <span className="text-white/85">How you completed it</span> on an incomplete mission. Reminders stay until the target time or you clear them.
               Within 24 hours of the mission appearing, use <span className="font-semibold text-cyan-200/90">Open mission</span>; after that, use{" "}
               <span className="font-semibold text-cyan-200/90">Done</span> or <span className="font-semibold text-cyan-200/90">Dismiss</span>. If the target passes with no action, the server may deduct{" "}
@@ -5325,9 +5475,9 @@ export function SyndicateAiChallengePanel() {
               </p>
             ) : (
               <>
-                <div className="syndicate-readable mb-4 flex flex-col gap-3 rounded-xl border border-cyan-400/25 bg-black/25 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4 sm:px-4">
+                <div className="syndicate-readable mb-3 flex flex-col gap-3 rounded-xl border border-[rgba(250,204,21,0.22)] bg-black/30 px-3 py-3 sm:mb-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4 sm:px-4">
                   <div className="flex min-w-0 flex-col gap-1.5">
-                    <label className="text-[11px] font-bold uppercase tracking-[0.12em] text-cyan-200/85" htmlFor="syndicate-reminder-sort">
+                    <label className="text-[11px] font-bold uppercase tracking-[0.12em] text-[color:var(--gold)]/85" htmlFor="syndicate-reminder-sort">
                       Sort by when set
                     </label>
                     <select
@@ -5344,7 +5494,7 @@ export function SyndicateAiChallengePanel() {
                     </select>
                   </div>
                   <div className="flex min-w-0 flex-col gap-1.5 sm:items-end">
-                    <label className="text-[11px] font-bold uppercase tracking-[0.12em] text-cyan-200/85" htmlFor="syndicate-reminder-day-filter">
+                    <label className="text-[11px] font-bold uppercase tracking-[0.12em] text-[color:var(--gold)]/85" htmlFor="syndicate-reminder-day-filter">
                       Added on date
                     </label>
                     <div className="flex flex-wrap items-center gap-2">
@@ -5376,7 +5526,7 @@ export function SyndicateAiChallengePanel() {
                     <button
                       type="button"
                       onClick={() => setReminderFilterDate("")}
-                      className="font-semibold text-cyan-200 underline-offset-2 hover:underline"
+                      className="syndicate-link-skip font-semibold text-cyan-200 underline-offset-2 hover:underline"
                     >
                       clear the date filter
                     </button>
@@ -5384,7 +5534,7 @@ export function SyndicateAiChallengePanel() {
                   </p>
                 ) : (
                   <section
-                    className="syndicate-readable w-full min-w-0 rounded-2xl border border-cyan-400/35 bg-[linear-gradient(165deg,rgba(0,40,64,0.55),rgba(10,8,6,0.92))] px-3 py-5 [box-shadow:0_0_0_1px_rgba(120,200,255,0.2),0_8px_32px_rgba(0,0,0,0.35)] sm:px-5 sm:py-6"
+                    className="syndicate-readable w-full min-w-0 rounded-2xl border border-[rgba(250,204,21,0.38)] bg-[linear-gradient(165deg,rgba(32,26,10,0.72),rgba(6,6,10,0.96))] px-3 py-5 [box-shadow:0_0_0_1px_rgba(250,204,21,0.12),0_8px_36px_rgba(0,0,0,0.45),0_0_28px_rgba(250,204,21,0.08)] sm:px-5 sm:py-6"
                     aria-label="All mission reminders"
                   >
                     {reminderFilterDate ? (
@@ -5394,7 +5544,7 @@ export function SyndicateAiChallengePanel() {
                         <span className="tabular-nums text-white/75">{missionsTabReminders.length}</span>
                       </p>
                     ) : null}
-                    <ul className="space-y-3">
+                    <ul className="list-none space-y-4 p-0">
                       {remindersPageSortedFiltered.map((item) => (
                         <MissionReminderCard
                           key={`all-rem-${item.id}`}

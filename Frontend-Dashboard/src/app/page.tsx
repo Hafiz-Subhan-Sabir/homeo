@@ -572,11 +572,11 @@ function MonkIcon({ kind }: { kind: MonkChallenge["key"] }) {
 
 function SyndicateModeSection() {
   return (
-    <section data-anim="in" className="mt-2 w-full min-w-0 shrink-0">
-      <div className="cut-frame cyber-frame relative min-h-[min(85vh,920px)] w-full overflow-hidden border border-[rgba(255,215,0,0.52)] bg-[#060606]/88 p-6 sm:p-7 [box-shadow:0_0_0_1px_rgba(255,215,0,0.30),0_0_18px_rgba(255,215,0,0.26),0_0_52px_rgba(255,215,0,0.14)]">
-        <div className="absolute inset-0 opacity-62 [background:radial-gradient(760px_220px_at_20%_0%,rgba(255,215,0,0.15),rgba(0,0,0,0)_65%)]" />
+    <section data-anim="in" className="mt-0 w-full min-w-0 shrink-0">
+      <div className="syndicate-dystopia-enclosure syndicate-missions-shell cyber-frame relative min-h-[min(85vh,920px)] w-full overflow-hidden bg-[#060606]/88 px-0 pb-3 pt-0 sm:pb-4 sm:pt-0.5">
+        <div className="absolute inset-0 opacity-62 [background:radial-gradient(760px_220px_at_20%_0%,rgba(255,215,0,0.15),rgba(0,0,0,0)_65%)] syndicate-missions-shell-wash" />
         <div className="absolute inset-0 opacity-30 [background:repeating-linear-gradient(0deg,rgba(255,255,255,0.015)_0px,rgba(255,255,255,0.015)_1px,transparent_8px,transparent_14px)]" />
-        <div className="relative">
+        <div className="relative min-h-0 pt-2 sm:pt-2.5">
           <SyndicateAiChallengePanel />
         </div>
       </div>
@@ -2140,6 +2140,8 @@ export default function Page() {
         "relative min-h-screen w-screen hud-void hud-scanlines hud-noise overflow-x-hidden overflow-y-auto lg:h-screen lg:overflow-hidden",
         themeMode === "danger" && "theme-danger",
         themeMode === "cyberpunk" && "theme-cyberpunk",
+        !sidebarOpen && "focus-mode",
+        (selectedNavKey === "monk" || selectedNavKey === "affiliate") && "syndicate-mood-context"
       )}
     >
       <div className="hud-ambient-glow" aria-hidden="true" />
@@ -2596,6 +2598,14 @@ export default function Page() {
                 !isMobileNavUi &&
                 "max-lg:pointer-events-none max-lg:opacity-[0.42] max-lg:transition-opacity max-lg:duration-200 max-lg:ease-out",
               "lg:h-full lg:min-h-0"
+              "shell-neon-yellow cut-frame cyber-frame gold-stroke relative flex min-h-0 w-full min-w-0 max-w-none flex-col overflow-hidden border bg-[#060606]/70",
+              sidebarOpen ? "col-span-7 md:col-span-10 lg:col-span-10" : "col-span-12",
+              "lg:h-full lg:min-h-0",
+              (selectedNavKey === "monk" || selectedNavKey === "affiliate") &&
+                "syndicate-main-shell",
+              selectedNavKey === "monk" || selectedNavKey === "affiliate"
+                ? "px-0 pt-1 pb-[var(--fluid-section-p)] sm:pt-1.5"
+                : "fluid-section-p"
             )}
           >
             <div className="absolute inset-0 opacity-70 [background:radial-gradient(820px_520px_at_40%_0%,rgba(250,204,21,0.09),rgba(0,0,0,0)_64%)]" />
@@ -2604,16 +2614,29 @@ export default function Page() {
               className={cn(
                 "relative flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden pr-1 no-scrollbar",
                 !sidebarOccupiesGrid && "lg:pl-14"
+                "relative flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden no-scrollbar",
+                selectedNavKey === "monk" || selectedNavKey === "affiliate"
+                  ? "px-[clamp(0.4rem,1.1vw+0.2rem,0.85rem)]"
+                  : "pr-1",
+                !sidebarOpen &&
+                  selectedNavKey !== "monk" &&
+                  selectedNavKey !== "affiliate" &&
+                  "md:pl-14",
+                selectedNavKey !== "monk" &&
+                  selectedNavKey !== "affiliate" &&
+                  "px-[var(--fluid-section-p)]"
               )}
             >
-              <header className="mb-[clamp(0.65rem,1.5vw+0.2rem,1.1rem)] shrink-0 border-b border-[color:var(--gold-neon-border-mid)] pb-[clamp(0.45rem,1.2vw+0.15rem,0.85rem)] pr-1">
-                <div className="heading-glow fluid-hero-title font-black italic tracking-[0.02em] text-[color:var(--gold-neon)] drop-shadow-[0_0_28px_rgba(250,204,21,0.35)]">
-                  THE SYNDICATE
-                </div>
-                <p className="mt-[clamp(0.35rem,0.9vw+0.12rem,0.55rem)] max-w-[min(100%,52rem)] text-[clamp(0.5rem,1.05vw+0.22rem,0.72rem)] font-black italic uppercase leading-snug tracking-[0.14em] text-[color:var(--gold-neon)]/88 drop-shadow-[0_0_14px_rgba(250,204,21,0.22)] sm:tracking-[0.18em]">
-                  MONEY, POWER, FREEDOM, HONOUR
-                </p>
-              </header>
+              {selectedNavKey !== "monk" ? (
+                <header className="mb-[clamp(0.65rem,1.5vw+0.2rem,1.1rem)] shrink-0 border-b border-[color:var(--gold-neon-border-mid)] pb-[clamp(0.45rem,1.2vw+0.15rem,0.85rem)] pr-1">
+                  <div className="heading-glow fluid-hero-title font-black italic tracking-[0.02em] text-[color:var(--gold-neon)] drop-shadow-[0_0_28px_rgba(250,204,21,0.35)]">
+                    THE SYNDICATE
+                  </div>
+                  <p className="mt-[clamp(0.35rem,0.9vw+0.12rem,0.55rem)] max-w-[min(100%,52rem)] text-[clamp(0.5rem,1.05vw+0.22rem,0.72rem)] font-black italic uppercase leading-snug tracking-[0.14em] text-[color:var(--gold-neon)]/88 drop-shadow-[0_0_14px_rgba(250,204,21,0.22)] sm:tracking-[0.18em]">
+                    MONEY, POWER, FREEDOM, HONOUR
+                  </p>
+                </header>
+              ) : null}
               {selectedNavKey === "monk" ? (
                 <SyndicateModeSection />
               ) : selectedNavKey === "affiliate" ? (
