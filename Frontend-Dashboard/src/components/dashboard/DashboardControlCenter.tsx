@@ -10,7 +10,254 @@ import { accentByKey, Card, cn, ProgressBar, themeAccent, type ThemeMode } from 
 import { PortalSessionControls } from "../auth/PortalSessionControls";
 import { GoalPathSystem } from "./path/GoalPathSystem";
 import { MissionCommandDeckCard } from "./MissionCommandDeckCard";
+import { SyndicateReminderDueBanner } from "./SyndicateReminderDueBanner";
+import {
+  formatSyndicateReminderCountdown,
+  useSyndicateMissionsPeek,
+  type SyndicateMissionPeekRow
+} from "./useSyndicateMissionsPeek";
+import { Bell, Target } from "lucide-react";
 export type { ThemeMode };
+
+function pickPrimaryMission(rows: SyndicateMissionPeekRow[]): SyndicateMissionPeekRow | null {
+  const missions = rows.filter((r) => r.mood !== "reminder");
+  if (!missions.length) return null;
+  return (
+    missions.find((r) => !r.completed && r.onBoard) ??
+    missions.find((r) => !r.completed) ??
+    missions[0] ??
+    null
+  );
+}
+
+function pickPrimaryReminder(rows: SyndicateMissionPeekRow[], now: number): SyndicateMissionPeekRow | null {
+  const withRem = rows.filter((r) => r.reminderAtMs != null && r.reminderAtMs > now);
+  if (!withRem.length) return null;
+  return withRem.reduce((a, b) => ((a.reminderAtMs ?? 0) <= (b.reminderAtMs ?? 0) ? a : b));
+}
+
+function formatSyndicateReminderWhen(ms: number) {
+  try {
+    return new Date(ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  } catch {
+    return "";
+  }
+}
+
+function syndicateDifficultyChipClass(d: string) {
+  const x = d.toLowerCase();
+  if (x === "easy") return "border-emerald-400/40 bg-emerald-500/14 text-emerald-100/90";
+  if (x === "hard") return "border-rose-400/40 bg-rose-500/14 text-rose-100/88";
+  return "border-amber-400/38 bg-amber-500/12 text-amber-100/88";
+}
+
+function SyndicateMissionsSnapshotCard({
+  themeMode,
+  onNavigate
+}: {
+  themeMode: ThemeMode;
+  onNavigate: (nav: DashboardNavKey) => void;
+}) {
+  const { rows, loading, error, linkedAccount, apiReached, refresh } = useSyndicateMissionsPeek();
+  const [reminderTick, setReminderTick] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setReminderTick((n) => n + 1), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const primaryMission = useMemo(() => pickPrimaryMission(rows), [rows]);
+  const primaryReminder = useMemo(() => pickPrimaryReminder(rows, Date.now()), [rows, reminderTick]);
+
+  const headerActions = (
+    <div className="flex items-center gap-2">
+      <motion.button
+        type="button"
+        onClick={() => refresh()}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.98 }}
+        className="text-[12px] font-black uppercase tracking-[0.12em] text-cyan-200/85 hover:text-cyan-100/95"
+      >
+        Refresh
+      </motion.button>
+      <motion.button
+        type="button"
+        onClick={() => onNavigate("monk")}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.98 }}
+        className="text-[12px] font-black uppercase tracking-[0.12em] text-[color:var(--gold)]/92"
+      >
+        Syndicate →
+      </motion.button>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      <div
+        className="cut-frame cyber-frame gold-stroke relative overflow-hidden rounded-lg border border-[rgba(197,179,88,0.28)] bg-[#060606]/80 px-4 py-4 sm:px-5 sm:py-5 md:px-6 md:py-6"
+        style={{ boxShadow: `0 0 0 1px rgba(197,179,88,0.08), 0 0 40px ${themeAccent(themeMode).glow}` }}
+      >
+        <div className="pointer-events-none absolute inset-0 opacity-80 [background:radial-gradient(720px_280px_at_12%_0%,rgba(0,255,255,0.09),rgba(0,0,0,0)_55%)]" />
+        <div className="relative flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <h3 className="font-mono text-[clamp(1.05rem,2.1vw+0.6rem,1.55rem)] font-black uppercase italic tracking-[0.06em] text-[color:var(--gold)]/95 drop-shadow-[0_0_18px_rgba(250,204,21,0.22)]">
+              Syndicate Mode
+            </h3>
+            <p className="mt-2 max-w-[52rem] text-[clamp(0.9rem,1.2vw+0.65rem,1.15rem)] font-semibold leading-relaxed text-white/78">
+              Build <span className="text-cyan-200/90">streaks</span>, unlock <span className="text-[color:var(--gold)]/90">levels</span>, and{" "}
+              <span className="text-emerald-200/88">earn points</span> to unlock programs and keep your edge on the board.
+            </p>
+            {!apiReached && rows.length > 0 ? (
+              <p className="mt-2 text-[13px] text-amber-200/75">Board sync limited — showing what’s saved on this device.</p>
+            ) : null}
+          </div>
+          <div className="shrink-0 pt-1 sm:pt-0">{headerActions}</div>
+        </div>
+      </div>
+
+      {loading && rows.length === 0 ? (
+        <div className="grid gap-4 md:grid-cols-2" aria-busy>
+          <div className="h-48 animate-pulse rounded-lg bg-white/8" />
+          <div className="h-48 animate-pulse rounded-lg bg-white/8" />
+        </div>
+      ) : null}
+
+      {!loading && error && rows.length === 0 ? (
+        <div className="rounded-lg border border-red-500/25 bg-red-950/25 px-4 py-4 text-[15px] text-red-200/90">
+          {error}
+          <button
+            type="button"
+            onClick={() => refresh()}
+            className="mt-3 block text-[13px] font-black uppercase tracking-[0.14em] text-[color:var(--gold)]/95 underline-offset-2 hover:underline"
+          >
+            Try again
+          </button>
+        </div>
+      ) : null}
+
+      {!loading && (rows.length > 0 || (!error && rows.length === 0)) ? (
+        <div className="grid gap-4 md:grid-cols-2 md:items-stretch">
+          <Card
+            themeMode={themeMode}
+            title="Mission"
+            accentKey="monk"
+            frameVariant="shell"
+            right={<Target className="h-5 w-5 text-cyan-300/80" aria-hidden />}
+          >
+            {primaryMission ? (
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-[12px] font-bold text-white/40">#{primaryMission.id}</span>
+                  {primaryMission.completed ? (
+                    <span className="rounded border border-white/18 bg-white/8 px-2 py-0.5 text-[11px] font-black uppercase tracking-[0.12em] text-white/55">
+                      Completed
+                    </span>
+                  ) : null}
+                </div>
+                <h4
+                  className={cn(
+                    "text-[clamp(1.05rem,1.4vw+0.85rem,1.35rem)] font-bold leading-snug text-white/94",
+                    primaryMission.completed && "line-through decoration-white/35"
+                  )}
+                >
+                  {primaryMission.title}
+                </h4>
+                {primaryMission.subtitle ? (
+                  <p className="text-[clamp(0.88rem,0.9vw+0.65rem,1.02rem)] leading-relaxed text-white/62">{primaryMission.subtitle}</p>
+                ) : null}
+                <div className="flex flex-wrap gap-2">
+                  <span className="rounded-md border border-white/16 bg-black/40 px-2 py-1 text-[12px] font-bold uppercase tracking-[0.1em] text-white/60">
+                    {primaryMission.mood}
+                  </span>
+                  <span className="rounded-md border border-white/16 bg-black/40 px-2 py-1 text-[12px] font-bold uppercase tracking-[0.1em] text-white/60">
+                    {primaryMission.category}
+                  </span>
+                  {primaryMission.difficulty && primaryMission.difficulty !== "—" ? (
+                    <span
+                      className={cn(
+                        "rounded-md border px-2 py-1 text-[12px] font-black uppercase tracking-[0.1em]",
+                        syndicateDifficultyChipClass(primaryMission.difficulty)
+                      )}
+                    >
+                      {primaryMission.difficulty}
+                    </span>
+                  ) : null}
+                  {primaryMission.onBoard ? (
+                    <span className="rounded-md border border-cyan-500/40 bg-cyan-500/14 px-2 py-1 text-[12px] font-black uppercase tracking-[0.1em] text-cyan-100/88">
+                      On 24h board
+                    </span>
+                  ) : (
+                    <span className="rounded-md border border-white/12 bg-black/30 px-2 py-1 text-[12px] font-black uppercase tracking-[0.1em] text-white/40">
+                      Off board
+                    </span>
+                  )}
+                  {primaryMission.points > 0 ? (
+                    <span className="text-[13px] font-black uppercase tracking-[0.08em] text-[color:var(--gold)]/85">+{primaryMission.points} pts</span>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-white/14 bg-black/35 px-3 py-5 text-center">
+                <p className="text-[clamp(0.95rem,1vw+0.7rem,1.08rem)] font-semibold text-white/65">No mission on your board right now.</p>
+                <p className="mt-2 text-[15px] text-white/45">Open Syndicate Mode to load today’s missions.</p>
+              </div>
+            )}
+          </Card>
+
+          <Card
+            themeMode={themeMode}
+            title="Reminder"
+            accentKey="monk"
+            frameVariant="shell"
+            right={<Bell className="h-5 w-5 text-cyan-300/85" aria-hidden />}
+          >
+            {primaryReminder && primaryReminder.reminderAtMs != null && primaryReminder.reminderAtMs > Date.now() ? (
+              <div className="flex flex-col gap-4 rounded-lg border border-cyan-400/35 bg-gradient-to-b from-cyan-500/14 via-black/40 to-transparent px-4 py-5">
+                <div>
+                  <div className="text-[12px] font-black uppercase tracking-[0.18em] text-cyan-200/88">Next up</div>
+                  <p className="mt-2 text-[clamp(1rem,1.2vw+0.75rem,1.2rem)] font-bold leading-snug text-white/90">{primaryReminder.title}</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-cyan-400/45 bg-cyan-500/18">
+                    <Bell className="h-6 w-6 text-cyan-100" aria-hidden />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-black uppercase tracking-[0.14em] text-cyan-200/85">Rings in</div>
+                    <div className="mt-1 font-mono text-[clamp(1.45rem,2.4vw+0.9rem,2.1rem)] font-black tabular-nums leading-none text-cyan-50">
+                      {formatSyndicateReminderCountdown(primaryReminder.reminderAtMs, Date.now())}
+                    </div>
+                    <div className="mt-2 text-[clamp(0.9rem,0.85vw+0.65rem,1.05rem)] text-white/55">{formatSyndicateReminderWhen(primaryReminder.reminderAtMs)}</div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-white/14 bg-black/35 px-3 py-5 text-center">
+                <p className="text-[clamp(0.95rem,1vw+0.7rem,1.08rem)] font-semibold text-white/65">No reminder scheduled.</p>
+                <p className="mt-2 text-[15px] text-white/45">Set one on a mission card in Syndicate Mode.</p>
+              </div>
+            )}
+          </Card>
+        </div>
+      ) : null}
+
+      {!loading && rows.length === 0 && !error ? (
+        <motion.button
+          type="button"
+          onClick={() => onNavigate("monk")}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className="w-full rounded-lg border border-cyan-400/45 bg-cyan-500/16 py-3.5 text-[14px] font-black uppercase tracking-[0.16em] text-cyan-50/95 hover:border-cyan-300/60 md:w-auto md:px-10"
+        >
+          Open Syndicate Mode
+        </motion.button>
+      ) : null}
+
+      {!loading && rows.length > 0 && !linkedAccount ? (
+        <p className="text-[13px] leading-relaxed text-white/48">Sign in from Syndicate Mode to sync missions and reminders across devices.</p>
+      ) : null}
+    </div>
+  );
+}
 
 function timeAgo(ts: number) {
   const s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
@@ -708,31 +955,36 @@ export default function DashboardControlCenter({
   const integrityHigh = snapshots.coreIntegrity.integrityPct > 90;
 
   return (
-    <div
-      className={cn(
-        "relative w-full max-w-none space-y-5 rounded-lg transition-[box-shadow] duration-700 md:space-y-6 lg:space-y-7",
-        integrityHigh && "dashboard-integrity-pulse"
-      )}
-    >
-      <div className="ghost-muted w-full min-w-0 max-w-none space-y-5 md:space-y-6 lg:space-y-7">
-        <HeroStatusPanel
-          themeMode={themeMode}
-          userName={userName}
-          userRole={userRole}
-          profileAvatar={profileAvatar}
-          snapshots={snapshots}
-          onNavigate={onNavigate}
-        />
+    <>
+      <SyndicateReminderDueBanner onNavigate={onNavigate} />
+      <div
+        className={cn(
+          "relative w-full max-w-none space-y-5 rounded-lg transition-[box-shadow] duration-700 md:space-y-6 lg:space-y-7",
+          integrityHigh && "dashboard-integrity-pulse"
+        )}
+      >
+        <div className="ghost-muted w-full min-w-0 max-w-none space-y-5 md:space-y-6 lg:space-y-7">
+          <HeroStatusPanel
+            themeMode={themeMode}
+            userName={userName}
+            userRole={userRole}
+            profileAvatar={profileAvatar}
+            snapshots={snapshots}
+            onNavigate={onNavigate}
+          />
 
-        <MissionCommandDeckCard themeMode={themeMode} />
+          <SyndicateMissionsSnapshotCard themeMode={themeMode} onNavigate={onNavigate} />
 
-        <GoalPathSystem themeMode={themeMode} courses={courses} onNavigate={onNavigate} />
+          <MissionCommandDeckCard themeMode={themeMode} />
 
-        <AffiliateSnapshotCard themeMode={themeMode} snapshots={snapshots} onNavigate={onNavigate} />
+          <GoalPathSystem themeMode={themeMode} courses={courses} onNavigate={onNavigate} />
 
-        <ActivityTimelineCard themeMode={themeMode} />
+          <AffiliateSnapshotCard themeMode={themeMode} snapshots={snapshots} onNavigate={onNavigate} />
+
+          <ActivityTimelineCard themeMode={themeMode} />
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

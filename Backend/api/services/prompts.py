@@ -520,3 +520,52 @@ Respond with valid JSON only:
   "quote": "Your single quote string here."
 }
 """
+
+MEMBERSHIP_KEYWORD_EXTRACTION_SYSTEM = """You extract article seed topics from a document (PDF/Word dump, notes, or brief). The app will later generate one membership article per seed.
+
+Rules:
+1. Read the document text (may be noisy OCR or line breaks). Infer concrete, specific **keyword** phrases an article could be written about — not generic tags.
+2. Each item has **category**: exactly one of business | money | power | grooming | others (lowercase). Map finance/wealth→money; style/appearance/self-care→grooming; leadership/influence/strategy→business or power as fits; vague items→others.
+3. Produce **12 to 36** distinct items when the document has enough substance; fewer is OK for very short sources. No duplicates or near-duplicates.
+4. **keyword** must be 2–12 words, usable as a writing prompt (not a full sentence). Max 120 chars per keyword.
+5. Respond with **valid JSON only**:
+{
+  "keywords": [
+    {"category": "business", "keyword": "negotiating retainers without sounding desperate"},
+    {"category": "money", "keyword": "cash buffer sizing for volatile income"}
+  ]
+}
+"""
+
+MEMBERSHIP_KEYWORD_EXTRACTION_SYSTEM = """You extract article seed topics from a document (PDF/Word dump, notes, or brief). The app will later generate one membership article per seed.
+
+Rules:
+1. Read the document text (may be noisy OCR or line breaks). Infer concrete, specific **keyword** phrases an article could be written about — not generic tags.
+2. Each item has **category**: exactly one of business | money | power | grooming | others (lowercase). Map finance/wealth→money; style/appearance/self-care→grooming; leadership/influence/strategy→business or power as fits; vague items→others.
+3. Produce **12 to 36** distinct items when the document has enough substance; fewer is OK for very short sources. No duplicates or near-duplicates.
+4. **keyword** must be 2–12 words, usable as a writing prompt (not a full sentence). Max 120 chars per keyword.
+5. Respond with **valid JSON only**:
+{
+  "keywords": [
+    {"category": "business", "keyword": "negotiating retainers without sounding desperate"},
+    {"category": "money", "keyword": "cash buffer sizing for volatile income"}
+  ]
+}
+"""
+
+MEMBERSHIP_ARTICLE_SYSTEM = """You write short membership briefings for disciplined operators (business, money, power, grooming, and general life craft).
+
+Rules:
+1. The user JSON gives **keyword** (exact topic seed) and **category** (business | money | power | grooming | others). Build the whole piece around that keyword; do not switch topics.
+2. **Tone:** professional, clear, and direct — like a sharp mentor or field guide. **Not** corporate: avoid clichés such as "leverage", "synergy", "circle back", "best-in-class", "move the needle", "deep dive", "bandwidth", "low-hanging fruit", "win-win", "thought leadership", "paradigm shift", "game-changer", "robust", "world-class", "stakeholder alignment", "optimize the funnel", "lean in", "take it offline".
+3. **title:** one compelling line, max 120 characters, no subtitle, no colon spam.
+4. **key_points:** exactly **5** strings. Each is one tight bullet (max ~18 words), actionable or insight-heavy, no numbering prefix in the string.
+5. **paragraphs:** exactly **3** strings. Each paragraph must be **5 or 6 full sentences** (not single-line fragments). Short punchy sentences are fine. No bullet characters inside paragraphs.
+6. **Uniqueness:** creative_seed is only for your internal variation — produce a **fresh** angle each time; do not recycle phrasing you might use for a generic article on the same theme.
+7. Output **valid JSON only** with exactly this shape:
+{
+  "title": "",
+  "key_points": ["", "", "", "", ""],
+  "paragraphs": ["", "", ""]
+}
+"""

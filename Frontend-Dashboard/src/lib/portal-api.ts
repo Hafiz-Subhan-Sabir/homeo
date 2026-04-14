@@ -241,23 +241,41 @@ export async function portalFetch<T>(
   init?: RequestInit & { skipAuth?: boolean }
 ): Promise<{ ok: boolean; status: number; data: T }> {
   const url = path.startsWith("http") ? path : resolveClientApiUrl(path.startsWith("/") ? path : `/${path}`);
-  const headers = new Headers(init?.headers);
-  if (!init?.skipAuth) {
-    const at = readStoredAccess();
-    if (at) headers.set("Authorization", `Bearer ${at}`);
-  }
-  if (init?.body && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
-  }
-  const res = await fetch(url, { ...init, headers });
-  let data: T = undefined as T;
-  const text = await res.text();
-  if (text) {
+
+  const buildHeaders = (bearer: string | null): Headers => {
+    const headers = new Headers(init?.headers);
+    if (!init?.skipAuth && bearer) headers.set("Authorization", `Bearer ${bearer}`);
+    if (init?.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+    return headers;
+  };
+
+  const parseBody = async (res: Response): Promise<T> => {
+    const text = await res.text();
+    if (!text) return undefined as T;
     try {
-      data = JSON.parse(text) as T;
+      return JSON.parse(text) as T;
     } catch {
-      data = text as T;
+      return text as T;
+    }
+  };
+
+  let bearer: string | null = init?.skipAuth ? null : readStoredAccess();
+  let res = await fetch(url, { ...init, headers: buildHeaders(bearer) });
+
+  if (res.status === 401 && !init?.skipAuth) {
+    const rt = readStoredRefresh();
+    if (rt) {
+      try {
+        const { access } = await refreshRequest(rt);
+        persistTokens(access, rt);
+        bearer = access;
+        res = await fetch(url, { ...init, headers: buildHeaders(bearer) });
+      } catch {
+        /* return the original 401 below */
+      }
     }
   }
+
+  const data = await parseBody(res);
   return { ok: res.ok, status: res.status, data };
 }

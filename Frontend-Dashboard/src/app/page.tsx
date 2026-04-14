@@ -1573,6 +1573,17 @@ export default function Page() {
     setPanelThemeMode(themeMode);
   }, [themeMode, setPanelThemeMode]);
 
+  /** Allow deep links like /?section=resources to open the correct module. */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const section = new URLSearchParams(window.location.search).get("section");
+    if (!section) return;
+    const valid = new Set(nav.map((n) => n.key));
+    if (valid.has(section)) {
+      setSelectedNavKey(section);
+    }
+  }, [nav]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const mq = window.matchMedia("(max-width: 767px)");
@@ -1604,7 +1615,7 @@ export default function Page() {
     return () => mq.removeEventListener("change", apply);
   }, []);
 
-  /** lg+ on first paint: mirror dashboard default (sidebar open on dashboard). Overlay bp stays closed until user taps menu. */
+  /** lg+ on first paint: dashboard starts open by default. */
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
     if (!window.matchMedia("(max-width: 1023px)").matches) {
@@ -1613,7 +1624,7 @@ export default function Page() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- bootstrap only; key is dashboard on first load
   }, []);
 
-  /** Desktop: dashboard keeps sidebar in grid; other sections collapse. Overlay: hide when leaving dashboard; do not force-open over content. */
+  /** Auto-close sidebar for non-dashboard modules; keep open on dashboard. */
   useEffect(() => {
     if (isOverlaySidebarBp) {
       if (selectedNavKey !== "dashboard") setSidebarOpen(false);

@@ -108,6 +108,12 @@ function scheduleSyndicateProgressPush() {
   }, 600);
 }
 
+/** Dashboard listens for this to refresh Syndicate mission snapshots without polling only. */
+export const SYNDICATE_DASHBOARD_REFRESH_EVENT = "syndicate-dashboard-refresh";
+
 export function onSyndicatePersist() {
   scheduleSyndicateProgressPush();
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(SYNDICATE_DASHBOARD_REFRESH_EVENT));
+  }
 }

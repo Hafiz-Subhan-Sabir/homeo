@@ -244,6 +244,52 @@ def _split_into_three(text: str) -> list[str]:
     return ["", "", ""]
 
 
+def _sentence_chunks(text: str) -> list[str]:
+    parts = re.split(r"(?<=[.!?])\s+", (text or "").strip())
+    return [p.strip() for p in parts if p and p.strip()]
+
+
+def _ensure_membership_paragraph(
+    paragraph: str,
+    *,
+    keyword: str = "",
+    category: str = "",
+    target_sentences: int = 5,
+) -> str:
+    sentences = _sentence_chunks(paragraph)
+    if len(sentences) >= target_sentences:
+        return " ".join(sentences[:6]).strip()
+
+    topic = (keyword or "the topic").strip()
+    cat = (category or "others").strip()
+    fillers = [
+        f"Use {topic} as a daily operating principle rather than a one-time idea.",
+        "Set one measurable standard so progress is visible instead of vague.",
+        "Keep execution simple, then repeat it until results become reliable under pressure.",
+        f"In {cat} decisions, prefer clarity and consistency over short-term noise.",
+        "Review outcomes weekly, keep what works, and remove friction from the next cycle.",
+        "The edge compounds when disciplined actions are repeated without unnecessary complexity.",
+    ]
+    i = 0
+    while len(sentences) < target_sentences and i < len(fillers):
+        candidate = fillers[i]
+        if candidate not in sentences:
+            sentences.append(candidate)
+        i += 1
+    return " ".join(sentences[:6]).strip()
+
+
+def _normalize_membership_paragraphs(paragraphs: list[str], *, keyword: str = "", category: str = "") -> list[str]:
+    cleaned = [str(x).strip() for x in paragraphs if str(x).strip()]
+    while len(cleaned) < 3:
+        cleaned.append("")
+    cleaned = cleaned[:3]
+    return [
+        _ensure_membership_paragraph(p, keyword=keyword, category=category, target_sentences=5)
+        for p in cleaned
+    ]
+
+
 def normalize_challenge_payload(ch: dict[str, Any]) -> dict[str, Any]:
     """Ensure example_tasks and benefits_list (3 each); keep legacy example_task / benefits for older clients."""
     out = dict(ch)
@@ -899,6 +945,177 @@ def merge_user_device_mindset_summary(
     if len(s) > 1200:
         s = s[:1197] + "..."
     return s
+
+
+def _normalize_membership_article(raw: Any, *, keyword: str = "", category: str = "") -> dict[str, Any]:
+    if not isinstance(raw, dict):
+        raise ValueError("Article response was not a JSON object")
+    title = str(raw.get("title") or "").strip()
+    if len(title) < 8:
+        raise ValueError("Title too short")
+    kp = raw.get("key_points")
+    if not isinstance(kp, list):
+        kp = []
+    key_points = [str(x).strip() for x in kp if str(x).strip()][:8]
+    while len(key_points) < 5:
+        key_points.append("")
+    key_points = key_points[:5]
+
+    paras = raw.get("paragraphs")
+    if not isinstance(paras, list):
+        paras = []
+    paragraphs = _normalize_membership_paragraphs(
+        [str(x).strip() for x in paras if str(x).strip()][:5],
+        keyword=keyword,
+        category=category,
+    )
+    return {"title": title[:500], "key_points": key_points, "paragraphs": paragraphs}
+
+
+def _normalize_extracted_keyword_rows(raw: Any) -> list[dict[str, str]]:
+    from apps.membership.keyword_dataset import normalize_category
+
+    if not isinstance(raw, dict):
+        raise ValueError("Keyword extraction response was not a JSON object")
+    arr = raw.get("keywords")
+    if not isinstance(arr, list):
+        raise ValueError('Keyword extraction must include a "keywords" array')
+    out: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for item in arr:
+        if not isinstance(item, dict):
+            continue
+        kw = str(item.get("keyword") or item.get("phrase") or item.get("term") or "").strip()
+        if len(kw) < 2:
+            continue
+        cat = normalize_category(str(item.get("category") or ""))
+        dedupe = (cat, kw.lower()[:240])
+        if dedupe in seen:
+            continue
+        seen.add(dedupe)
+        out.append({"category": cat, "keyword": kw[:500]})
+    if len(out) < 3:
+        raise ValueError("Too few distinct keywords extracted (need at least 3)")
+    return out[:48]
+
+
+def extract_membership_keywords_from_document(document_text: str, *, creative_seed: str = "") -> list[dict[str, str]]:
+    """
+    Turn raw document text into {category, keyword} rows for ArticleKeywordDataset.rows.
+    """
+    from .prompts import MEMBERSHIP_KEYWORD_EXTRACTION_SYSTEM
+
+    text = (document_text or "").strip()
+    if len(text) < 80:
+        raise ValueError("Document text too short for keyword extraction")
+    cap = 18_000
+    if len(text) > cap:
+        text = text[:cap] + "\n\n[... document truncated for processing ...]"
+
+    payload = {
+        "document_text": text,
+        "creative_seed": (creative_seed or "").strip()[:64],
+    }
+    user = "Extract article seed keywords from this document (JSON input):\n" + json.dumps(
+        payload, ensure_ascii=False
+    )
+    data = chat_json(
+        MEMBERSHIP_KEYWORD_EXTRACTION_SYSTEM,
+        user,
+        max_tokens=3600,
+        temperature=0.35,
+    )
+    return _normalize_extracted_keyword_rows(data)
+
+
+def _normalize_extracted_keyword_rows(raw: Any) -> list[dict[str, str]]:
+    from apps.membership.keyword_dataset import normalize_category
+
+    if not isinstance(raw, dict):
+        raise ValueError("Keyword extraction response was not a JSON object")
+    arr = raw.get("keywords")
+    if not isinstance(arr, list):
+        raise ValueError('Keyword extraction must include a "keywords" array')
+    out: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for item in arr:
+        if not isinstance(item, dict):
+            continue
+        kw = str(item.get("keyword") or item.get("phrase") or item.get("term") or "").strip()
+        if len(kw) < 2:
+            continue
+        cat = normalize_category(str(item.get("category") or ""))
+        dedupe = (cat, kw.lower()[:240])
+        if dedupe in seen:
+            continue
+        seen.add(dedupe)
+        out.append({"category": cat, "keyword": kw[:500]})
+    if len(out) < 3:
+        raise ValueError("Too few distinct keywords extracted (need at least 3)")
+    return out[:48]
+
+
+def extract_membership_keywords_from_document(document_text: str, *, creative_seed: str = "") -> list[dict[str, str]]:
+    """
+    Turn raw document text into {category, keyword} rows for ArticleKeywordDataset.rows.
+    """
+    from .prompts import MEMBERSHIP_KEYWORD_EXTRACTION_SYSTEM
+
+    text = (document_text or "").strip()
+    if len(text) < 80:
+        raise ValueError("Document text too short for keyword extraction")
+    cap = 18_000
+    if len(text) > cap:
+        text = text[:cap] + "\n\n[... document truncated for processing ...]"
+
+    payload = {
+        "document_text": text,
+        "creative_seed": (creative_seed or "").strip()[:64],
+    }
+    user = "Extract article seed keywords from this document (JSON input):\n" + json.dumps(
+        payload, ensure_ascii=False
+    )
+    data = chat_json(
+        MEMBERSHIP_KEYWORD_EXTRACTION_SYSTEM,
+        user,
+        max_tokens=3600,
+        temperature=0.35,
+    )
+    return _normalize_extracted_keyword_rows(data)
+
+
+def generate_membership_article(
+    *,
+    keyword: str,
+    category: str,
+    avoid_titles: list[str] | None = None,
+    creative_seed: str = "",
+) -> dict[str, Any]:
+    """JSON article for membership hub: title, key_points (5), paragraphs (3)."""
+    from .prompts import MEMBERSHIP_ARTICLE_SYSTEM
+
+    avoid = "\n".join(f"- {t}" for t in (avoid_titles or [])[:30] if str(t).strip()) or "(none)"
+    user = json.dumps(
+        {
+            "keyword": (keyword or "").strip()[:400],
+            "category": (category or "others").strip().lower()[:32],
+            "titles_to_avoid": avoid,
+            "creative_seed": (creative_seed or "").strip()[:64],
+        },
+        ensure_ascii=False,
+    )
+    last_err: Exception | None = None
+    for attempt in range(2):
+        temp = 0.82 if attempt == 0 else 0.92
+        try:
+            data = chat_json(MEMBERSHIP_ARTICLE_SYSTEM, user, max_tokens=2800, temperature=temp)
+            return _normalize_membership_article(data, keyword=keyword, category=category)
+        except (ValueError, TypeError, KeyError, json.JSONDecodeError) as e:
+            last_err = e
+            if attempt == 0:
+                continue
+            raise
+    raise last_err or RuntimeError("Membership article generation failed")
 
 
 def generate_agent_daily_quote(

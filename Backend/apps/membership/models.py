@@ -3,6 +3,43 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 
+class ArticleKeywordDataset(models.Model):
+    """
+    Admin-uploaded source for AI-generated membership article seeds.
+    Upload CSV, Word (.docx), or PDF. If the file has category/keyword columns or lines, those are
+    used. Otherwise the full document text is read and OpenAI extracts keyword seeds automatically
+    (requires OPENAI_API_KEY). Legacy .doc not supported—use .docx or CSV.
+    """
+
+    name = models.CharField(max_length=200)
+    csv_file = models.FileField(
+        upload_to="membership/keyword_datasets/",
+        help_text="CSV, Word (.docx), or PDF. Structured sheets parse directly; prose PDFs/DOCX get automatic keyword extraction via OpenAI.",
+    )
+    rows = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Filled automatically when the file is saved.",
+    )
+    csv_file = models.FileField(
+        upload_to="membership/keyword_datasets/",
+        help_text="CSV, Word (.docx), or PDF. Each row: category, keyword. Legacy .doc not supported.",
+    )
+    rows = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Filled automatically when the file is saved.",
+    )
+    is_active = models.BooleanField(default=False, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class Article(models.Model):
     title = models.CharField(max_length=500)
     slug = models.SlugField(max_length=500, unique=True, db_index=True)
