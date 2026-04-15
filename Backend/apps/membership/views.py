@@ -1,5 +1,4 @@
-﻿import random
-import uuid
+﻿import uuid
 
 from django.db.models import Q
 from django.http import FileResponse, Http404
@@ -11,8 +10,18 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.membership.json_tags import filter_articles_with_tag
+from apps.membership.generation import (
+    collect_avoid_fingerprints,
+    collect_avoid_keyword_phrases,
+    merge_progression_by_rank,
+    pick_keyword_row,
+    progression_from_article_seeds,
+    record_successful_generation,
+)
 from apps.membership.keyword_dataset import VALID_CATEGORIES, dataset_category_counts, normalize_category
-from apps.membership.models import Article, ArticleKeywordDataset, Video
+from apps.membership.keyword_levels import normalize_level
+from apps.membership.models import Article, ArticleKeywordDataset, MembershipGenerationState, Video
 from apps.membership.permissions import MembershipPublicReadOrAuthenticated
 from apps.membership.redis_index import cache_get_merged_ids, cache_set_merged_ids, search_article_ids, tokenize
 from apps.membership.serializers import ArticleSerializer, VideoSerializer
@@ -201,7 +210,7 @@ class MembershipGeneratedArticleView(APIView):
     def post(self, request):
         today = timezone.localdate()
         existing_today = (
-            Article.objects.filter(tags__contains=["operator-brief"], published_at__date=today)
+            filter_articles_with_tag(Article.objects.filter(published_at__date=today), "operator-brief")
             .order_by("-published_at", "-id")
             .first()
         )
@@ -233,14 +242,59 @@ class MembershipGeneratedArticleView(APIView):
         if not rows:
             return Response({"detail": "No keywords for that category in the active dataset."}, status=400)
 
-        row = random.choice(rows)
+        read_slugs_in = request.data.get("read_slugs")
+        read_slugs: list[str] = []
+        if isinstance(read_slugs_in, list):
+            read_slugs = [str(x).strip() for x in read_slugs_in if str(x).strip()][:32]
+
+        read_articles: list[Article] = []
+        for slug in read_slugs:
+            a = Article.objects.filter(slug=slug).first()
+            if a:
+                read_articles.append(a)
+
+        state = MembershipGenerationState.objects.filter(pk=1).first()
+        state_fps = list(state.recent_keyword_fingerprints) if state and state.recent_keyword_fingerprints else []
+        avoid_fps = collect_avoid_fingerprints(state_fps=state_fps, read_slugs=read_slugs)
+
+        base_prog: dict[str, str] = {}
+        if state and isinstance(state.progression_by_category, dict):
+            base_prog = {normalize_category(str(k)): str(v) for k, v in state.progression_by_category.items() if k and v}
+        read_prog = progression_from_article_seeds(read_articles)
+        eff_prog = merge_progression_by_rank(base_prog, read_prog)
+
+        row = pick_keyword_row(
+            rows,
+            dataset=ds,
+            category_filter=cat_req,
+            avoid_fingerprints=avoid_fps,
+            progression_by_category=eff_prog,
+        )
         keyword = str(row.get("keyword") or "").strip()
         category = normalize_category(str(row.get("category") or cat_req))
+        level_used = normalize_level(str(row.get("level") or row.get("tier") or row.get("difficulty") or ""))
 
         avoid_in = request.data.get("avoid_titles")
         avoid: list[str] = []
         if isinstance(avoid_in, list):
             avoid = [str(x).strip() for x in avoid_in if str(x).strip()][:40]
+
+        recent_titles = list(state.recent_titles) if state and state.recent_titles else []
+        merged_titles: list[str] = []
+        seen_t = set()
+        for t in avoid + recent_titles:
+            s = (t or "").strip()
+            if not s:
+                continue
+            low = s.lower()
+            if low in seen_t:
+                continue
+            seen_t.add(low)
+            merged_titles.append(s[:500])
+            if len(merged_titles) >= 40:
+                break
+
+        avoid_keywords = collect_avoid_keyword_phrases(read_slugs=read_slugs)
 
         seed = uuid.uuid4().hex[:14]
         try:
@@ -249,7 +303,8 @@ class MembershipGeneratedArticleView(APIView):
             body = generate_membership_article(
                 keyword=keyword,
                 category=category,
-                avoid_titles=avoid,
+                avoid_titles=merged_titles,
+                avoid_keywords=avoid_keywords,
                 creative_seed=seed,
             )
         except RuntimeError as e:
@@ -265,6 +320,7 @@ class MembershipGeneratedArticleView(APIView):
 
         body["keyword_used"] = keyword
         body["category_used"] = category
+        body["level_used"] = level_used
 
         key_points = [str(x).strip() for x in (body.get("key_points") or []) if str(x).strip()]
         paragraphs = [str(x).strip() for x in (body.get("paragraphs") or []) if str(x).strip()]
@@ -292,8 +348,18 @@ class MembershipGeneratedArticleView(APIView):
             source_url="",
             thumbnail="",
             is_featured=False,
+            generation_seed_keyword=keyword[:500],
+            generation_seed_category=category,
+            generation_seed_level=level_used,
         )
         article.save()
+        record_successful_generation(
+            dataset=ds,
+            category=category,
+            keyword=keyword,
+            title=article.title,
+            level_used=level_used,
+        )
         body["article_id"] = article.id
         body["article_slug"] = article.slug
 

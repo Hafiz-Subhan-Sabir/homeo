@@ -3747,6 +3747,89 @@ nextjs-portal {
   }
 }
 
+/* Article detail: animated yellow / amber frame */
+@keyframes membership-article-border-shine {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Readable body copy (Thryon is display-only on article titles). */
+.membership-article-prose {
+  font-family: var(--hud-font);
+  text-rendering: optimizeLegibility;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.membership-article-title {
+  font-family: var(--font-heading);
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.membership-article-shiny-frame {
+  position: relative;
+  min-width: 0;
+  border-radius: 1.25rem;
+  padding: 3px;
+  isolation: isolate;
+  background: linear-gradient(
+    105deg,
+    rgba(202, 138, 4, 0.65),
+    rgba(250, 204, 21, 0.75),
+    rgba(253, 224, 71, 0.6),
+    rgba(234, 179, 8, 0.7),
+    rgba(250, 250, 210, 0.55),
+    rgba(250, 204, 21, 0.7),
+    rgba(202, 138, 4, 0.6)
+  );
+  background-size: 220% 100%;
+  animation: membership-article-border-shine 5.5s ease-in-out infinite;
+  box-shadow:
+    0 0 0 1px rgba(250, 204, 21, 0.35),
+    0 0 24px rgba(250, 204, 21, 0.22),
+    0 0 48px rgba(234, 179, 8, 0.14),
+    inset 0 1px 0 rgba(254, 249, 195, 0.35);
+}
+
+.membership-article-shiny-frame::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: 0;
+  opacity: 0.6;
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    rgba(254, 240, 138, 0.45) 40%,
+    rgba(255, 255, 255, 0.2) 48%,
+    transparent 58%
+  );
+  background-size: 200% 100%;
+  animation: membership-article-border-shine 3.2s ease-in-out infinite reverse;
+}
+
+.membership-article-shiny-inner {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  border-radius: calc(1.25rem - 3px);
+  background: linear-gradient(180deg, rgba(14, 14, 16, 0.98) 0%, #0b0b0c 48%, #09090a 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(250, 204, 21, 0.14),
+    inset 0 0 0 2px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(0, 0, 0, 0.2);
+}
+
 .membership-dystopia-shell {
   position: relative;
   isolation: isolate;

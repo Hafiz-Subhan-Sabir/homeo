@@ -561,7 +561,7 @@ Rules:
 3. **title:** one compelling line, max 120 characters, no subtitle, no colon spam.
 4. **key_points:** exactly **5** strings. Each is one tight bullet (max ~18 words), actionable or insight-heavy, no numbering prefix in the string.
 5. **paragraphs:** exactly **3** strings. Each paragraph must be **5 or 6 full sentences** (not single-line fragments). Short punchy sentences are fine. No bullet characters inside paragraphs.
-6. **Uniqueness:** creative_seed is only for your internal variation — produce a **fresh** angle each time; do not recycle phrasing you might use for a generic article on the same theme.
+6. **Uniqueness:** creative_seed is only for your internal variation — produce a **fresh** angle each time. Honor **titles_to_avoid** (never reuse those exact titles) and **keywords_to_avoid** (those are recent seed phrases — vary examples and framing so the piece does not read as a near-duplicate, while still fully developing the assigned **keyword**).
 7. Output **valid JSON only** with exactly this shape:
 {
   "title": "",

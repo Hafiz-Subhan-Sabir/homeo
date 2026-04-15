@@ -18,6 +18,9 @@ export type ArticleDto = {
   is_featured: boolean;
   /** Relative API path e.g. `/api/portal/membership/articles/3/pdf/` when a PDF is stored on the article. */
   pdf_url: string | null;
+  generation_seed_keyword?: string;
+  generation_seed_category?: string;
+  generation_seed_level?: string;
 };
 
 function cx(...parts: Array<string | false | null | undefined>) {
@@ -97,7 +100,7 @@ export function ArticleCard({ article, featured, index = 0, onOpenPdf, onOpenWeb
 
         <h3
           className={cx(
-            "line-clamp-3 font-black leading-snug text-cyan-100 drop-shadow-[0_0_20px_rgba(34,211,238,0.2)] transition group-hover:text-cyan-50",
+            "line-clamp-3 font-black italic leading-snug tracking-[0.01em] text-[color:var(--gold-neon)] drop-shadow-[0_0_18px_rgba(250,204,21,0.2)] transition group-hover:text-amber-200 group-hover:drop-shadow-[0_0_24px_rgba(250,204,21,0.3)]",
             featured ? "text-[21px] sm:text-[24px]" : "text-[18px] sm:text-[20px]"
           )}
         >

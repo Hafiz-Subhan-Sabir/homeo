@@ -3,7 +3,7 @@ from django.contrib import admin, messages
 from django.core.files.uploadedfile import UploadedFile
 
 from apps.membership.keyword_dataset import KeywordDatasetParseError, parse_keyword_dataset_bytes
-from apps.membership.models import Article, ArticleKeywordDataset, Video
+from apps.membership.models import Article, ArticleKeywordDataset, KeywordUsageStat, MembershipGenerationState, Video
 
 
 class ArticleKeywordDatasetForm(forms.ModelForm):
@@ -77,6 +77,20 @@ class ArticleKeywordDatasetAdmin(admin.ModelAdmin):
                 self.message_user(request, f"Keyword dataset saved with {len(rows)} seeds.", messages.SUCCESS)
         if obj.is_active:
             ArticleKeywordDataset.objects.exclude(pk=obj.pk).update(is_active=False)
+
+
+@admin.register(KeywordUsageStat)
+class KeywordUsageStatAdmin(admin.ModelAdmin):
+    list_display = ("keyword", "category", "usage_count", "last_used_at", "dataset")
+    list_filter = ("category",)
+    search_fields = ("keyword", "fingerprint")
+    readonly_fields = ("fingerprint",)
+
+
+@admin.register(MembershipGenerationState)
+class MembershipGenerationStateAdmin(admin.ModelAdmin):
+    list_display = ("id", "updated_at")
+    readonly_fields = ("id", "updated_at")
 
 
 @admin.register(Article)

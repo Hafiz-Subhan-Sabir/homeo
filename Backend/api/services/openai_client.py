@@ -1089,17 +1089,20 @@ def generate_membership_article(
     keyword: str,
     category: str,
     avoid_titles: list[str] | None = None,
+    avoid_keywords: list[str] | None = None,
     creative_seed: str = "",
 ) -> dict[str, Any]:
     """JSON article for membership hub: title, key_points (5), paragraphs (3)."""
     from .prompts import MEMBERSHIP_ARTICLE_SYSTEM
 
     avoid = "\n".join(f"- {t}" for t in (avoid_titles or [])[:30] if str(t).strip()) or "(none)"
+    avoid_kw = "\n".join(f"- {k}" for k in (avoid_keywords or [])[:30] if str(k).strip()) or "(none)"
     user = json.dumps(
         {
             "keyword": (keyword or "").strip()[:400],
             "category": (category or "others").strip().lower()[:32],
             "titles_to_avoid": avoid,
+            "keywords_to_avoid": avoid_kw,
             "creative_seed": (creative_seed or "").strip()[:64],
         },
         ensure_ascii=False,
