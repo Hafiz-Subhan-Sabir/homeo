@@ -283,7 +283,7 @@ export function MembershipContentHub() {
   return (
     <div
       className={cx(
-        "membership-dystopia-shell relative w-full max-w-none overflow-visible rounded-xl pr-[clamp(0.15rem,0.5vw+0.05rem,0.35rem)]",
+        "membership-dystopia-shell relative flex h-full min-h-0 w-full max-w-none flex-1 flex-col overflow-visible rounded-xl pr-[clamp(0.15rem,0.5vw+0.05rem,0.35rem)]",
         "border border-[color:var(--gold-neon-border-mid)] shadow-[inset_0_0_100px_rgba(0,0,0,0.88),0_0_60px_rgba(250,204,21,0.08)]"
       )}
     >
@@ -296,7 +296,7 @@ export function MembershipContentHub() {
       <div className="relative z-[3] h-1.5 w-full bg-[linear-gradient(90deg,transparent,rgba(250,204,21,0.7),transparent)] opacity-90" aria-hidden />
       <MembershipHudCorners />
 
-      <div className="relative z-[5] px-4 pb-6 pt-5 sm:px-6 sm:pb-8 sm:pt-6">
+      <div className="relative z-[5] flex min-h-0 flex-1 flex-col px-4 pb-6 pt-5 sm:px-6 sm:pb-8 sm:pt-6">
         <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-[color:var(--gold-neon-border-mid)]/35 bg-black/55 px-3 py-2.5 font-mono text-[10px] uppercase tracking-[0.12em] text-[color:var(--gold-neon)]/85 shadow-[inset_0_1px_0_rgba(250,204,21,0.08)] sm:text-[11px] sm:tracking-[0.14em]">
           <span className="text-[color:var(--gold-neon)]/90">Sector // Intel mesh</span>
           <span className="hidden text-neutral-600 sm:inline">|</span>

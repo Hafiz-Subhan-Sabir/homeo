@@ -11,6 +11,23 @@ import { MembershipArticleReader, type ArticleReaderState } from "@/components/m
 
 const ARTICLES_HREF = "/?section=resources";
 
+/** Turn a single very long paragraph into two for readability (sentence boundary near the middle). */
+function splitLongProseForDisplay(text: string, minChars = 520): string[] {
+  const t = text.trim();
+  if (t.length < minChars) return [t];
+  const target = Math.floor(t.length * 0.45);
+  const windowStart = Math.max(0, target - 320);
+  const windowEnd = Math.min(t.length, target + 320);
+  const slice = t.slice(windowStart, windowEnd);
+  const idx = slice.lastIndexOf(". ");
+  if (idx === -1) return [t];
+  const splitAt = windowStart + idx + 1;
+  const a = t.slice(0, splitAt).trim();
+  const b = t.slice(splitAt).trim();
+  if (!a || !b) return [t];
+  return [a, b];
+}
+
 function formatPublishedDate(iso: string): string | null {
   if (!iso?.trim()) return null;
   const d = new Date(iso);
@@ -94,7 +111,7 @@ export default function MembershipArticleDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen overflow-x-hidden bg-[#0b0b0c]">
+      <div className="min-h-dvh overflow-x-hidden bg-[#0b0b0c]">
         <div className="fluid-page-px mx-auto max-w-5xl py-12 sm:py-16">
           <div className="h-4 w-32 animate-pulse rounded bg-white/10" />
           <div className="mt-10 h-10 max-w-2xl animate-pulse rounded bg-white/[0.07]" />
@@ -112,7 +129,7 @@ export default function MembershipArticleDetailPage() {
 
   if (err || !article) {
     return (
-      <div className="min-h-screen overflow-x-hidden bg-[#0b0b0c] py-12 text-neutral-100 fluid-page-px">
+      <div className="min-h-dvh overflow-x-hidden bg-[#0b0b0c] py-12 text-neutral-100 fluid-page-px">
         <div className="mx-auto max-w-lg rounded-2xl border border-white/[0.08] bg-[#141416] p-8 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
           <p className="text-[15px] leading-relaxed text-red-200/90">{err || "Not found."}</p>
           <Link
@@ -129,7 +146,7 @@ export default function MembershipArticleDetailPage() {
   const publishedLabel = formatPublishedDate(article.published_at);
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#0b0b0c] text-neutral-100">
+    <div className="min-h-dvh overflow-x-hidden bg-[#0b0b0c] text-neutral-100">
       <div className="border-b border-white/[0.06] bg-[#0e0e10]/80">
         <div className="fluid-page-px mx-auto flex w-full min-w-0 max-w-5xl items-center justify-between gap-3 py-4 sm:gap-4">
           <Link
@@ -237,6 +254,19 @@ export default function MembershipArticleDetailPage() {
                     return (
                       <div key={i} className="space-y-5 sm:space-y-6">
                         {subParas.map((para, k) => (
+                          <p key={k} className="min-w-0 text-pretty text-neutral-200/95" lang="en">
+                            {para}
+                          </p>
+                        ))}
+                      </div>
+                    );
+                  }
+
+                  const longParts = splitLongProseForDisplay(block);
+                  if (longParts.length > 1) {
+                    return (
+                      <div key={i} className="space-y-5 sm:space-y-6">
+                        {longParts.map((para, k) => (
                           <p key={k} className="min-w-0 text-pretty text-neutral-200/95" lang="en">
                             {para}
                           </p>

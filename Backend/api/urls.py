@@ -8,6 +8,8 @@ from . import views
 # Fallback when ROOT_URLCONF only mounts `path("api/", include("api.urls"))`.
 # Names omitted to avoid clashing with syndicate_backend.urls (same paths, first match wins).
 urlpatterns = [
+    path("courses/", include("apps.courses.urls")),
+    path("videos/", include("apps.courses.urls_videos")),
     # DRF Token auth for Syndicate login/signup (JWT portal routes are registered first in syndicate_backend.urls).
     path("syndicate-auth/signup/", auth_views.signup),
     path("syndicate-auth/login/", auth_views.login),

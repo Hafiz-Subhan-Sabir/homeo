@@ -1,0 +1,177 @@
+"use client";
+
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import ChromaGrid, { type ChromaItem } from "@/components/ChromaGrid";
+import { CourseVideoPlaylist } from "@/components/programs/CourseVideoPlaylist";
+import { StaffVideoUploadPanel } from "@/components/programs/StaffVideoUploadPanel";
+import { cn } from "@/components/dashboard/dashboardPrimitives";
+import { fetchCoursesList, type CourseDto } from "@/lib/courses-api";
+import { meRequest, readStoredAccess } from "@/lib/portal-api";
+
+function coursesListErrorMessage(status: number, data: unknown): string {
+  if (typeof data === "object" && data && "detail" in data) {
+    return String((data as { detail?: string }).detail ?? "Request failed.");
+  }
+  if (status === 401) return "Sign in to load secure programs and playlists.";
+  return `Could not load courses (${status}).`;
+}
+
+type Course = {
+  id: string;
+  title: string;
+  subtitle: string;
+  statusText: string;
+  progress: number;
+  accent?: "gold" | "ice";
+  imageSrc?: string;
+  meta?: string;
+  detail?: string;
+};
+
+type Props = {
+  /** Hero slideshow (e.g. InstructorSlideshow) rendered above the grid */
+  instructorHero: ReactNode;
+  chromaItems: ChromaItem[];
+  selectedCourseId: string | null;
+  onSelectCourse: (id: string) => void;
+  sidebarOccupiesGrid: boolean;
+  isNarrowViewport: boolean;
+  isGoalsPanelOpen: boolean;
+  selectedCourseWithProgress: (Course & { progress: number }) | null;
+  activeCoursePanel: ReactNode | null;
+};
+
+export function ProgramsCourseSection({
+  instructorHero,
+  chromaItems,
+  selectedCourseId,
+  onSelectCourse,
+  sidebarOccupiesGrid,
+  isNarrowViewport,
+  isGoalsPanelOpen,
+  selectedCourseWithProgress,
+  activeCoursePanel,
+}: Props) {
+  const [apiCourses, setApiCourses] = useState<CourseDto[]>([]);
+  const [apiCourseId, setApiCourseId] = useState<number | null>(null);
+  const [coursesError, setCoursesError] = useState<string | null>(null);
+  const [staff, setStaff] = useState(false);
+
+  const reloadApiCourses = useCallback(async () => {
+    const res = await fetchCoursesList();
+    if (res.ok && Array.isArray(res.data)) {
+      setApiCourses(res.data as CourseDto[]);
+      setCoursesError(null);
+      return;
+    }
+    setApiCourses([]);
+    setCoursesError(coursesListErrorMessage(res.status, res.data));
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void reloadApiCourses();
+    const at = readStoredAccess();
+    if (at) {
+      meRequest(at)
+        .then((u) => {
+          if (!cancelled) setStaff(!!u.is_staff);
+        })
+        .catch(() => {
+          if (!cancelled) setStaff(false);
+        });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadApiCourses]);
+
+  useEffect(() => {
+    if (apiCourses.length === 0) return;
+    setApiCourseId((id) => {
+      if (id !== null && apiCourses.some((c) => c.id === id)) return id;
+      return apiCourses[0].id;
+    });
+  }, [apiCourses]);
+
+  const activeApiTitle = apiCourses.find((c) => c.id === apiCourseId)?.title ?? "";
+  const showSecureBlock = staff || apiCourses.length > 0 || coursesError !== null;
+
+  return (
+    <>
+      <div className="mb-5">{instructorHero}</div>
+      {staff ? <StaffVideoUploadPanel isStaff={staff} onCourseCreated={reloadApiCourses} /> : null}
+
+      {showSecureBlock ? (
+        <div className="mb-6 space-y-4">
+          <div className="border-b border-[color:var(--gold-neon-border-mid)]/35 pb-2">
+            <div className="text-[11px] font-black uppercase tracking-[0.18em] text-[color:var(--gold)]/80">Programs · secure video</div>
+            <p className="mt-1 text-[12px] text-white/55">
+              DRM playback via VdoCipher. {apiCourses.length > 1 ? "Switch course with the chips below." : "Playlist opens when courses are available."}
+            </p>
+          </div>
+          {coursesError ? (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-950/25 px-4 py-3 text-[13px] text-amber-100/90">{coursesError}</div>
+          ) : null}
+          {!coursesError && staff && apiCourses.length === 0 ? (
+            <p className="text-[12px] text-white/50">No courses returned from the API yet. Create one above or publish an existing course in Django admin.</p>
+          ) : null}
+          {apiCourses.length > 0 ? (
+            <>
+              <div className="flex flex-wrap gap-2">
+                {apiCourses.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setApiCourseId(c.id)}
+                    className={cn(
+                      "rounded-lg border px-4 py-2.5 text-left text-[12px] font-bold uppercase tracking-[0.08em] transition",
+                      apiCourseId === c.id
+                        ? "border-[color:var(--gold-neon-border)] bg-[rgba(250,204,21,0.12)] text-[color:var(--gold)]"
+                        : "border-white/15 bg-black/40 text-white/75 hover:border-[color:var(--gold-neon-border-mid)]"
+                    )}
+                  >
+                    {c.title}
+                  </button>
+                ))}
+              </div>
+              {apiCourseId !== null ? (
+                <CourseVideoPlaylist courseId={apiCourseId} courseTitle={activeApiTitle} autoAdvance />
+              ) : null}
+            </>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="mb-5">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="text-[14px] font-extrabold uppercase tracking-[0.22em] text-white/65">Courses</div>
+          <div className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-white/40">Hover / Select</div>
+        </div>
+      </div>
+      <div className="pr-1" data-cards-wrap>
+        <div
+          className={cn(
+            "relative",
+            sidebarOccupiesGrid ? "min-h-[min(52vh,560px)] sm:min-h-[min(58vh,640px)]" : "min-h-[min(56vh,620px)] sm:min-h-[min(64vh,720px)]"
+          )}
+        >
+          <ChromaGrid
+            items={chromaItems}
+            selectedId={selectedCourseId}
+            onSelect={onSelectCourse}
+            columns={sidebarOccupiesGrid ? (isNarrowViewport ? 2 : 3) : 4}
+            radius={sidebarOccupiesGrid ? (isNarrowViewport ? 280 : 380) : 440}
+            damping={0.45}
+            fadeOut={0.6}
+            ease="power3.out"
+            interactionDisabled={isGoalsPanelOpen}
+            className={cn(sidebarOccupiesGrid ? "py-2" : "py-4")}
+          />
+        </div>
+
+        {selectedCourseWithProgress ? <div className="mt-6">{activeCoursePanel}</div> : null}
+      </div>
+    </>
+  );
+}

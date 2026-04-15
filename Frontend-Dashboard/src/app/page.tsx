@@ -16,6 +16,7 @@ import { GoalsPanel } from "@/components/ui/GoalsPanel";
 import { SyndicateAiChallengePanel } from "../components/SyndicateAiChallengePanel";
 import { MembershipContentHub } from "../components/membership/MembershipContentHub";
 import { AffiliatePortalSection } from "@/components/affiliate/AffiliatePortalSection";
+import { ProgramsCourseSection } from "@/components/programs/ProgramsCourseSection";
 import { Toaster } from "react-hot-toast";
 
 type NavItem = { label: string; key: string; active?: boolean };
@@ -573,11 +574,28 @@ function MonkIcon({ kind }: { kind: MonkChallenge["key"] }) {
 
 function SyndicateModeSection() {
   return (
-    <section data-anim="in" className="mt-0 w-full min-w-0 shrink-0">
-      <div className="syndicate-dystopia-enclosure syndicate-missions-shell cyber-frame relative min-h-[min(85vh,920px)] w-full overflow-hidden bg-[#060606]/88 px-0 pb-3 pt-0 sm:pb-4 sm:pt-0.5">
-        <div className="absolute inset-0 opacity-62 [background:radial-gradient(760px_220px_at_20%_0%,rgba(255,215,0,0.15),rgba(0,0,0,0)_65%)] syndicate-missions-shell-wash" />
-        <div className="absolute inset-0 opacity-30 [background:repeating-linear-gradient(0deg,rgba(255,255,255,0.015)_0px,rgba(255,255,255,0.015)_1px,transparent_8px,transparent_14px)]" />
-        <div className="relative min-h-0 pt-2 sm:pt-2.5">
+    <section
+      data-anim="in"
+      className={cn(
+        "mt-0 flex w-full min-w-0 flex-col",
+        "has-[#syndicate-mission-detail-top]:min-h-0 has-[#syndicate-mission-detail-top]:flex-1"
+      )}
+    >
+      <div
+        className={cn(
+          "syndicate-dystopia-enclosure syndicate-missions-shell cyber-frame relative flex w-full flex-col overflow-x-hidden bg-[#060606]/88 px-0 pb-3 pt-0 sm:pb-4 sm:pt-0.5",
+          "[&:not(:has(#syndicate-mission-detail-top))]:overflow-y-visible",
+          "has-[#syndicate-mission-detail-top]:min-h-0 has-[#syndicate-mission-detail-top]:flex-1 has-[#syndicate-mission-detail-top]:overflow-y-hidden"
+        )}
+      >
+        <div className="pointer-events-none absolute inset-0 opacity-62 [background:radial-gradient(760px_220px_at_20%_0%,rgba(255,215,0,0.15),rgba(0,0,0,0)_65%)] syndicate-missions-shell-wash" />
+        <div className="pointer-events-none absolute inset-0 opacity-30 [background:repeating-linear-gradient(0deg,rgba(255,255,255,0.015)_0px,rgba(255,255,255,0.015)_1px,transparent_8px,transparent_14px)]" />
+        <div
+          className={cn(
+            "relative flex w-full flex-col pt-2 sm:pt-2.5",
+            "has-[#syndicate-mission-detail-top]:min-h-0 has-[#syndicate-mission-detail-top]:flex-1"
+          )}
+        >
           <SyndicateAiChallengePanel />
         </div>
       </div>
@@ -1502,7 +1520,7 @@ export default function Page() {
       /* ignore */
     }
   }, []);
-  /** Desktop (lg+): opens for dashboard via layout effect + nav sync. Overlay (max-lg): starts closed until user opens menu. */
+  /** Overlay (max-lg): slide-out; lg+ grid rail (opened before paint in useLayoutEffect). */
   const [sidebarOpen, setSidebarOpen] = useState(false);
   /** Below md (768px): main + sidebar sit side-by-side; nav column is 5/12 (~42% width). */
   const [isNarrowViewport, setIsNarrowViewport] = useState(false);
@@ -1597,10 +1615,26 @@ export default function Page() {
     setOverlayMount(true);
   }, []);
 
+  /** Before paint: match breakpoints + open desktop rail (avoids wrong grid + missing Dashboard until reload). */
+  useLayoutEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq1023 = window.matchMedia("(max-width: 1023px)");
+    const mq820 = window.matchMedia("(max-width: 820px)");
+    const mq767 = window.matchMedia("(max-width: 767px)");
+    setIsOverlaySidebarBp(mq1023.matches);
+    setIsMobileNavUi(mq820.matches);
+    setIsNarrowViewport(mq767.matches);
+    if (!mq1023.matches) setSidebarOpen(true);
+  }, []);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const mq = window.matchMedia("(max-width: 1023px)");
-    const apply = () => setIsOverlaySidebarBp(mq.matches);
+    const apply = () => {
+      const next = mq.matches;
+      setIsOverlaySidebarBp(next);
+      if (!next) setSidebarOpen(true);
+    };
     apply();
     mq.addEventListener("change", apply);
     return () => mq.removeEventListener("change", apply);
@@ -1615,23 +1649,25 @@ export default function Page() {
     return () => mq.removeEventListener("change", apply);
   }, []);
 
-  /** lg+ on first paint: dashboard starts open by default. */
+  /** After route change or overlay open, scroll rail to top so Dashboard is never clipped above the fold. */
   useLayoutEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!window.matchMedia("(max-width: 1023px)").matches) {
-      setSidebarOpen(selectedNavKey === "dashboard");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- bootstrap only; key is dashboard on first load
-  }, []);
+    const el = sidebarRef.current;
+    if (!el || !sidebarOpen) return;
+    el.scrollTop = 0;
+  }, [selectedNavKey, sidebarOpen]);
 
-  /** Auto-close sidebar for non-dashboard modules; keep open on dashboard. */
+  /** Overlay only: close slide-out when leaving dashboard so the dimmed shell regains width. */
   useEffect(() => {
-    if (isOverlaySidebarBp) {
-      if (selectedNavKey !== "dashboard") setSidebarOpen(false);
-      return;
-    }
-    setSidebarOpen(selectedNavKey === "dashboard");
+    if (!isOverlaySidebarBp) return;
+    if (selectedNavKey !== "dashboard") setSidebarOpen(false);
   }, [selectedNavKey, isOverlaySidebarBp]);
+
+  /** lg+: collapse grid rail when not on Dashboard so missions / detail use full shell width (reopen via menu). */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(max-width: 1023px)").matches) return;
+    if (selectedNavKey !== "dashboard") setSidebarOpen(false);
+  }, [selectedNavKey]);
 
   /** Overlay: auto-collapse a few seconds after open (not on dashboard). */
   useEffect(() => {
@@ -1844,6 +1880,26 @@ export default function Page() {
     [courses, recordEvent]
   );
 
+  /** Profile menu: click-outside only (kept out of GSAP context so opening/closing profile does not revert all shell tweens). */
+  useEffect(() => {
+    const onDocDown = (e: MouseEvent) => {
+      if (!profileOpen) return;
+      const t = e.target as Node | null;
+      const btn = profileBtnRef.current;
+      const panel = profilePanelRef.current;
+      if (!t || !btn || !panel) return;
+      if (btn.contains(t) || panel.contains(t)) return;
+      setProfileOpen(false);
+    };
+    document.addEventListener("mousedown", onDocDown);
+    return () => document.removeEventListener("mousedown", onDocDown);
+  }, [profileOpen]);
+
+  /**
+   * Shell motion: dock tickers, intro tweens, course/monk reveals.
+   * Depends on `selectedNavKey` (not `profileOpen`) so toggling the profile menu does not tear down tickers/tweens
+   * and scramble layout during dev Fast Refresh or normal use.
+   */
   useLayoutEffect(() => {
     if (!rootRef.current) return;
 
@@ -1954,6 +2010,7 @@ export default function Page() {
       );
       if (wrap) io.observe(wrap);
 
+      const cardDisposers: Array<() => void> = [];
       cards.forEach((card) => {
         const onEnter = () => {
           gsap.to(card, { y: -2, duration: 0.18, ease: "power2.out" });
@@ -1965,22 +2022,29 @@ export default function Page() {
         card.addEventListener("mouseleave", onLeave);
         card.addEventListener("focus", onEnter);
         card.addEventListener("blur", onLeave);
+        cardDisposers.push(() => {
+          card.removeEventListener("mouseenter", onEnter);
+          card.removeEventListener("mouseleave", onLeave);
+          card.removeEventListener("focus", onEnter);
+          card.removeEventListener("blur", onLeave);
+        });
       });
 
       // Monk section cards: reveal on scroll with premium stagger
+      let monkIo: IntersectionObserver | null = null;
       const monkCards = gsap.utils.toArray<HTMLElement>("[data-monk-card]");
       if (monkCards.length) {
         gsap.set(monkCards, { opacity: 0, y: 18 });
         const monkWrap = document.querySelector<HTMLElement>("[data-monk-card]")?.parentElement ?? null;
         let monkRevealed = false;
-        const monkIo = new IntersectionObserver(
+        monkIo = new IntersectionObserver(
           (entries) => {
             if (monkRevealed) return;
             const hit = entries.some((e) => e.isIntersecting);
             if (!hit) return;
             monkRevealed = true;
             gsap.to(monkCards, { opacity: 1, y: 0, duration: 0.65, ease: "power3.out", stagger: 0.08 });
-            monkIo.disconnect();
+            monkIo?.disconnect();
           },
           { root: null, threshold: 0.16 }
         );
@@ -1999,30 +2063,19 @@ export default function Page() {
         });
       }
 
-      // Click-outside to close profile panel
-      const onDocDown = (e: MouseEvent) => {
-        if (!profileOpen) return;
-        const t = e.target as Node | null;
-        const btn = profileBtnRef.current;
-        const panel = profilePanelRef.current;
-        if (!t || !btn || !panel) return;
-        if (btn.contains(t) || panel.contains(t)) return;
-        setProfileOpen(false);
-      };
-      document.addEventListener("mousedown", onDocDown);
-
       return () => {
-        document.removeEventListener("mousedown", onDocDown);
         gsap.ticker.remove(sidebarTick);
         gsap.ticker.remove(topTick);
         io.disconnect();
+        monkIo?.disconnect();
+        for (const d of cardDisposers) d();
       };
     }, rootRef);
 
     return () => ctx.revert();
-  }, [profileOpen]);
+  }, [selectedNavKey]);
 
-  /** Nav glitch must attach when the rail exists; gsap.context only re-ran on profileOpen, so closed sidebars never got listeners. */
+  /** Nav glitch must attach when the rail exists (separate from main GSAP shell context). */
   useLayoutEffect(() => {
     if (!sidebarOpen) return;
     const aside = sidebarRef.current;
@@ -2176,7 +2229,7 @@ export default function Page() {
       )}
     >
       <div className="hud-ambient-glow" aria-hidden="true" />
-      <div className="relative flex min-h-screen w-full max-w-[100vw] flex-col fluid-page-px fluid-page-pb lg:h-full">
+      <div className="relative flex min-h-screen w-full max-w-[100vw] flex-col fluid-page-px fluid-page-pb lg:h-full lg:min-h-0">
         {/* Sticky shell has no GSAP transform; inner bar uses data-anim (transform breaks sticky on same node). */}
         <div className="sticky top-0 z-[60] w-full max-w-full shrink-0">
           <div
@@ -2204,7 +2257,7 @@ export default function Page() {
                 type="button"
                 onClick={() => setSidebarOpen((v) => !v)}
                 className="navbar-chrome-btn cut-frame-sm cyber-frame gold-stroke grid h-8 w-8 shrink-0 place-items-center border bg-black/70 text-[color:var(--gold-neon)]/95 sm:h-9 sm:w-9 md:h-10 md:w-10"
-                aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
+                aria-label={sidebarOpen ? "Hide sidebar menu" : "Show sidebar menu"}
               >
                 <IconToggle open={sidebarOpen} />
               </button>
@@ -2573,7 +2626,7 @@ export default function Page() {
         </AnimatePresence>
 
         {/* Main frame — `relative` + popLayout: exiting sidebar leaves grid flow so main shell does not wrap to row 2 (14 cols) during close. */}
-        <div className="relative mt-0 grid min-h-0 w-full max-w-none flex-1 grid-cols-12 fluid-main-grid max-md:items-start">
+        <div className="relative mt-0 grid min-h-0 w-full max-w-none flex-1 auto-rows-[minmax(0,1fr)] grid-cols-12 fluid-main-grid max-md:items-start lg:h-full lg:min-h-0 lg:items-stretch">
           <AnimatePresence initial={true} mode="popLayout">
             {sidebarOpen && (!isOverlaySidebarBp || !isMobileNavUi) ? (
               <motion.aside
@@ -2604,18 +2657,16 @@ export default function Page() {
                   "max-lg:top-[calc(var(--topbarH,4.5rem)+var(--fluid-main-grid-pt))] max-lg:h-[calc(100dvh-var(--topbarH,4.5rem)-var(--fluid-main-grid-pt))]",
                   /* Mobile: shorter rail (~52px + safe-area) above bottom chrome / FAB; tablet (max-lg) unchanged */
                   "max-[820px]:!top-[calc(var(--topbarH,4.5rem)+3px)] max-[820px]:!h-[calc(100dvh-var(--topbarH,4.5rem)-3px-3.25rem-env(safe-area-inset-bottom))] max-[820px]:box-border max-[820px]:overflow-x-hidden max-[820px]:rounded-br-lg max-[820px]:pb-2",
-                  "lg:relative lg:col-span-2 lg:sticky lg:top-0 lg:z-20 lg:h-full lg:w-auto lg:max-w-none lg:rounded-none lg:shadow-none lg:overflow-x-visible lg:overflow-auto"
+                  "lg:relative lg:col-span-2 lg:sticky lg:top-0 lg:z-20 lg:h-full lg:min-h-0 lg:w-auto lg:max-w-none lg:rounded-none lg:shadow-none lg:overflow-x-visible lg:overflow-y-auto"
                 )}
               >
-                <div className="absolute inset-0 opacity-70 [background:radial-gradient(680px_320px_at_20%_10%,rgba(250,204,21,0.1),rgba(0,0,0,0)_62%)]" />
-                <div className="relative min-w-0">
+                <div className="pointer-events-none absolute inset-0 opacity-70 [background:radial-gradient(680px_320px_at_20%_10%,rgba(250,204,21,0.1),rgba(0,0,0,0)_62%)]" />
+                <div className="relative min-h-0 min-w-0 lg:min-h-0">
                   <SidebarNavRailList
                     nav={nav}
                     selectedNavKey={selectedNavKey}
                     setSelectedNavKey={setSelectedNavKey}
-                    onItemActivate={() => {
-                      if (isOverlaySidebarBp) setSidebarOpen(false);
-                    }}
+                    onItemActivate={() => setSidebarOpen(false)}
                   />
                 </div>
               </motion.aside>
@@ -2624,11 +2675,11 @@ export default function Page() {
 
           {/* Courses grid */}
           <motion.section
-            layout={!isOverlaySidebarBp ? "size" : false}
+            layout={false}
             transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
             data-anim="in"
             className={cn(
-              "shell-neon-yellow cut-frame cyber-frame gold-stroke relative flex min-h-0 w-full min-w-0 max-w-none flex-col overflow-hidden border bg-[#060606]/70 fluid-section-p",
+              "shell-neon-yellow cut-frame cyber-frame gold-stroke relative flex min-h-0 w-full min-w-0 max-w-none flex-col self-stretch overflow-hidden border bg-[#060606]/70 fluid-section-p",
               "col-span-12",
               sidebarOccupiesGrid ? "lg:col-span-10" : "lg:col-span-12",
               isOverlaySidebarBp &&
@@ -2677,71 +2728,41 @@ export default function Page() {
               ) : selectedNavKey === "affiliate" ? (
                 <AffiliatePortalSection />
               ) : selectedNavKey === "programs" ? (
-                <>
-                  <div className="mb-5">
-                    <InstructorSlideshow />
-                  </div>
-                  <div className="mb-4 flex items-center justify-between gap-3">
-                    <div className="text-[14px] font-extrabold uppercase tracking-[0.22em] text-white/65">
-                      Courses
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-white/40">
-                        Hover / Select
-                      </div>
-                    </div>
-                  </div>
-                  <div className="pr-1" data-cards-wrap>
-                    <div
-                      className={cn(
-                        "relative",
-                        sidebarOccupiesGrid ? "min-h-[min(52vh,560px)] sm:min-h-[min(58vh,640px)]" : "min-h-[min(56vh,620px)] sm:min-h-[min(64vh,720px)]"
-                      )}
-                    >
-                      <ChromaGrid
-                        items={chromaItems}
-                        selectedId={selectedCourseId}
-                        onSelect={handleChromaCourseSelect}
-                        columns={
-                          sidebarOccupiesGrid ? (isNarrowViewport ? 2 : 3) : 4
-                        }
-                        radius={
-                          sidebarOccupiesGrid ? (isNarrowViewport ? 280 : 380) : 440
-                        }
-                        damping={0.45}
-                        fadeOut={0.6}
-                        ease="power3.out"
-                        interactionDisabled={isGoalsPanelOpen}
-                        className={cn(sidebarOccupiesGrid ? "py-2" : "py-4")}
+                <ProgramsCourseSection
+                  instructorHero={<InstructorSlideshow />}
+                  chromaItems={chromaItems}
+                  selectedCourseId={selectedCourseId}
+                  onSelectCourse={handleChromaCourseSelect}
+                  sidebarOccupiesGrid={sidebarOccupiesGrid}
+                  isNarrowViewport={isNarrowViewport}
+                  isGoalsPanelOpen={isGoalsPanelOpen}
+                  selectedCourseWithProgress={selectedCourseWithProgress}
+                  activeCoursePanel={
+                    selectedCourseWithProgress ? (
+                      <ActiveCoursePanel
+                        course={selectedCourseWithProgress}
+                        onContinue={() => {
+                          const id = selectedCourseWithProgress.id;
+                          const next = Math.max(0, Math.min(100, (courseProgress[id] ?? 0) + 8));
+                          const updated = { ...courseProgress, [id]: next };
+                          setCourseProgress(updated);
+                          window.localStorage.setItem("dashboarded:course-progress", JSON.stringify(updated));
+                          window.localStorage.setItem("dashboarded:lastCourseId", id);
+                          recordEvent({
+                            category: "program",
+                            title: "Lesson progress",
+                            detail: `${selectedCourseWithProgress.title} → ${next}%`,
+                            moreDetails: `You continued “${selectedCourseWithProgress.title}”. Completion is now ${next}% for this browser session; last active course id: ${id}.`
+                          });
+                        }}
                       />
-                    </div>
-
-                    {selectedCourseWithProgress ? (
-                      <div className="mt-6">
-                        <ActiveCoursePanel
-                          course={selectedCourseWithProgress}
-                          onContinue={() => {
-                            const id = selectedCourseWithProgress.id;
-                            const next = Math.max(0, Math.min(100, (courseProgress[id] ?? 0) + 8));
-                            const updated = { ...courseProgress, [id]: next };
-                            setCourseProgress(updated);
-                            window.localStorage.setItem("dashboarded:course-progress", JSON.stringify(updated));
-                            window.localStorage.setItem("dashboarded:lastCourseId", id);
-                            recordEvent({
-                              category: "program",
-                              title: "Lesson progress",
-                              detail: `${selectedCourseWithProgress.title} → ${next}%`,
-                              moreDetails: `You continued “${selectedCourseWithProgress.title}”. Completion is now ${next}% for this browser session; last active course id: ${id}.`
-                            });
-                          }}
-                        />
-                      </div>
-                    ) : null}
-                  </div>
-
-                </>
+                    ) : null
+                  }
+                />
               ) : selectedNavKey === "resources" ? (
-                <MembershipContentHub />
+                <div className="flex min-h-0 min-w-0 w-full max-w-none flex-1 flex-col">
+                  <MembershipContentHub />
+                </div>
               ) : selectedNavKey === "dashboard" ? (
                 <>
                   <section

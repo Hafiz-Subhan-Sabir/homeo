@@ -325,7 +325,7 @@ function avatarFromSavedProfileImage(saved: string, fallback: string): string {
 }
 
 const CTA_BTN =
-  "syndicate-hud-cta rounded-md border border-[#fede00] bg-[linear-gradient(180deg,#fff06a_0%,#fede00_45%,#d5b900_100%)] text-black [box-shadow:inset_0_1px_0_rgba(255,250,180,0.92),inset_0_-2px_0_rgba(120,104,0,0.72),0_0_16px_rgba(254,222,0,0.48)] hover:brightness-110";
+  "syndicate-hud-cta rounded-md border border-[#eab308] bg-[linear-gradient(180deg,#fef08a_0%,#fde047_46%,#eab308_100%)] text-black [box-shadow:inset_0_1px_0_rgba(255,252,220,0.88),inset_0_-2px_0_rgba(161,98,7,0.55),0_0_16px_rgba(253,224,71,0.45)] hover:brightness-110";
 const HUD_LABEL = "text-[10px] font-black uppercase tracking-[0.1em] text-[color:var(--gold)]/48";
 const HUD_VALUE = "mt-1 font-mono font-black text-[#fefce8]/94";
 
@@ -1374,7 +1374,7 @@ function MissionReminderCard({
                   {item.howDraft ? (
                     <div className="mt-2 rounded-md border border-white/12 bg-black/40 p-2.5 sm:p-3">
                       <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-200/75">
-                        How you completed it
+                        How will you complete it
                       </div>
                       <p className="mt-1.5 max-h-[140px] overflow-y-auto whitespace-pre-wrap break-words text-[13px] leading-relaxed text-white/88 sm:text-[14px]">
                         {item.howDraft}
@@ -1730,9 +1730,9 @@ function DetailPane({
   return (
     <div
       id="syndicate-mission-detail-top"
-      className="syndicate-readable syndicate-detail-pane mx-auto w-full min-w-0 max-w-[min(100%,64rem)] scroll-mt-[max(6.5rem,calc(env(safe-area-inset-top,0px)+4.5rem))] px-2 pb-2 pt-1 sm:px-4 sm:pb-3 sm:pt-2 md:px-5"
+      className="syndicate-readable syndicate-detail-pane flex h-full min-h-0 w-full min-w-0 max-w-none flex-1 flex-col overflow-hidden scroll-mt-[max(6.5rem,calc(env(safe-area-inset-top,0px)+4.5rem))] px-1 pb-2 pt-1 sm:px-2 sm:pb-3 sm:pt-2 md:px-3"
     >
-      <div className="sticky top-0 z-20 -mx-2 mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-[linear-gradient(180deg,rgba(8,8,10,0.97),rgba(6,6,8,0.92))] px-3 py-3 shadow-[0_10px_28px_rgba(0,0,0,0.55)] backdrop-blur-md sm:-mx-4 sm:px-4 md:-mx-5 md:mb-4 md:px-5">
+      <div className="z-20 -mx-2 mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-[linear-gradient(180deg,rgba(8,8,10,0.97),rgba(6,6,8,0.92))] px-3 py-3 shadow-[0_10px_28px_rgba(0,0,0,0.55)] backdrop-blur-md sm:-mx-4 sm:px-4 md:-mx-5 md:mb-4 md:px-5">
         <button
           type="button"
           onClick={onBack}
@@ -1741,7 +1741,7 @@ function DetailPane({
           ← Back to missions
         </button>
       </div>
-      <div className="rounded-lg border border-[rgba(0,255,255,0.3)] bg-[linear-gradient(165deg,rgba(5,14,24,0.94),rgba(0,0,0,0.84)_52%,rgba(46,10,58,0.64))] p-4 [box-shadow:0_0_28px_rgba(0,255,255,0.1)] sm:p-6 md:p-7">
+      <div className="flex min-h-0 w-full flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain rounded-lg border border-[rgba(0,255,255,0.3)] bg-[linear-gradient(165deg,rgba(5,14,24,0.94),rgba(0,0,0,0.84)_52%,rgba(46,10,58,0.64))] p-4 [box-shadow:0_0_28px_rgba(0,255,255,0.1)] sm:p-6 md:p-7">
         <div className="mb-3 flex flex-wrap items-center gap-1.5">
           <span className="rounded border border-white/25 px-1.5 py-0.5 text-[9px] font-semibold uppercase leading-tight tracking-wide text-white/80 sm:text-[10px]">
             {row.category}
@@ -1844,7 +1844,7 @@ function DetailPane({
                 <div className="space-y-4">
                   <div>
                     <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-[color:var(--gold)]/75">
-                      How you completed it
+                      How will you complete it
                     </div>
                     <div className="syndicate-readable whitespace-pre-wrap break-words rounded-md border border-white/15 bg-black/50 px-3 py-2.5 text-[15px] leading-relaxed text-white/95">
                       {how.trim() || "—"}
@@ -1873,14 +1873,14 @@ function DetailPane({
           ) : (
             <>
               <label className="mb-1.5 block text-[12px] font-semibold text-white/80" htmlFor="mission-how">
-                How you completed it
+                How will you complete it
               </label>
               <textarea
                 id="mission-how"
                 value={how}
                 onChange={(e) => setHow(e.target.value)}
                 rows={4}
-                placeholder="Describe what you did to complete this mission…"
+                placeholder="Describe how you will complete this mission…"
                 className="syndicate-readable mb-4 min-h-[112px] w-full resize-y rounded-md border border-white/18 bg-black/50 px-3 py-3 text-[16px] leading-relaxed text-white/95 outline-none placeholder:text-white/35 focus:border-cyan-400/45 focus:ring-1 focus:ring-cyan-400/20 sm:text-[15px]"
               />
               {onMissionReminderChange ? (
@@ -3567,7 +3567,7 @@ export function SyndicateAiChallengePanel() {
     const how = draft.how.trim();
     const learned = draft.learned.trim();
     if (!how || !learned) {
-      setError("Fill in both how you completed the mission and what you learned before submitting.");
+      setError("Fill in both how you will complete the mission and what you learned before submitting.");
       return;
     }
     setSubmitBusy(true);
@@ -3977,37 +3977,39 @@ export function SyndicateAiChallengePanel() {
         {adminTaskRecordingPortal}
         {completionToast}
         {syndicateHelpModal}
-        <DetailPane
-          key={selected.id}
-          row={selected}
-          initialResponse={initialResp}
-          submitting={submitBusy}
-          scorePreview={selectedScorePreview}
-          awardedPoints={selectedAwardedPoints}
-          submitDisabled={selectedSubmitLocked}
-          submitLockedMessage={selectedSubmitLockedMessage}
-          nowMs={nowTick}
-          done={doneIds.has(selected.id)}
-          taskTimerStartMs={doneIds.has(selected.id) ? null : missionStartMap[selected.id] ?? null}
-          onBack={() => setSelected(null)}
-          onSubmit={handleSubmit}
-          onDraftPersist={doneIds.has(selected.id) ? undefined : persistMissionDraft}
-          missionReminderIso={missionReminders[selected.id]?.atIso ?? null}
-          onMissionReminderChange={doneIds.has(selected.id) ? undefined : setMissionReminderForSelected}
-          onMissionReminderDone={
-            doneIds.has(selected.id)
-              ? undefined
-              : () => {
-                  setShowStatsProfile(false);
-                  setSyndicateView("reminders");
-                  setSelected(null);
-                  window.setTimeout(() => {
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }, 0);
-                }
-          }
-          onSyndicateHelpOpen={openSyndicateHelp}
-        />
+        <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
+          <DetailPane
+            key={selected.id}
+            row={selected}
+            initialResponse={initialResp}
+            submitting={submitBusy}
+            scorePreview={selectedScorePreview}
+            awardedPoints={selectedAwardedPoints}
+            submitDisabled={selectedSubmitLocked}
+            submitLockedMessage={selectedSubmitLockedMessage}
+            nowMs={nowTick}
+            done={doneIds.has(selected.id)}
+            taskTimerStartMs={doneIds.has(selected.id) ? null : missionStartMap[selected.id] ?? null}
+            onBack={() => setSelected(null)}
+            onSubmit={handleSubmit}
+            onDraftPersist={doneIds.has(selected.id) ? undefined : persistMissionDraft}
+            missionReminderIso={missionReminders[selected.id]?.atIso ?? null}
+            onMissionReminderChange={doneIds.has(selected.id) ? undefined : setMissionReminderForSelected}
+            onMissionReminderDone={
+              doneIds.has(selected.id)
+                ? undefined
+                : () => {
+                    setShowStatsProfile(false);
+                    setSyndicateView("reminders");
+                    setSelected(null);
+                    window.setTimeout(() => {
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }, 0);
+                  }
+            }
+            onSyndicateHelpOpen={openSyndicateHelp}
+          />
+        </div>
       </>
     );
   }
@@ -4017,7 +4019,7 @@ export function SyndicateAiChallengePanel() {
       {adminTaskRecordingPortal}
       {completionToast}
       {syndicateHelpModal}
-      <div className="syndicate-dash-outer relative mx-auto w-full min-w-0 max-w-[min(100%,100rem)] space-y-2 border px-0 pb-1.5 pt-0 sm:space-y-3 sm:pb-2 sm:pt-0 max-md:space-y-2 max-md:border-0 max-md:bg-[linear-gradient(168deg,#050508_0%,#0d0818_44%,#0a0610_100%)] max-md:px-0 max-md:pb-1.5 max-md:pt-0 max-md:shadow-none">
+      <div className="syndicate-dash-outer relative mx-auto flex min-h-[min(85vh,920px)] w-full min-w-0 max-w-[min(100%,100rem)] flex-col space-y-2 border px-0 pb-1.5 pt-0 sm:space-y-3 sm:pb-2 sm:pt-0 max-md:space-y-2 max-md:border-0 max-md:bg-[linear-gradient(168deg,#050508_0%,#0d0818_44%,#0a0610_100%)] max-md:px-0 max-md:pb-1.5 max-md:pt-0 max-md:shadow-none">
       <div className="pointer-events-none absolute inset-0 -z-10 syndicate-dash-scanlines max-md:opacity-35" />
       <div className="syndicate-dash-header mb-1 flex w-full flex-col gap-2 rounded-2xl border px-2 py-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3 sm:px-2.5 sm:py-2 max-md:mb-0 max-md:rounded-none max-md:border-x-0 max-md:border-t-0 max-md:border-b-[rgba(255,215,0,0.24)] max-md:px-2 max-md:py-1.5">
         <div className="min-w-0 w-full sm:flex-1 sm:min-w-0">
@@ -4454,7 +4456,7 @@ export function SyndicateAiChallengePanel() {
                                   <div className="space-y-4">
                                     <div>
                                       <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/45">
-                                        How you completed it
+                                        How will you complete it
                                       </div>
                                       <p className="mt-2 whitespace-pre-wrap break-words text-[14px] leading-relaxed text-white/88 sm:text-[15px]">
                                         {parts.how.trim() || "—"}
@@ -5797,7 +5799,7 @@ export function SyndicateAiChallengePanel() {
               </button>
             </div>
             <p className="syndicate-readable mb-3 max-w-3xl text-[13px] leading-relaxed text-white/70 sm:mb-4 sm:text-[14px]">
-              Set date &amp; time under <span className="text-white/85">How you completed it</span> on an incomplete mission. Reminders stay until the target time or you clear them.
+              Set date &amp; time under <span className="text-white/85">How will you complete it</span> on an incomplete mission. Reminders stay until the target time or you clear them.
               Within 24 hours of the mission appearing, use <span className="font-semibold text-cyan-200/90">Open mission</span>; after that, use{" "}
               <span className="font-semibold text-cyan-200/90">Done</span> or <span className="font-semibold text-cyan-200/90">Dismiss</span>. If the target passes with no action, the server may deduct{" "}
               <span className="font-semibold text-amber-200/90">1 point</span> and remove the reminder.
