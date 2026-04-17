@@ -71,7 +71,9 @@ export function VideoCard({ video, onPlay, index = 0 }: VideoCardProps) {
         </span>
       </button>
 
-      <h3 className="relative z-[1] mt-4 line-clamp-2 text-[15px] font-bold leading-snug text-neutral-50">{video.title}</h3>
+      <h3 className="relative z-[1] mt-4 line-clamp-2 text-[15px] font-bold leading-snug text-[#facc15] [text-shadow:0_0_12px_rgba(250,204,21,0.25)]">
+        {video.title}
+      </h3>
       {video.description ? (
         <p className="relative z-[1] mt-2 line-clamp-2 flex-1 text-[12px] leading-relaxed text-neutral-300">{video.description}</p>
       ) : (

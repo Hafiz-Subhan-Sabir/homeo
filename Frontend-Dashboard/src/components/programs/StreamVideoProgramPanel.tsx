@@ -14,11 +14,14 @@ type Props = {
   streamVideoId: number;
   /** Called once when playback becomes ready (e.g. refetch list so "Processing" badges update). */
   onPlaybackReady?: () => void;
+  /** Optional custom text block for the right details panel (membership-specific copy). */
+  detailsOverride?: string;
 };
 
-const playerShell = "overflow-hidden rounded-xl border border-white/10 bg-black/50";
+const playerShell =
+  "overflow-hidden rounded-xl border border-amber-300/50 bg-black/50 shadow-[0_0_30px_rgba(251,191,36,0.22),0_0_52px_rgba(34,211,238,0.12),inset_0_0_0_1px_rgba(255,255,255,0.12)]";
 
-export function StreamVideoProgramPanel({ streamVideoId, onPlaybackReady }: Props) {
+export function StreamVideoProgramPanel({ streamVideoId, onPlaybackReady, detailsOverride }: Props) {
   const [detail, setDetail] = useState<StreamVideoDetail | null>(null);
   const [playback, setPlayback] = useState<StreamPayload | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -104,11 +107,22 @@ export function StreamVideoProgramPanel({ streamVideoId, onPlaybackReady }: Prop
   }
 
   const hlsUrl = playback.hls_url;
-  const priceLabel = Number(detail.price).toLocaleString(undefined, { style: "currency", currency: "USD" });
   const ready = playback.status === "ready" && !!hlsUrl;
+  const statusLabel = playback.status === "ready" ? "available" : playback.status;
+  const hasDetailsOverride = Boolean((detailsOverride || "").trim());
+  const detailsText = (detailsOverride || "").trim() || (detail.description || "").trim() || "No description added for this video yet.";
+  const overrideLines = hasDetailsOverride
+    ? detailsText
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+    : [];
+  const overrideHeading = overrideLines[0] ?? "";
+  const overrideKeyPoints = overrideLines.slice(1, 5);
+  const overrideClosing = overrideLines.slice(5);
 
   return (
-    <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(260px,300px)] lg:items-start lg:gap-10">
+    <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1.2fr)_minmax(340px,460px)] lg:items-start lg:gap-8">
       <div className="min-w-0 space-y-5">
         <div className="space-y-2">
           {!ready ? (
@@ -120,7 +134,7 @@ export function StreamVideoProgramPanel({ streamVideoId, onPlaybackReady }: Prop
               </span>
               <p>
                 {playback.status === "processing"
-                  ? "This video is still being prepared. It will auto-refresh when ready."
+                  ? "This video is still being prepared. It will auto-refresh automatically."
                   : "Playback is not available yet."}
               </p>
             </div>
@@ -137,16 +151,12 @@ export function StreamVideoProgramPanel({ streamVideoId, onPlaybackReady }: Prop
 
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-[clamp(1.15rem,2.2vw+0.5rem,1.65rem)] font-black leading-tight tracking-tight text-white">
+            <h2 className="text-[clamp(1.2rem,2.3vw+0.5rem,1.8rem)] font-black leading-tight tracking-tight text-[#facc15] [text-shadow:0_0_16px_rgba(250,204,21,0.28)]">
               {detail.title}
             </h2>
-            <span className="rounded-full border border-cyan-400/35 bg-cyan-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-cyan-100/90">
-              Stream
-            </span>
           </div>
-          <p className="mt-2 text-[13px] font-semibold text-[color:var(--gold)]/90">{priceLabel}</p>
           {(detail.description || "").trim() ? (
-            <p className="mt-3 max-w-3xl text-[14px] font-medium leading-[1.65] tracking-[0.01em] text-white/[0.88] antialiased">
+            <p className="mt-3 max-w-3xl rounded-lg border border-[#facc15]/20 bg-black/35 px-4 py-3 text-[15px] font-medium leading-[1.75] tracking-[0.01em] text-white/95 antialiased">
               {(detail.description || "").trim()}
             </p>
           ) : null}
@@ -154,19 +164,50 @@ export function StreamVideoProgramPanel({ streamVideoId, onPlaybackReady }: Prop
       </div>
 
       <aside
-        aria-label="Stream info"
-        className="flex min-h-0 flex-col rounded-xl border border-white/12 bg-black/40 p-4 lg:sticky lg:top-24"
+        aria-label="Video details"
+        className="flex min-h-0 flex-col rounded-xl border border-[#facc15]/25 bg-[linear-gradient(180deg,rgba(14,14,14,0.92),rgba(6,6,6,0.92))] p-5 shadow-[0_0_28px_rgba(250,204,21,0.08),inset_0_0_0_1px_rgba(255,255,255,0.04)] lg:sticky lg:top-24"
       >
-        <div className="text-[11px] font-black uppercase tracking-[0.18em] text-white/55">Stream</div>
-        <p className="mt-3 text-[13px] leading-relaxed text-white/75">
-          Secure playback from your catalog. Lesson playlists for multi-video courses stay under{" "}
-          <span className="text-white/90">Programs</span> as before.
-        </p>
-        <dl className="mt-4 space-y-2 text-[12px] text-white/70">
-          <div className="flex justify-between gap-2 border-t border-white/10 pt-3">
-            <dt className="text-white/50">Status</dt>
+        {hasDetailsOverride ? null : (
+          <div className="text-[11px] font-black uppercase tracking-[0.18em] text-[#facc15]/85">Description</div>
+        )}
+        {hasDetailsOverride ? (
+          <div className="mt-2 space-y-4">
+            <h3 className="text-[clamp(1.14rem,0.7vw+1rem,1.42rem)] font-black uppercase tracking-[0.04em] text-[#facc15] [text-shadow:0_0_12px_rgba(250,204,21,0.4),0_0_22px_rgba(250,204,21,0.2)]">
+              {overrideHeading}
+            </h3>
+            {overrideKeyPoints.length ? (
+              <ul className="space-y-1.5">
+                {overrideKeyPoints.map((point) => (
+                  <li
+                    key={point}
+                    className="text-[clamp(1.02rem,0.65vw+0.9rem,1.26rem)] font-black tracking-[0.01em] text-white [text-shadow:0_0_11px_rgba(250,204,21,0.35),0_0_18px_rgba(250,204,21,0.14)]"
+                  >
+                    {point}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {overrideClosing.length ? (
+              <div className="space-y-1.5">
+                {overrideClosing.map((line) => (
+                  <p
+                    key={line}
+                    className="text-[clamp(1.02rem,0.65vw+0.9rem,1.26rem)] font-black leading-[1.35] tracking-[0.01em] text-white [text-shadow:0_0_11px_rgba(250,204,21,0.35),0_0_18px_rgba(250,204,21,0.14)]"
+                  >
+                    {line}
+                  </p>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <p className="mt-3 whitespace-pre-line text-[14px] leading-relaxed text-white/85">{detailsText}</p>
+        )}
+        <dl className="mt-5 space-y-2 text-[12px] text-white/70">
+          <div className="flex justify-between gap-2 border-t border-[#facc15]/20 pt-3">
+            <dt className="text-white/60">Status</dt>
             <dd className={cn("font-semibold", ready ? "text-emerald-300/90" : "text-amber-200/90")}>
-              {playback.status}
+              {statusLabel}
             </dd>
           </div>
         </dl>

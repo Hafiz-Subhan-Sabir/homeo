@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -10,6 +10,12 @@ import { MembershipArticleReader, type ArticleReaderState } from "./MembershipAr
 import { VideoCard, type VideoDto } from "./VideoCard";
 
 type Tab = "articles" | "videos";
+const MEMBERSHIP_SYNDICATE_VISION = `the syndicate vision
+Honour
+Money
+Power
+Freedom
+Success Is Born From Struggle And Failure Is Born From Comfort`;
 
 type Paginated<T> = {
   count: number;
@@ -442,7 +448,7 @@ export function MembershipContentHub() {
       <AnimatePresence>
         {activeVideo ? (
           <motion.div
-            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-[200] overflow-y-auto bg-black/80 p-4 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -455,12 +461,14 @@ export function MembershipContentHub() {
               initial={{ scale: 0.96, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.96, opacity: 0 }}
-              className="relative w-full max-w-4xl overflow-hidden rounded-xl border border-cyan-300/50 bg-black shadow-[0_0_72px_rgba(34,211,238,0.22),0_0_40px_rgba(220,38,38,0.12),inset_0_0_0_1px_rgba(251,191,36,0.12)]"
+              className="relative mx-auto my-6 w-full max-w-6xl overflow-hidden rounded-xl border border-cyan-300/50 bg-black shadow-[0_0_72px_rgba(34,211,238,0.22),0_0_40px_rgba(220,38,38,0.12),inset_0_0_0_1px_rgba(251,191,36,0.12)]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="pointer-events-none absolute inset-0 opacity-[0.07] membership-hazard-stripe" aria-hidden />
               <div className="relative flex items-center justify-between gap-3 border-b border-cyan-300/25 bg-black/80 px-4 py-3">
-                <div className="min-w-0 line-clamp-1 text-[13px] font-bold text-cyan-100">{activeVideo.title}</div>
+                <div className="min-w-0 line-clamp-1 text-[13px] font-bold text-[#facc15] [text-shadow:0_0_12px_rgba(250,204,21,0.25)]">
+                  {activeVideo.title}
+                </div>
                 <button
                   type="button"
                   onClick={() => setActiveVideo(null)}
@@ -470,7 +478,11 @@ export function MembershipContentHub() {
                 </button>
               </div>
               <div className="bg-black p-3 sm:p-4">
-                <StreamVideoProgramPanel streamVideoId={activeVideo.id} onPlaybackReady={refreshVideosSilently} />
+                <StreamVideoProgramPanel
+                  streamVideoId={activeVideo.id}
+                  onPlaybackReady={refreshVideosSilently}
+                  detailsOverride={MEMBERSHIP_SYNDICATE_VISION}
+                />
               </div>
             </motion.div>
           </motion.div>
