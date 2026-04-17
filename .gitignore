@@ -1,58 +1,10 @@
-<<<<<<< HEAD
-# Secrets — never commit
-.env
-.env.local
-**/.env
-!**/.env.example
-# Explicit paths (some Git versions match **/.env inconsistently on Windows)
-Frontend-Dashboard/.env
-frontend/.env
-Backend/.env
-backend/.env
-Frontend-Dashboard/.next/
-frontend/.next/
-LOCAL_DEV_CREDENTIALS.txt
-*CREDENTIALS*.txt
-
-# Python
-__pycache__/
-*.py[cod]
-*.sqlite3
-.venv/
-venv/
-
-# Node / Next.js
-node_modules/
-.next/
-out/
-*.tsbuildinfo
-
-# Large local uploads (keep folder via backend .gitignore + .gitkeep)
-backend/data/uploads/*
-!backend/data/uploads/.gitkeep
-Backend/data/uploads/*
-!Backend/data/uploads/.gitkeep
-
-# Django user uploads (admin attachments, etc.)
-backend/media/
-Backend/media/
-
-# Collected static (build output; do not commit)
-backend/staticfiles/
-Backend/staticfiles/
-
-# IDE / OS
-.idea/
-.vscode/
-*.swp
-.DS_Store
-Thumbs.db
-=======
 # ----- Secrets / local config -----
 .env
 .env.*
 !.env.example
 !.env.local.example
+LOCAL_DEV_CREDENTIALS.txt
+*CREDENTIALS*.txt
 
 # ----- Python / Django -----
 __pycache__/
@@ -74,9 +26,12 @@ htmlcov/
 *.log
 *.pid
 
-# Django collected/static caches
-backend/staticfiles/
-backend/media/
+# Backend (canonical folder name: Backend)
+Backend/.env
+Backend/data/uploads/*
+!Backend/data/uploads/.gitkeep
+Backend/media/
+Backend/staticfiles/
 
 # Virtual environments
 .venv/
@@ -85,10 +40,13 @@ env/
 
 # ----- Node / Next.js -----
 node_modules/
-frontend/.next/
-frontend/out/
-frontend/.turbo/
-frontend/coverage/
+Frontend-Dashboard/.env
+Frontend-Dashboard/.next/
+Frontend-Dashboard/out/
+Frontend-Dashboard/.turbo/
+Frontend-Dashboard/coverage/
+.next/
+out/
 *.tsbuildinfo
 npm-debug.log*
 yarn-debug.log*
@@ -101,9 +59,8 @@ Thumbs.db
 desktop.ini
 .idea/
 .vscode/
+*.swp
 
 # ----- Cursor / local assistant artifacts -----
 .cursor/
 .cursor-cache/
-
->>>>>>> syndicate_real1/login

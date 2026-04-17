@@ -2,8 +2,8 @@
 
 This guide deploys the project to Railway with:
 
-- Django API (`backend/`)
-- Next.js frontend (`frontend/` or `Frontend-Dashboard/`)
+- Django API (`Backend/`)
+- Next.js frontend (`Frontend-Dashboard/`)
 - Optional Celery worker for HLS transcoding
 - PostgreSQL + Redis
 
@@ -15,20 +15,20 @@ In one Railway project, create:
 
 1. **PostgreSQL** service
 2. **Redis** service
-3. **Backend web** service (root directory: `backend`)
-4. **Frontend web** service (root directory: `frontend` or `Frontend-Dashboard`)
+3. **Backend web** service (root directory: `Backend`)
+4. **Frontend web** service (root directory: `Frontend-Dashboard`)
 5. **Backend worker** service (optional but recommended for video processing)
 
 ---
 
-## 2) Backend web service (`backend/`)
+## 2) Backend web service (`Backend/`)
 
-Set **Root Directory** to `backend`.
+Set **Root Directory** to `Backend`.
 
 This repo already includes:
 
-- `backend/railway.toml`
-- `backend/railway_start.sh`
+- `Backend/railway.toml`
+- `Backend/railway_start.sh`
 
 So start/release commands are handled automatically.
 
@@ -53,6 +53,8 @@ Streaming/security (recommended):
 - `VIDEO_CDN_PUBLIC_BASE_URL` = `https://<your-backend-domain>`
 - `STREAM_SIGNED_URL_TTL_SECONDS` = `900` (or lower, e.g. `300`)
 - `STREAM_SIGNING_SECRET` = long random string
+
+Optional (emergency / debugging only): `STREAM_SYNC_TRANSCODE_ON_PLAYBACK=true` runs HLS transcoding inside the web request when a video is still `processing` (e.g. worker was down). Prefer a healthy Celery worker; do not enable under real traffic.
 
 Object storage for HLS (if using R2/S3):
 
@@ -80,7 +82,7 @@ After deploy, verify:
 
 ## 3) Backend worker service (Celery)
 
-Create another service from same repo with root `backend`.
+Create another service from same repo with root `Backend`.
 
 Set Start Command:
 
@@ -94,9 +96,9 @@ Why needed: HLS transcode jobs run in Celery; without worker, videos can stay in
 
 ---
 
-## 4) Frontend service (`frontend/` or `Frontend-Dashboard/`)
+## 4) Frontend service (`Frontend-Dashboard/`)
 
-Set Root Directory to your real frontend folder.
+Set Root Directory to `Frontend-Dashboard`.
 
 ### Required frontend environment variables
 

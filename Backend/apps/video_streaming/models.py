@@ -70,6 +70,28 @@ class StreamVideo(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class PlayerLayout(models.TextChoices):
+        AUTO = "auto", "Auto (from video)"
+        LANDSCAPE = "landscape", "Landscape (16:9 frame)"
+        PORTRAIT = "portrait", "Portrait (9:16 frame)"
+
+    player_layout = models.CharField(
+        max_length=16,
+        choices=PlayerLayout.choices,
+        default=PlayerLayout.AUTO,
+        help_text="Dashboard player frame. Auto uses pixel dimensions from transcoding and live playback metadata.",
+    )
+    source_width = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        help_text="Source video width in pixels (filled when HLS processing completes).",
+    )
+    source_height = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        help_text="Source video height in pixels (filled when HLS processing completes).",
+    )
+
     class Meta:
         ordering = ["-created_at"]
 
@@ -90,6 +112,11 @@ class StreamPlaylist(models.Model):
         help_text="Optional. Shown on the Programs grid; falls back to the first video thumbnail.",
     )
     is_published = models.BooleanField(default=True, db_index=True)
+    is_coming_soon = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Show this playlist card as Coming Soon on Programs.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -40,6 +40,56 @@ def _ffmpeg_executable() -> str:
     return found
 
 
+def _ffprobe_path() -> str | None:
+    ffmpeg_exe = Path(_ffmpeg_executable())
+    parent = ffmpeg_exe.parent
+    stem = ffmpeg_exe.stem.lower()
+    if stem == "ffmpeg":
+        for name in ("ffprobe", "ffprobe.exe"):
+            p = parent / name
+            if p.is_file():
+                return str(p)
+    return shutil.which("ffprobe")
+
+
+def _ffprobe_video_dimensions(input_path: Path) -> tuple[int, int] | None:
+    probe = _ffprobe_path()
+    if not probe:
+        return None
+    try:
+        cp = subprocess.run(
+            [
+                probe,
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-show_entries",
+                "stream=width,height",
+                "-of",
+                "csv=p=0:s=x",
+                str(input_path),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    except (subprocess.CalledProcessError, OSError, ValueError):
+        return None
+    line = (cp.stdout or "").strip()
+    if "x" not in line:
+        return None
+    w_s, h_s = line.lower().split("x", 1)
+    try:
+        w, h = int(w_s), int(h_s)
+    except ValueError:
+        return None
+    if w <= 0 or h <= 0:
+        return None
+    return w, h
+
+
 def _public_cdn_base() -> str:
     return (os.environ.get("VIDEO_CDN_PUBLIC_BASE_URL") or "").strip().rstrip("/")
 
@@ -140,6 +190,7 @@ def process_stream_video_to_hls(self, video_id: int) -> None:
             shutil.rmtree(out_dir, ignore_errors=True)
 
         input_path = Path(video.original_video.path)
+        probed = _ffprobe_video_dimensions(input_path)
         _run_ffmpeg_hls(input_path, out_dir)
 
         use_s3 = getattr(settings, "USE_S3_OBJECT_STORAGE", False)
@@ -164,11 +215,14 @@ def process_stream_video_to_hls(self, video_id: int) -> None:
                 )
             hls_url = f"{base.rstrip('/')}/media/hls/{video_id}/index.m3u8"
 
-        StreamVideo.objects.filter(pk=video_id).update(
-            hls_path=hls_url,
-            status=StreamVideo.Status.READY,
-            last_error="",
-        )
+        ready_kwargs: dict = {
+            "hls_path": hls_url,
+            "status": StreamVideo.Status.READY,
+            "last_error": "",
+        }
+        if probed:
+            ready_kwargs["source_width"], ready_kwargs["source_height"] = probed
+        StreamVideo.objects.filter(pk=video_id).update(**ready_kwargs)
     except Exception as exc:
         logger.exception("HLS processing failed for video %s", video_id)
         StreamVideo.objects.filter(pk=video_id).update(

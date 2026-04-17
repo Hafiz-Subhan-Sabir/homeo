@@ -65,6 +65,10 @@ const nextConfig = {
           source: "/api/streaming/:path*",
           destination: `${backendOrigin}/api/streaming/:path*`
         },
+        {
+          source: "/api/auth/:path*",
+          destination: `${backendOrigin}/api/auth/:path*`
+        },
         // Uploaded course covers & video thumbnails (Django MEDIA_URL)
         {
           source: "/media/:path*",

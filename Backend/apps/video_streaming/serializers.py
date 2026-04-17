@@ -16,6 +16,9 @@ class StreamVideoListSerializer(serializers.ModelSerializer):
             "price",
             "thumbnail_url",
             "status",
+            "player_layout",
+            "source_width",
+            "source_height",
             "created_at",
         )
         read_only_fields = fields
@@ -73,6 +76,7 @@ class StreamPlaylistListSerializer(serializers.ModelSerializer):
             "cover_image_url",
             "video_count",
             "is_published",
+            "is_coming_soon",
             "created_at",
         )
         read_only_fields = fields

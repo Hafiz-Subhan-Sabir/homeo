@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import LuxuryRedirectOverlay from "@/components/LuxuryRedirectOverlay";
+import LuxuryRedirectOverlay from "@/components/syndicate-otp/LuxuryRedirectOverlay";
+import { syndicateOtpSignupHref } from "@/lib/syndicate-otp-paths";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8001";
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/$/, "");
 const SYNDICATE_URL =
   process.env.NEXT_PUBLIC_POST_LOGIN_REDIRECT_URL ?? "https://the-syndicate.com/";
 
@@ -118,7 +118,7 @@ export default function CheckoutSuccessScreen({
         return;
       }
       try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/checkout/success/`, {
+        const response = await fetch(`${API_BASE_URL || ""}/api/auth/checkout/success/`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ session_id: sessionId }),
@@ -187,7 +187,7 @@ export default function CheckoutSuccessScreen({
           {!loading && error ? <p className="form-error">{error}</p> : null}
 
           {!loading && error ? (
-            <Link className="cyber-btn checkout-login-btn" href="/signup">
+            <Link className="cyber-btn checkout-login-btn" href={syndicateOtpSignupHref()}>
               <span className="cyber-btn__text">BACK TO SIGN UP</span>
             </Link>
           ) : null}

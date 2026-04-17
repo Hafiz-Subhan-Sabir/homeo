@@ -1,5 +1,7 @@
 import { portalFetch } from "@/lib/portal-api";
 
+export type StreamVideoPlayerLayout = "auto" | "landscape" | "portrait";
+
 export type StreamVideoListItem = {
   id: number;
   title: string;
@@ -7,6 +9,10 @@ export type StreamVideoListItem = {
   price: string;
   thumbnail_url: string | null;
   status: string;
+  /** Omitted on older API responses; treat as `"auto"`. */
+  player_layout?: StreamVideoPlayerLayout;
+  source_width?: number | null;
+  source_height?: number | null;
   created_at: string;
 };
 
@@ -28,6 +34,7 @@ export type StreamPlaylistListItem = {
   cover_image_url: string | null;
   video_count: number;
   is_published: boolean;
+  is_coming_soon: boolean;
   created_at: string;
 };
 

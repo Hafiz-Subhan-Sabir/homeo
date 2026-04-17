@@ -82,7 +82,13 @@ export default function StreamVideoDetailPage() {
           </p>
         ) : (
           <div className="overflow-hidden rounded-lg border border-white/10 bg-black">
-            <HlsVideoPlayer src={hls} className="aspect-video w-full" />
+            <HlsVideoPlayer
+              src={hls}
+              className="rounded-[inherit]"
+              playerLayout={detail.player_layout ?? "auto"}
+              sourceWidth={detail.source_width ?? null}
+              sourceHeight={detail.source_height ?? null}
+            />
           </div>
         )}
       </section>

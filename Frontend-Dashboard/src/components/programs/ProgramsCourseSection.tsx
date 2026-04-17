@@ -212,25 +212,31 @@ export function ProgramsCourseSection({
           ) : null}
 
           {hasCatalogItems && secureView === "grid" ? (
-            <div className="mx-auto grid max-w-[1600px] grid-cols-2 gap-4 sm:gap-5 md:grid-cols-3 md:gap-6 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
               {streamPlaylists.map((pl, j) => {
                 const i = j;
                 const grad = PROGRAM_CARD_BACKGROUNDS[i % PROGRAM_CARD_BACKGROUNDS.length];
                 const coverSrc = resolveDjangoMediaUrl(pl.cover_image_url);
+                const comingSoon = !!pl.is_coming_soon;
                 return (
                   <button
                     key={`playlist-${pl.id}`}
                     type="button"
-                    onClick={() => openStreamPlaylist(pl.id)}
+                    onClick={() => {
+                      if (!comingSoon) openStreamPlaylist(pl.id);
+                    }}
                     className={cn(
                       "group/card relative flex aspect-[4/5] w-full flex-col overflow-hidden text-left outline-none",
                       "rounded-3xl",
                       "shadow-[0_6px_32px_rgba(0,0,0,0.55),0_0_0_1px_rgba(167,139,250,0.22),0_0_40px_rgba(139,92,246,0.14)]",
                       "transition-[transform,box-shadow] duration-300 ease-out",
-                      "hover:-translate-y-0.5 hover:shadow-[0_14px_48px_rgba(0,0,0,0.5),0_0_0_1px_rgba(196,181,253,0.35),0_0_64px_rgba(139,92,246,0.22)]",
+                      comingSoon
+                        ? "opacity-95 cursor-not-allowed"
+                        : "hover:-translate-y-0.5 hover:shadow-[0_14px_48px_rgba(0,0,0,0.5),0_0_0_1px_rgba(196,181,253,0.35),0_0_64px_rgba(139,92,246,0.22)]",
                       "focus-visible:ring-2 focus-visible:ring-violet-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black",
                       "active:translate-y-0"
                     )}
+                    aria-disabled={comingSoon}
                   >
                     <span
                       className="pointer-events-none absolute left-1/2 top-1/2 z-0 aspect-square w-[185%] max-w-none -translate-x-1/2 -translate-y-1/2 will-change-transform bg-[conic-gradient(from_0deg_at_50%_50%,#f5f3ff,#c4b5fd,#a78bfa,#8b5cf6,#7c3aed,#ddd6fe,#ede9fe,#f5f3ff)] animate-[spin_5.5s_linear_infinite] motion-reduce:animate-none"
@@ -269,6 +275,16 @@ export function ProgramsCourseSection({
                         <span className="absolute right-3 top-3 z-[4] rounded-full bg-white/95 px-2.5 py-0.5 text-[10px] font-bold tabular-nums text-neutral-900 shadow-[0_2px_10px_rgba(0,0,0,0.45)] sm:right-3.5 sm:top-3.5">
                           {pl.video_count} videos
                         </span>
+                        {comingSoon ? (
+                          <>
+                            <span className="pointer-events-none absolute inset-0 z-[3] bg-black/35" />
+                            <span className="pointer-events-none absolute inset-0 z-[4] flex items-center justify-center px-5 text-center">
+                              <span className="rounded-2xl border border-amber-300/65 bg-black/70 px-5 py-3 text-[20px] font-black uppercase tracking-[0.18em] text-[#f5c814] shadow-[0_0_26px_rgba(245,200,20,0.35)] sm:text-[24px]">
+                                Coming Soon
+                              </span>
+                            </span>
+                          </>
+                        ) : null}
                         <div
                           className={cn(
                             "rounded-xl border px-3 py-2.5 sm:px-3.5 sm:py-3",

@@ -17,6 +17,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.video_streaming.models import StreamPlaylist, StreamPlaylistItem, StreamVideo
+from apps.video_streaming.transcode_policy import inline_stream_transcode_enabled
 from apps.video_streaming.serializers import (
     StreamPlaylistDetailSerializer,
     StreamPlaylistListSerializer,
@@ -151,6 +152,20 @@ class StreamVideoStreamView(APIView):
             video = StreamVideo.objects.get(pk=pk)
         except StreamVideo.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Local-dev fallback: stuck "processing" rows (e.g. no worker) transcode on first playback.
+        if (
+            inline_stream_transcode_enabled()
+            and video.status == StreamVideo.Status.PROCESSING
+            and bool(video.original_video and video.original_video.name)
+        ):
+            try:
+                from apps.video_streaming.tasks import process_stream_video_to_hls
+
+                process_stream_video_to_hls(video.pk)
+                video.refresh_from_db(fields=["status", "hls_path", "last_error"])
+            except Exception:
+                video.refresh_from_db(fields=["status", "hls_path", "last_error"])
 
         if video.status != StreamVideo.Status.READY or not (video.hls_path or "").strip():
             payload = {"id": video.id, "status": video.status, "hls_url": None}

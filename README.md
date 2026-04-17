@@ -11,6 +11,7 @@ This repo merges the upstream challenges stack described in [Smart AI Agent — 
 - **Syndicate missions** — DRF Token auth at `/api/syndicate-auth/login/` (signup, login, logout, me) for the missions panel; OpenAI generates and evaluates missions.
 - **Progress & sync** — Authenticated users persist streaks and points; leaderboard and admin-assigned tasks are supported.
 - **Affiliate tracking** — Same Django service: `/api/track/*` and `/api/affiliate/auth/*` (OTP). The Next.js app calls these via `NEXT_PUBLIC_SYNDICATE_API_URL` (or optional `NEXT_PUBLIC_AFFILIATE_API_BASE_URL` override).
+- **Member OTP + Stripe** — Public onboarding UI lives in **`Frontend-Dashboard`** under **`/syndicate-otp/*`** (login, signup, verify OTP). **`/checkout`** and **`/checkout/success`** stay at the site root for Stripe return URLs. Set `NEXT_PUBLIC_SYNDICATE_OTP_UI_BASE` if you need a different prefix.
 
 ## Tech stack
 
@@ -24,23 +25,21 @@ This repo merges the upstream challenges stack described in [Smart AI Agent — 
 
 | Folder | Role |
 |--------|------|
-| **`backend/`** | Single Django project: `syndicate_backend`, `api`, `apps/challenges`, `apps/portal`, `apps/membership`, **`apps/affiliate_tracking`** (merged from the old standalone affiliate API). |
-| **`frontend/`** | Next.js dashboard (recommended directory name). |
+| **`Backend/`** | Single Django project: `syndicate_backend`, `api`, `apps/challenges`, `apps/portal`, `apps/membership`, **`apps/affiliate_tracking`** (merged from the old standalone affiliate API). |
+| **`Frontend-Dashboard/`** | Next.js app: dashboard, portal proxy usage, streaming UI, and the member OTP + Stripe flow. |
 
-If your tree still has **`Frontend-Dashboard/`** (file lock during rename), it is the same app—close the IDE lock on that folder and rename it to **`frontend/`**, or set Railway / CI root to the folder you actually have.
-
-The old **`affiliate-portal/`** split (separate Next + Django) has been removed; behavior lives in **`backend/`** + **`frontend/`** (or `Frontend-Dashboard/`).
+The old **`affiliate-portal/`** split (separate Next + Django) has been removed; behavior lives in **`Backend/`** + **`Frontend-Dashboard/`**.
 
 ## Backend setup
 
 ```bash
-cd backend
+cd Backend
 python -m venv .venv
 # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-Copy `backend/.env.example` to `backend/.env`, set secrets as needed, then:
+Copy `Backend/.env.example` to `Backend/.env`, set secrets as needed, then:
 
 ```bash
 python manage.py migrate
@@ -50,12 +49,11 @@ python manage.py runserver
 ## Frontend setup
 
 ```bash
-cd frontend
-# or: cd Frontend-Dashboard
+cd Frontend-Dashboard
 npm install
 ```
 
-Copy `.env.local.example` to `.env.local` in that folder. Use `BACKEND_INTERNAL_URL` for the portal proxy and `NEXT_PUBLIC_SYNDICATE_API_URL` for direct API calls (must end with `/api`). Affiliate features use the **same** base URL unless `NEXT_PUBLIC_AFFILIATE_API_BASE_URL` is set.
+Copy `Frontend-Dashboard/.env.example` to `Frontend-Dashboard/.env.local` and adjust. Use `BACKEND_INTERNAL_URL` for the portal proxy and `NEXT_PUBLIC_SYNDICATE_API_URL` for direct API calls (must end with `/api`). Affiliate features use the **same** base URL unless `NEXT_PUBLIC_AFFILIATE_API_BASE_URL` is set.
 
 ```bash
 npm run dev

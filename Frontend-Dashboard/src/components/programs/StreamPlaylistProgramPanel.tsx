@@ -17,8 +17,7 @@ type Props = {
   playlistId: number;
 };
 
-const playerShell =
-  "aspect-video max-h-[min(58vh,640px)] w-full overflow-hidden rounded-xl border border-white/10 bg-black/50 sm:max-h-[min(62vh,720px)]";
+const playerShell = "overflow-hidden rounded-xl border border-white/10 bg-black/50";
 
 export function StreamPlaylistProgramPanel({ playlistId }: Props) {
   const [playlist, setPlaylist] = useState<StreamPlaylistDetail | null>(null);
@@ -94,15 +93,28 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
     );
   }
 
+  if (playlist.is_coming_soon) {
+    return (
+      <div className="rounded-xl border border-amber-400/35 bg-amber-950/20 px-4 py-10 text-center text-[14px] text-amber-100/90">
+        <div className="mx-auto mb-2 inline-flex rounded-full border border-amber-300/55 bg-amber-500/20 px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em]">
+          Coming soon
+        </div>
+        <p>This playlist is marked as coming soon. Please check back later.</p>
+      </div>
+    );
+  }
+
   const hlsUrl = playback?.hls_url ?? null;
   const ready = playback?.status === "ready" && !!hlsUrl;
 
   return (
-    <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(260px,300px)] lg:items-start lg:gap-10">
+    <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] lg:items-start lg:gap-10">
       <div className="min-w-0 space-y-5">
         <div className="space-y-2">
           {!ready ? (
-            <div className={`flex ${playerShell} flex-col items-center justify-center gap-2 px-4 text-center text-sm text-white/65`}>
+            <div
+              className={`flex aspect-video max-h-[min(58vh,640px)] w-full flex-col items-center justify-center gap-2 px-4 text-center text-sm text-white/65 sm:max-h-[min(62vh,720px)] ${playerShell}`}
+            >
               <span className="rounded-full border border-violet-400/35 bg-violet-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-violet-100/90">
                 {playback?.status === "processing" ? "Processing" : playback?.status ?? "…"}
               </span>
@@ -113,7 +125,14 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
               </p>
             </div>
           ) : (
-            <HlsVideoPlayer key={hlsUrl} src={hlsUrl} className={playerShell} />
+            <HlsVideoPlayer
+              key={hlsUrl}
+              src={hlsUrl}
+              className={playerShell}
+              playerLayout={activeVideo.player_layout ?? "auto"}
+              sourceWidth={activeVideo.source_width ?? null}
+              sourceHeight={activeVideo.source_height ?? null}
+            />
           )}
         </div>
 
@@ -123,11 +142,9 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
               {activeVideo?.title ?? "Episode"}
             </h2>
           </div>
-          <p className="mt-1 text-[12px] font-bold text-[#f5c814]">
-            {activeIdx + 1} / {items.length}
-          </p>
           {(activeVideo?.description || "").trim() ? (
             <div className="mt-3 max-w-4xl rounded-xl border border-white/12 bg-black/35 px-4 py-3">
+              <div className="mb-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-[#f5c814]">Description</div>
               <p className="font-sans whitespace-pre-line text-left text-[15px] font-normal leading-7 tracking-normal text-white/92 antialiased">
                 {(activeVideo?.description || "").trim()}
               </p>
@@ -152,11 +169,11 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
                   type="button"
                   onClick={() => setActiveIdx(i)}
                   className={cn(
-                    "flex w-full gap-3 rounded-xl border p-2.5 text-left transition",
+                    "flex w-full gap-3.5 rounded-xl border p-3 text-left transition",
                     on ? "border-violet-300/70 bg-violet-500/10 shadow-[0_0_0_1px_rgba(196,181,253,0.2)]" : "border-transparent bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.05]"
                   )}
                 >
-                  <div className="relative h-14 w-[4.5rem] shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-violet-800/90 via-neutral-900 to-black">
+                  <div className="relative h-16 w-[6.4rem] shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-violet-800/90 via-neutral-900 to-black">
                     {thumbSrc ? (
                       <img src={thumbSrc} alt="" className="absolute inset-0 h-full w-full object-cover opacity-90" />
                     ) : null}
@@ -170,17 +187,14 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
                     </span>
                   </div>
                   <div className="min-w-0 flex-1 py-0.5">
-                    <div className={cn("text-[13px] font-semibold leading-snug", on ? "text-white" : "text-white/80")}>
-                      {v.title}
-                    </div>
-                    <span
+                    <div
                       className={cn(
-                        "mt-1 inline-block rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em]",
-                        v.status === "ready" ? "bg-emerald-500/20 text-emerald-100" : "bg-amber-500/20 text-amber-100"
+                        "font-sans text-[14px] font-semibold leading-[1.35] tracking-normal antialiased",
+                        on ? "text-white" : "text-white/85"
                       )}
                     >
-                      {v.status}
-                    </span>
+                      {v.title}
+                    </div>
                   </div>
                 </button>
               </li>

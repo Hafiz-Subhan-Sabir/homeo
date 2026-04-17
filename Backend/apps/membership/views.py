@@ -28,6 +28,7 @@ from apps.membership.serializers import ArticleSerializer, VideoSerializer
 from apps.portal.permissions import IsAuthenticatedStrict
 from apps.video_streaming.models import StreamVideo
 from apps.video_streaming.serializers import StreamVideoListSerializer, StreamVideoStreamSerializer
+from apps.video_streaming.transcode_policy import inline_stream_transcode_enabled
 from apps.video_streaming.views import (
     _build_stream_token,
     _token_ttl_seconds,
@@ -161,6 +162,21 @@ class MembershipSecureVideoStreamView(APIView):
 
     def get(self, request, pk: int, *args, **kwargs):
         video = get_object_or_404(StreamVideo, pk=pk, show_in_membership=True)
+
+        # Local-dev fallback: process stuck rows on first open (no worker / no eager env).
+        if (
+            inline_stream_transcode_enabled()
+            and video.status == StreamVideo.Status.PROCESSING
+            and bool(video.original_video and video.original_video.name)
+        ):
+            try:
+                from apps.video_streaming.tasks import process_stream_video_to_hls
+
+                process_stream_video_to_hls(video.pk)
+                video.refresh_from_db(fields=["status", "hls_path", "last_error"])
+            except Exception:
+                video.refresh_from_db(fields=["status", "hls_path", "last_error"])
+
         if video.status != StreamVideo.Status.READY or not (video.hls_path or "").strip():
             payload = {"id": video.id, "status": video.status, "hls_url": None}
             return Response(StreamVideoStreamSerializer(payload).data, status=status.HTTP_200_OK)

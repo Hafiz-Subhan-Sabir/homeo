@@ -1,4 +1,4 @@
-# Root directory: `frontend/` (or `Frontend-Dashboard/` if not renamed yet). Dockerfile avoids BuildKit .next/cache mount issues.
+# Root directory: `Frontend-Dashboard/`. Dockerfile avoids BuildKit .next/cache mount issues.
 # (fixes intermittent "runc ... error mounting ... .next/cache" failures).
 
 [build]

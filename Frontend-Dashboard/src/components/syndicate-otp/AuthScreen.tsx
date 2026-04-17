@@ -13,7 +13,12 @@ import {
 } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { gsap } from "gsap";
-import LuxuryRedirectOverlay from "@/components/LuxuryRedirectOverlay";
+import LuxuryRedirectOverlay from "@/components/syndicate-otp/LuxuryRedirectOverlay";
+import {
+  syndicateOtpLoginHref,
+  syndicateOtpSignupHref,
+  syndicateOtpVerifyHref
+} from "@/lib/syndicate-otp-paths";
 
 type AuthMode = "login" | "signup" | "otp";
 type OtpFlow = "login" | "signup";
@@ -43,8 +48,7 @@ type ApiPayload = {
   };
 };
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8001";
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/$/, "");
 const SYNDICATE_URL =
   process.env.NEXT_PUBLIC_POST_LOGIN_REDIRECT_URL ?? "https://the-syndicate.com/";
 const STRIPE_PUBLISHABLE_KEY =
@@ -81,12 +85,12 @@ export default function AuthScreen({
   }, [email]);
 
   const switchHref = isSignup
-    ? "/login"
+    ? syndicateOtpLoginHref()
     : isOtp
       ? isSignupOtp
-        ? `/signup?email=${encodeURIComponent(email.trim())}`
-        : `/login?email=${encodeURIComponent(email.trim())}`
-      : "/signup";
+        ? syndicateOtpSignupHref(email.trim())
+        : syndicateOtpLoginHref(email.trim())
+      : syndicateOtpSignupHref();
   const switchText = isSignup
     ? "Already a member? Log in"
     : isOtp
@@ -103,14 +107,10 @@ export default function AuthScreen({
   }, [email, isOtp, otpValue]);
 
   useEffect(() => {
-    document.documentElement.classList.remove(
-      "page-login",
-      "page-signup",
-      "page-otp",
-    );
-    document.documentElement.classList.add(
-      isOtp ? "page-otp" : isSignup ? "page-signup" : "page-login",
-    );
+    const el = document.getElementById("syndicate-otp-mount");
+    if (!el) return;
+    el.classList.remove("page-login", "page-signup", "page-otp");
+    el.classList.add(isOtp ? "page-otp" : isSignup ? "page-signup" : "page-login");
   }, [isOtp, isSignup]);
 
   useEffect(() => {
@@ -343,7 +343,7 @@ export default function AuthScreen({
   }
 
   async function beginHostedStripeCheckout(signupToken: string) {
-    const response = await fetch(`${API_BASE_URL}/api/auth/checkout/create-session/`, {
+    const response = await fetch(`${API_BASE_URL || ""}/api/auth/checkout/create-session/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ signup_token: signupToken }),
@@ -378,8 +378,9 @@ export default function AuthScreen({
 
   async function postJson(path: string, body: Record<string, string | undefined>) {
     let response: Response;
+    const url = `${API_BASE_URL || ""}${path}`;
     try {
-      response = await fetch(`${API_BASE_URL}${path}`, {
+      response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -387,7 +388,7 @@ export default function AuthScreen({
     } catch (caught) {
       if (caught instanceof TypeError) {
         throw new Error(
-          `Cannot reach the API (${API_BASE_URL}). From the backend folder run: .\\run_dev.ps1 — or: python manage.py runserver 127.0.0.1:8001`,
+          `Cannot reach the API (${url || path}). From the Backend folder run: .\\run_dev.ps1 — or: python manage.py runserver`,
         );
       }
       throw caught;
@@ -466,9 +467,7 @@ export default function AuthScreen({
           }
           return;
         }
-        router.push(
-          `/verify-otp?email=${encodeURIComponent(data.email || email.trim())}&flow=signup`,
-        );
+        router.push(syndicateOtpVerifyHref(data.email || email.trim(), "signup"));
         return;
       }
 
@@ -520,9 +519,7 @@ export default function AuthScreen({
         throw new Error("Verification step not started. Please try again.");
       }
       setMessage(data.message || "Check your inbox for the code.");
-      router.push(
-        `/verify-otp?email=${encodeURIComponent(data.email || email.trim())}&flow=login`,
-      );
+      router.push(syndicateOtpVerifyHref(data.email || email.trim(), "login"));
     } catch (submitError) {
       setError(
         submitError instanceof Error

@@ -1,10 +1,10 @@
-import AuthScreen from "@/components/auth/AuthScreen";
+import AuthScreen from "@/components/syndicate-otp/AuthScreen";
 
-type VerifyOtpPageProps = {
+type PageProps = {
   searchParams: Promise<{ email?: string; flow?: string }>;
 };
 
-export default async function VerifyOtpPage({ searchParams }: VerifyOtpPageProps) {
+export default async function SyndicateOtpVerifyPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const email = typeof params.email === "string" ? params.email : "";
   const flow = params.flow === "signup" ? "signup" : "login";

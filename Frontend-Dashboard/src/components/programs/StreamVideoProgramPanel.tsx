@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import HlsVideoPlayer from "@/components/streaming/HlsVideoPlayer";
 import {
   fetchStreamVideoDetail,
@@ -12,16 +12,18 @@ import { cn } from "@/components/dashboard/dashboardPrimitives";
 
 type Props = {
   streamVideoId: number;
+  /** Called once when playback becomes ready (e.g. refetch list so "Processing" badges update). */
+  onPlaybackReady?: () => void;
 };
 
-const playerShell =
-  "aspect-video max-h-[min(58vh,640px)] w-full overflow-hidden rounded-xl border border-white/10 bg-black/50 sm:max-h-[min(62vh,720px)]";
+const playerShell = "overflow-hidden rounded-xl border border-white/10 bg-black/50";
 
-export function StreamVideoProgramPanel({ streamVideoId }: Props) {
+export function StreamVideoProgramPanel({ streamVideoId, onPlaybackReady }: Props) {
   const [detail, setDetail] = useState<StreamVideoDetail | null>(null);
   const [playback, setPlayback] = useState<StreamPayload | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const reportedReadyRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,6 +49,41 @@ export function StreamVideoProgramPanel({ streamVideoId }: Props) {
       cancelled = true;
     };
   }, [streamVideoId]);
+
+  useEffect(() => {
+    reportedReadyRef.current = false;
+  }, [streamVideoId]);
+
+  useEffect(() => {
+    if (!onPlaybackReady) return;
+    const ready = playback?.status === "ready" && Boolean(playback?.hls_url);
+    if (ready && !reportedReadyRef.current) {
+      reportedReadyRef.current = true;
+      onPlaybackReady();
+    }
+    if (!ready) {
+      reportedReadyRef.current = false;
+    }
+  }, [playback?.status, playback?.hls_url, onPlaybackReady]);
+
+  useEffect(() => {
+    if (!playback || playback.status !== "processing") return;
+    let cancelled = false;
+    const timer = window.setInterval(() => {
+      void (async () => {
+        try {
+          const p = await fetchStreamVideoPlayback(streamVideoId);
+          if (!cancelled) setPlayback(p);
+        } catch {
+          // Keep current UI state; next poll may recover.
+        }
+      })();
+    }, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [playback?.status, streamVideoId]);
 
   if (loading) {
     return (
@@ -75,18 +112,26 @@ export function StreamVideoProgramPanel({ streamVideoId }: Props) {
       <div className="min-w-0 space-y-5">
         <div className="space-y-2">
           {!ready ? (
-            <div className={`flex ${playerShell} flex-col items-center justify-center gap-2 px-4 text-center text-sm text-white/65`}>
+            <div
+              className={`flex aspect-video max-h-[min(58vh,640px)] w-full flex-col items-center justify-center gap-2 px-4 text-center text-sm text-white/65 sm:max-h-[min(62vh,720px)] ${playerShell}`}
+            >
               <span className="rounded-full border border-amber-400/35 bg-amber-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-100/90">
                 {playback.status === "processing" ? "Processing" : playback.status}
               </span>
               <p>
                 {playback.status === "processing"
-                  ? "This video is still being prepared. Refresh in a moment."
+                  ? "This video is still being prepared. It will auto-refresh when ready."
                   : "Playback is not available yet."}
               </p>
             </div>
           ) : (
-            <HlsVideoPlayer src={hlsUrl} className={playerShell} />
+            <HlsVideoPlayer
+              src={hlsUrl}
+              className={playerShell}
+              playerLayout={detail.player_layout ?? "auto"}
+              sourceWidth={detail.source_width ?? null}
+              sourceHeight={detail.source_height ?? null}
+            />
           )}
         </div>
 
