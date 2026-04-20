@@ -5,7 +5,14 @@ import Image from "next/image";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-const navItems = [
+type SectionId =
+  | "what-you-get"
+  | "our-methods"
+  | "courses"
+  | "subscribe"
+  | "join-now";
+
+const navItems: { label: string; id: SectionId }[] = [
   { label: "What You Get", id: "what-you-get" },
   { label: "Our Methods", id: "our-methods" },
   { label: "Courses", id: "courses" },
@@ -13,7 +20,10 @@ const navItems = [
   { label: "Join Now", id: "join-now" },
 ];
 
-const sectionContent = {
+const sectionContent: Record<
+  SectionId,
+  { title: string; subtitle: string; points: string[] }
+> = {
   "what-you-get": {
     title: "What You Get",
     subtitle: "Honour, money, power, and freedom through practical execution.",
@@ -41,25 +51,45 @@ const sectionContent = {
   },
 };
 
-function initWebGPU(canvas) {
-  let animationFrame = null;
+type Cleanup = () => void;
+
+type WebGPUCanvasContext = {
+  configure: (config: unknown) => void;
+  getCurrentTexture: () => { createView: () => unknown };
+};
+
+type GPUWithNavigator = Navigator & {
+  gpu?: {
+    requestAdapter: () => Promise<{
+      requestDevice: () => Promise<any>;
+    } | null>;
+    getPreferredCanvasFormat: () => string;
+  };
+};
+
+function initWebGPU(canvas: HTMLCanvasElement | null): Promise<Cleanup> {
+  let animationFrame: number | null = null;
   let shouldStop = false;
-  let context = null;
-  let device = null;
+  let context: WebGPUCanvasContext | null = null;
+  let device: any = null;
 
   const start = async () => {
-    if (!("gpu" in navigator) || !canvas) {
+    const browserNavigator = navigator as GPUWithNavigator;
+    if (!browserNavigator.gpu || !canvas) {
       return () => {};
     }
 
-    const adapter = await navigator.gpu.requestAdapter();
+    const adapter = await browserNavigator.gpu.requestAdapter();
     if (!adapter) {
       return () => {};
     }
 
     device = await adapter.requestDevice();
-    context = canvas.getContext("webgpu");
-    const format = navigator.gpu.getPreferredCanvasFormat();
+    context = canvas.getContext("webgpu") as WebGPUCanvasContext | null;
+    if (!context) {
+      return () => {};
+    }
+    const format = browserNavigator.gpu.getPreferredCanvasFormat();
     const dpr = Math.max(1, window.devicePixelRatio || 1);
 
     const shader = device.createShaderModule({
@@ -205,8 +235,8 @@ function initWebGPU(canvas) {
 }
 
 export default function Home() {
-  const rootRef = useRef(null);
-  const canvasRef = useRef(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     let cleanupWebGPU = () => {};
@@ -223,7 +253,7 @@ export default function Home() {
     gsap.registerPlugin(ScrollTrigger);
 
     const ctx = gsap.context(() => {
-      gsap.utils.toArray(".content-section").forEach((section) => {
+      gsap.utils.toArray<HTMLElement>(".content-section").forEach((section) => {
         gsap.from(section, {
           y: 90,
           opacity: 0,
@@ -238,8 +268,9 @@ export default function Home() {
         });
       });
 
-      gsap.utils.toArray(".content-section").forEach((section) => {
+      gsap.utils.toArray<HTMLElement>(".content-section").forEach((section) => {
         const id = section.getAttribute("id");
+        if (!id) return;
         const link = document.querySelector(`a[href="#${id}"]`);
         if (!link) return;
 
@@ -255,9 +286,9 @@ export default function Home() {
       });
 
       gsap.to(".floating-orb", {
-        y: (index) => (index % 2 === 0 ? -28 : 30),
-        x: (index) => (index % 2 === 0 ? 20 : -20),
-        duration: (index) => 3 + index * 0.45,
+        y: (index: number) => (index % 2 === 0 ? -28 : 30),
+        x: (index: number) => (index % 2 === 0 ? 20 : -20),
+        duration: (index: number) => 3 + index * 0.45,
         repeat: -1,
         yoyo: true,
         ease: "sine.inOut",
