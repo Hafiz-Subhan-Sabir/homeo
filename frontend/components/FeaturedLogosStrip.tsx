@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import Image from 'next/image'
 
 type FeaturedLogo = {
@@ -17,8 +18,51 @@ type FeaturedLogosStripProps = {
 
 export default function FeaturedLogosStrip({ logos, speedSeconds = 24, compact = false, className }: FeaturedLogosStripProps) {
   const safeLogos = logos.filter((logo) => logo.src.trim().length > 0 && logo.alt.trim().length > 0)
-  const repeatCount = compact ? 10 : 6
-  const trackLogos = Array.from({ length: repeatCount }, () => safeLogos).flat()
+  const groupRepeatCount = 3
+  const baseGroup = Array.from({ length: groupRepeatCount }, () => safeLogos).flat()
+  const trackLogos = [...baseGroup, ...baseGroup]
+  const stripRef = useRef<HTMLDivElement | null>(null)
+  const itemRefs = useRef<Array<HTMLElement | null>>([])
+  const centerGap = compact ? 'min(400px, 68vw)' : 'min(400px, 42vw)'
+  const centerBlurWidth = compact ? 'clamp(54px, 9vw, 90px)' : 'clamp(72px, 8vw, 124px)'
+
+  useEffect(() => {
+    const root = stripRef.current
+    if (!root) return
+
+    const updateScales = () => {
+      const rect = root.getBoundingClientRect()
+      const centerX = rect.width / 2
+      const centerGapPx = Math.min(400, rect.width * (compact ? 0.68 : 0.42))
+      const halfGap = centerGapPx / 2
+      const blurBand = compact ? Math.max(42, rect.width * 0.08) : Math.max(58, rect.width * 0.08)
+
+      const leftZoneStart = centerX - halfGap - blurBand
+      const leftZoneEnd = centerX - halfGap
+      const rightZoneStart = centerX + halfGap
+      const rightZoneEnd = centerX + halfGap + blurBand
+
+      itemRefs.current.forEach((el) => {
+        if (!el) return
+        const logoRect = el.getBoundingClientRect()
+        const logoMidX = logoRect.left - rect.left + logoRect.width / 2
+        const insideBlurZone =
+          (logoMidX >= leftZoneStart && logoMidX <= leftZoneEnd) ||
+          (logoMidX >= rightZoneStart && logoMidX <= rightZoneEnd)
+
+        el.style.transform = insideBlurZone ? 'scale(1.055)' : 'scale(1)'
+      })
+    }
+
+    updateScales()
+    const timer = window.setInterval(updateScales, 110)
+    window.addEventListener('resize', updateScales)
+
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('resize', updateScales)
+    }
+  }, [compact, trackLogos.length])
 
   return (
     <section
@@ -38,9 +82,13 @@ export default function FeaturedLogosStrip({ logos, speedSeconds = 24, compact =
         </div>
       </div>
 
-      <div className="relative w-full overflow-hidden">
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-[#030508]/90 via-[#030508]/45 to-transparent sm:w-14" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-[#030508]/90 via-[#030508]/45 to-transparent sm:w-14" />
+      <div
+        ref={stripRef}
+        className="relative w-full overflow-hidden"
+        style={{ ['--center-gap' as string]: centerGap, ['--center-blur-width' as string]: centerBlurWidth }}
+      >
+        <div className="logos-side-fade logos-side-fade-left" />
+        <div className="logos-side-fade logos-side-fade-right" />
         <div
           className={[
             'animate-marquee flex w-max items-center',
@@ -51,13 +99,16 @@ export default function FeaturedLogosStrip({ logos, speedSeconds = 24, compact =
           {trackLogos.map((logo, index) => (
             <article
               key={`${logo.src}-${index}`}
+              ref={(el) => {
+                itemRefs.current[index] = el
+              }}
               className={[
-                'flex items-center justify-center rounded-xl border border-amber-300/45 bg-[#030811]/78 shadow-[0_0_20px_rgba(251,191,36,0.08)] backdrop-blur-[2px]',
+                'flex items-center justify-center rounded-xl border border-amber-300/45 bg-[#030811]/78 shadow-[0_0_20px_rgba(251,191,36,0.08)] backdrop-blur-[2px] transition-transform duration-300 ease-out',
                 compact ? 'px-3 py-1 sm:px-3.5 sm:py-1.5' : 'px-4 py-2.5 sm:px-5 sm:py-3',
               ].join(' ')}
               style={compact
-                ? { minWidth: 'clamp(78px, 13vw, 108px)', height: 'clamp(30px, 5vw, 40px)' }
-                : { minWidth: 'clamp(140px, 28vw, 180px)', height: 'clamp(66px, 12vw, 86px)' }}
+                ? { minWidth: 'clamp(66px, 11vw, 92px)', height: 'clamp(30px, 5vw, 40px)' }
+                : { minWidth: 'clamp(120px, 22vw, 156px)', height: 'clamp(66px, 12vw, 86px)' }}
             >
               {logo.href ? (
                 <a href={logo.href} target="_blank" rel="noreferrer" aria-label={logo.alt} className="inline-flex">

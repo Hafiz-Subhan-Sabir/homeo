@@ -44,13 +44,13 @@ export default function CourseCard({ course, neon }: CourseCardProps) {
       }}
     >
       <div className={`pointer-events-none absolute inset-0 opacity-35 blur-2xl ${neon.glow}`} />
-      <div className="relative mb-4 overflow-hidden rounded-xl border border-white/10">
+      <div className="relative mb-4 overflow-hidden rounded-xl border border-white/10 bg-black/40">
         <Image
           src={course.image}
           alt={`${course.title} thumbnail`}
           width={640}
           height={320}
-          className="h-40 w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+          className="h-44 w-full object-cover object-top transition-transform duration-500 ease-out group-hover:scale-[1.03] sm:h-48"
           loading="lazy"
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
         />

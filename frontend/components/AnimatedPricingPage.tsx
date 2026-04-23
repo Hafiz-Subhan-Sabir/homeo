@@ -256,7 +256,7 @@ export function PricingPage({
       <div className="relative mx-auto flex w-full max-w-6xl flex-col items-center">
         <header className="mb-12 rounded-2xl border border-[#00f5ff]/30 bg-black/20 px-6 py-10 text-center md:mb-16 md:px-10 md:py-12">
           <h2 className="mt-2 font-display text-4xl font-black uppercase tracking-[0.12em] text-white md:text-5xl">
-            Syndicate Subscriptions
+            Syndicate Offers
           </h2>
           <p className="mx-auto mt-4 max-w-2xl font-mono text-base tracking-[0.1em] text-zinc-400 md:text-lg">
             Choose your access tier. Bundle for full dominance or membership for exclusive content.

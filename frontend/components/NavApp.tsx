@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { type NavSectionId, RadialNav } from '@/components/RadialNav'
-import LetterGlitch from '@/components/LetterGlitch'
 
 const SECTION_ROUTES: Record<Exclude<NavSectionId, 'joinNow'>, string> = {
   home: '/',
@@ -61,7 +60,7 @@ export function NavApp() {
 
   return (
     <div
-      className="fixed left-0 right-0 top-0 z-50 flex flex-col bg-gradient-to-b from-black/45 via-black/20 to-transparent backdrop-blur-[2px] transition-[height] duration-500 ease-in-out pt-2"
+      className="fixed left-0 right-0 top-0 z-50 flex flex-col bg-gradient-to-b from-black/45 via-black/20 to-transparent transition-[height] duration-500 ease-in-out pt-2"
       style={{
         height: menuOpen ? '100dvh' : '69px',
         minHeight: menuOpen ? '100dvh' : undefined,
@@ -70,17 +69,6 @@ export function NavApp() {
       }}
       role="banner"
     >
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <LetterGlitch
-          glitchSpeed={130}
-          centerVignette={false}
-          outerVignette={false}
-          smooth
-          glitchColors={['#2b4539', '#7f5af0', '#61b3dc']}
-          layerOpacity={0.1}
-          className="bg-transparent"
-        />
-      </div>
       <div className="relative z-10 flex flex-1 flex-col min-h-0">
         <div
           className={`flex h-14 min-h-14 w-full shrink-0 items-center px-4 transition-[justify-content] duration-500 ease-in-out sm:h-16 sm:min-h-16 sm:px-5 ${

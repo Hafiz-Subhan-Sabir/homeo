@@ -1,3 +1,5 @@
+import { readdir } from 'node:fs/promises'
+import path from 'node:path'
 import Image from 'next/image'
 import Link from 'next/link'
 import { PricingPage } from '@/components/AnimatedPricingPage'
@@ -7,8 +9,8 @@ import FAQSection from '@/components/FAQSection'
 import FeaturedLogosStrip from '@/components/FeaturedLogosStrip'
 import LetterGlitch from '@/components/LetterGlitch'
 import NeonTypingBadge from '@/components/NeonTypingBadge'
+import PaywallSnapshotsSection from '@/components/PaywallSnapshotsSection'
 import SiteFooter from '@/components/SiteFooter'
-import SyndicateReachSection from '@/components/SyndicateReachSection'
 
 const FEATURED_LOGOS = [
   {
@@ -28,24 +30,6 @@ const FEATURED_LOGOS = [
   },
 ]
 
-const METHODS = [
-  {
-    title: 'Signal-Based Training',
-    description:
-      'Learn from real operating principles: weekly execution loops, operator scorecards, and decisions that compound over time.',
-  },
-  {
-    title: 'Systems Over Motivation',
-    description:
-      'Replace random effort with repeatable systems for outreach, delivery, and cash flow so momentum does not rely on mood.',
-  },
-  {
-    title: 'Network Accountability',
-    description:
-      'Use cohort pressure and peer review to maintain standards, cut procrastination, and keep your actions aligned with outcomes.',
-  },
-]
-
 const PROGRAM_IMAGE_BASE = '/Assets/programs/cources%20imnages'
 const courseImage = (fileName: string) => `${PROGRAM_IMAGE_BASE}/${encodeURIComponent(fileName)}`
 
@@ -60,7 +44,52 @@ const FEATURED_PROGRAM_IMAGES = [
   { src: courseImage('new-project (12).png'), alt: 'Building Apps using React JS' },
 ]
 
-export default function Home() {
+const FOUNDER_DIRS = ['Assets/founder', 'assets/founder'] as const
+const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif'])
+
+const toLabel = (fileName: string) =>
+  fileName
+    .replace(/\.[^/.]+$/, '')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+async function getFounderImages() {
+  for (const dir of FOUNDER_DIRS) {
+    const absolute = path.join(process.cwd(), 'public', ...dir.split('/'))
+    try {
+      const entries = await readdir(absolute, { withFileTypes: true })
+      const files = entries
+        .filter((entry) => entry.isFile())
+        .map((entry) => entry.name)
+        .filter((name) => IMAGE_EXTENSIONS.has(path.extname(name).toLowerCase()))
+
+      if (files.length > 0) {
+        return files.map((file, index) => ({
+          src: `/${dir}/${encodeURIComponent(file)}`,
+          alt: toLabel(file) || `Founder image ${index + 1}`,
+        }))
+      }
+    } catch {
+      // Ignore missing folder and try the next candidate.
+    }
+  }
+
+  return []
+}
+
+export default async function Home() {
+  const founderImages = await getFounderImages()
+  const midpoint = Math.ceil(founderImages.length / 2)
+  const topRowBase = founderImages.slice(0, midpoint)
+  const bottomRowBase = founderImages.slice(midpoint)
+  const safeTopRow = topRowBase.length > 0 ? topRowBase : founderImages
+  const safeBottomRow = bottomRowBase.length > 0 ? bottomRowBase : safeTopRow
+  const topRowGroup = Array.from({ length: 4 }, () => safeTopRow).flat()
+  const bottomRowGroup = Array.from({ length: 4 }, () => safeBottomRow).flat()
+  const topRowTrack = [...topRowGroup, ...topRowGroup]
+  const bottomRowTrack = [...bottomRowGroup, ...bottomRowGroup]
+
   return (
     <div className="min-h-screen bg-black">
       <section id="heroSection" className="relative h-screen w-screen overflow-hidden">
@@ -106,7 +135,7 @@ export default function Home() {
           />
         </div>
         <div className="absolute bottom-4 left-1/2 z-20 w-[min(94vw,1180px)] -translate-x-1/2 sm:bottom-6">
-          <FeaturedLogosStrip logos={FEATURED_LOGOS} speedSeconds={16} compact />
+          <FeaturedLogosStrip logos={FEATURED_LOGOS} speedSeconds={34} compact />
         </div>
         <div className="relative z-10 h-screen w-screen" />
       </section>
@@ -144,43 +173,85 @@ export default function Home() {
           </div>
         </div>
       </section>
-      <CertificatesSection />
+
+      <section className="relative h-screen min-h-screen w-screen overflow-hidden bg-black">
+        <div className="pointer-events-none absolute inset-0">
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            className="h-full w-full object-cover opacity-40"
+          >
+            <source src="/Assets/video.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <div className="pointer-events-none absolute inset-0 bg-black/55" />
+        <div className="relative z-10 mx-auto flex h-full w-full max-w-[1700px] flex-col justify-center px-4 py-12 sm:px-6 md:px-8">
+          {founderImages.length > 0 ? (
+            <div className="space-y-4 sm:space-y-5">
+              <div className="relative w-full overflow-hidden">
+                <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-black via-black/55 to-transparent sm:w-16" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-black via-black/55 to-transparent sm:w-16" />
+                <div
+                  className="animate-marquee flex w-max items-center gap-3 sm:gap-4"
+                  style={{ ['--duration' as string]: '48s', ['--gap' as string]: '1rem' }}
+                >
+                  {topRowTrack.map((image, index) => (
+                    <article
+                      key={`top-${image.src}-${index}`}
+                      className="group relative h-[240px] w-[180px] overflow-hidden rounded-xl border border-amber-300/35 bg-black/35 sm:h-[290px] sm:w-[220px] md:h-[330px] md:w-[250px]"
+                    >
+                      <Image
+                        src={image.src}
+                        alt={image.alt}
+                        fill
+                        sizes="(max-width: 640px) 180px, (max-width: 768px) 220px, 250px"
+                        className="object-cover object-top transition-transform duration-500 ease-out group-hover:scale-105"
+                      />
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-black/15 to-transparent" />
+                    </article>
+                  ))}
+                </div>
+              </div>
+
+              <div className="relative w-full overflow-hidden">
+                <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-black via-black/55 to-transparent sm:w-16" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-black via-black/55 to-transparent sm:w-16" />
+                <div
+                  className="animate-marquee-reverse flex w-max items-center gap-3 sm:gap-4"
+                  style={{ ['--duration' as string]: '52s', ['--gap' as string]: '1rem' }}
+                >
+                  {bottomRowTrack.map((image, index) => (
+                    <article
+                      key={`bottom-${image.src}-${index}`}
+                      className="group relative h-[240px] w-[180px] overflow-hidden rounded-xl border border-amber-300/35 bg-black/35 sm:h-[290px] sm:w-[220px] md:h-[330px] md:w-[250px]"
+                    >
+                      <Image
+                        src={image.src}
+                        alt={image.alt}
+                        fill
+                        sizes="(max-width: 640px) 180px, (max-width: 768px) 220px, 250px"
+                        className="object-cover object-top transition-transform duration-500 ease-out group-hover:scale-105"
+                      />
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-black/15 to-transparent" />
+                    </article>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="mx-auto max-w-2xl text-center text-sm text-amber-100/80 sm:text-base">
+              Add founder images to <code>/public/Assets/founder</code> to display them in this section.
+            </p>
+          )}
+        </div>
+      </section>
       <PricingPage />
+      <PaywallSnapshotsSection />
+      <CertificatesSection />
       <FAQSection />
-      <SyndicateReachSection />
-
-      <section className="border-b border-fuchsia-300/20 bg-gradient-to-b from-[#0a0514] to-[#02050b] px-4 py-14 sm:px-6 sm:py-16">
-        <div className="mx-auto max-w-5xl text-center">
-          <p className="text-xs uppercase tracking-[0.24em] text-fuchsia-200/80">Our Methods</p>
-          <h2 className="mt-3 text-3xl font-bold text-fuchsia-50 sm:text-4xl md:text-5xl">How we build disciplined operators</h2>
-          <p className="mx-auto mt-4 max-w-3xl text-sm text-fuchsia-100/75 sm:text-base">
-            Every method below is designed to move you from information overload to clear execution and measurable performance.
-          </p>
-        </div>
-      </section>
-
-      <section className="px-4 py-12 sm:px-6 sm:py-16">
-        <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-3">
-          {METHODS.map((method) => (
-            <article
-              key={method.title}
-              className="rounded-xl border border-fuchsia-300/20 bg-fuchsia-950/10 p-6 shadow-[0_0_24px_rgba(217,70,239,0.12)]"
-            >
-              <h2 className="text-lg font-semibold text-fuchsia-100">{method.title}</h2>
-              <p className="mt-3 text-sm leading-relaxed text-fuchsia-100/75">{method.description}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="px-4 pb-16 sm:px-6 sm:pb-20">
-        <div className="mx-auto max-w-5xl rounded-2xl border border-fuchsia-300/20 bg-gradient-to-r from-fuchsia-900/20 via-black to-cyan-900/20 p-6 text-center sm:p-8">
-          <h3 className="text-2xl font-semibold text-fuchsia-50">Execution beats theory</h3>
-          <p className="mx-auto mt-3 max-w-2xl text-sm text-fuchsia-100/75 sm:text-base">
-            We teach methods that fit real-world constraints and reward consistency. You leave with playbooks, not just inspiration.
-          </p>
-        </div>
-      </section>
 
       <section
         id="joinNowSection"
@@ -211,7 +282,7 @@ export default function Home() {
         </div>
       </section>
 
-      <FeaturedLogosStrip logos={FEATURED_LOGOS} speedSeconds={20} />
+      <FeaturedLogosStrip logos={FEATURED_LOGOS} speedSeconds={40} />
       <SiteFooter />
     </div>
   )

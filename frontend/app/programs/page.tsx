@@ -79,11 +79,11 @@ const PROGRAM_CATEGORIES: ProgramCategory[] = [
 export default function ProgramsPage() {
   return (
     <div className="min-h-screen bg-black pt-[69px]">
-      <section className="relative overflow-hidden border-b border-pink-300/20 px-4 py-14 sm:px-6 sm:py-16">
+      <section className="relative flex min-h-[52vh] w-screen items-center overflow-hidden border-b border-pink-300/20 px-4 py-16 sm:min-h-[60vh] sm:px-6 sm:py-20">
         <div className="pointer-events-none absolute inset-0">
           <iframe
             src="https://player.vimeo.com/video/1051218843?muted=1&autoplay=1&loop=1&background=1&app_id=122963"
-            className="h-full w-full scale-[1.18]"
+            className="h-full w-full scale-[1.35]"
             allow="autoplay; fullscreen; picture-in-picture"
             loading="lazy"
             referrerPolicy="strict-origin-when-cross-origin"
@@ -91,7 +91,7 @@ export default function ProgramsPage() {
           />
           <div className="absolute inset-0 bg-gradient-to-b from-[#150412]/78 to-[#02050b]/90" />
         </div>
-        <div className="relative z-10 mx-auto max-w-5xl text-center">
+        <div className="relative z-10 mx-auto w-full max-w-[1400px] text-center">
           <p className="text-xs uppercase tracking-[0.24em] text-pink-200/80">Programs</p>
           <h1 className="mt-3 text-3xl font-bold text-pink-50 sm:text-4xl md:text-5xl">Pick your current growth path</h1>
           <p className="mx-auto mt-4 max-w-3xl text-sm text-pink-100/75 sm:text-base">
@@ -104,14 +104,14 @@ export default function ProgramsPage() {
         <div className="pointer-events-none absolute inset-0 opacity-[0.08]" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgba(0,0,0,0.4) 2px, rgba(0,0,0,0.4) 4px)' }} />
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,217,255,0.12),transparent_36%),radial-gradient(circle_at_80%_15%,rgba(255,0,110,0.1),transparent_30%),radial-gradient(circle_at_55%_80%,rgba(57,255,20,0.08),transparent_30%)]" />
 
-        <div className="relative z-10 mx-auto max-w-6xl space-y-14">
+        <div className="relative z-10 mx-auto w-full max-w-[1600px] space-y-14">
           {PROGRAM_CATEGORIES.map((category, categoryIndex) => (
             <section key={category.name} aria-labelledby={`${category.name}-title`}>
               <h2
                 id={`${category.name}-title`}
                 className="mb-8 text-center text-2xl font-black uppercase sm:text-3xl md:text-4xl"
               >
-                <span className="bg-gradient-to-r from-[#ff006e] via-[#00d9ff] to-[#39ff14] bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(255,0,110,0.4)]">
+                <span className="programs-heading-glow bg-gradient-to-r from-[#fef3c7] via-[#fcd34d] to-[#f59e0b] bg-clip-text text-transparent">
                   {category.name}
                 </span>
               </h2>
