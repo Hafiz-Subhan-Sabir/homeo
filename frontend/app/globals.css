@@ -361,6 +361,35 @@ body {
   text-shadow: 0 0 16px rgba(0, 245, 255, 0.08);
 }
 
+.methods-fade-up {
+  animation: methods-fade-up 0.7s ease both;
+}
+
+.methods-float {
+  animation: methods-float 5.5s ease-in-out infinite;
+}
+
+@keyframes methods-fade-up {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes methods-float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -375,7 +404,9 @@ body {
   .pillar-electric-border::before,
   .pillar-electric-border::after,
   .animate-marquee,
-  .animate-marquee-reverse {
+  .animate-marquee-reverse,
+  .methods-fade-up,
+  .methods-float {
     animation: none !important;
     transition: none !important;
     opacity: 1;
