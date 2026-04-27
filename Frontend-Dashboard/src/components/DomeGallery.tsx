@@ -687,7 +687,7 @@ export default function DomeGallery({
                     style={{ borderRadius: `var(--tile-radius, ${imageBorderRadius})`, backfaceVisibility: 'hidden' }}
                   >
                     <Image
-                      src={it.src || '/assets/logo.png'}
+                      src={it.src || '/assets/logo.webp'}
                       draggable={false}
                       alt={it.alt}
                       fill

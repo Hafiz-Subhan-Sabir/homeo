@@ -44,7 +44,7 @@ const FEATURED_PROGRAM_IMAGES = [
   { src: courseImage('new-project (12).png'), alt: 'Building Apps using React JS' },
 ]
 
-const FOUNDER_DIRS = ['Assets/founder', 'assets/founder'] as const
+const FOUNDER_DIRS = ['assets/founder'] as const
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif'])
 
 const toLabel = (fileName: string) =>
@@ -123,7 +123,7 @@ export default async function Home() {
         </div>
         <div className="pointer-events-none absolute left-1/2 top-1/2 z-[19] w-full max-w-[min(1020px,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 px-3 sm:px-4">
           <Image
-            src="/assets/logo.png"
+            src="/assets/logo.webp"
             alt="ONEM Logo"
             width={1020}
             height={720}

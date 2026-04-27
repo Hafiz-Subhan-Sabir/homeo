@@ -57,6 +57,8 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/syndicate-otp/") ||
     pathname.startsWith("/api/") ||
     pathname.startsWith("/_next/") ||
+    pathname.startsWith("/assets/") ||
+    pathname.startsWith("/fonts/") ||
     pathname === "/favicon.ico";
 
   if (!authCookie && !authFreePath && !pathname.startsWith("/static/")) {

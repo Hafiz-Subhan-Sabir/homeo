@@ -4,7 +4,7 @@ export default function NavLogo() {
   return (
     <div className="flex items-center" data-logo="gun" aria-label="Logo">
       <Image
-        src="/assets/logo.png"
+        src="/assets/logo.webp"
         alt="syndicate Logo"
         width={119}
         height={40}

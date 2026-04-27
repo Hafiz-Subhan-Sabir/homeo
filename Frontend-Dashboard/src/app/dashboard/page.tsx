@@ -2281,7 +2281,7 @@ export default function Page() {
                   )}
                 >
                   <img
-                    src="/assets/logo.png"
+                    src="/assets/logo.webp"
                     alt=""
                     className="pointer-events-none relative z-[1] h-[26px] w-auto max-w-[min(100%,100px)] object-contain opacity-[0.96] [filter:drop-shadow(0_0_14px_rgba(250,204,21,0.32))] sm:h-[34px] sm:max-w-[130px] md:h-[44px] md:max-w-[160px] lg:h-[60px] lg:max-w-[200px]"
                     onError={(e) => {

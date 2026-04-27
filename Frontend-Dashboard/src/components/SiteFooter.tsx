@@ -34,7 +34,7 @@ export default function SiteFooter() {
         <div className="grid grid-cols-1 items-center gap-[clamp(1rem,3vw,2.25rem)] md:grid-cols-[minmax(300px,1.1fr)_minmax(420px,1.2fr)_minmax(360px,1fr)] md:gap-[clamp(1.4rem,2.5vw,3rem)]">
           <div className="p-1 md:justify-self-start">
             <Image
-              src="/assets/logo.png"
+              src="/assets/logo.webp"
               alt="Onem logo"
               width={360}
               height={120}
