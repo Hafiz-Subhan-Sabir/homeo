@@ -487,10 +487,10 @@ export default function AuthScreen({
 
       if (!response.ok) {
         if (response.status === 404 && data.code === "SIGNUP_REQUIRED") {
-          throw new Error(
-            data.error ||
-              "No account for this email. Complete sign up first, then return here to log in.",
-          );
+          const loginEmail = (data.email || email.trim()).trim();
+          setMessage(data.error || "No account found. Redirecting to signup...");
+          router.replace(syndicateOtpSignupHref(loginEmail));
+          return;
         }
         throw new Error(data.error || "Request failed");
       }

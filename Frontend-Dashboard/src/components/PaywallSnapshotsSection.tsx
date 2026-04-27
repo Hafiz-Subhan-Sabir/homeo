@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { syndicateOtpLoginHref } from '@/lib/syndicate-otp-paths'
 
 type SnapshotItem = {
   src: string
@@ -107,7 +108,7 @@ export default function PaywallSnapshotsSection() {
           </h3>
           <div className="mt-8 flex flex-wrap justify-center gap-x-7 gap-y-4 sm:mt-10">
             <Link
-              href="/login"
+              href={syndicateOtpLoginHref()}
               className="hamburger-attract inline-flex min-h-[54px] min-w-[210px] items-center justify-center rounded-xl border border-amber-300/80 bg-black/80 px-8 py-3 text-base font-bold tracking-[0.04em] text-amber-100 shadow-[0_0_22px_rgba(251,191,36,0.4)] transition hover:scale-[1.03] hover:bg-black/95 hover:shadow-[0_0_30px_rgba(251,191,36,0.62)]"
             >
               JOIN NOW

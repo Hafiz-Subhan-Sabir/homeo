@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import FeaturedLogosStrip from '@/components/FeaturedLogosStrip'
 import SiteFooter from '@/components/SiteFooter'
+import { syndicateOtpLoginHref } from '@/lib/syndicate-otp-paths'
 
 const FEATURED_LOGOS = [
   {
@@ -63,7 +64,7 @@ export default function GlobalBottomSections() {
           )}
           <div className="mt-10 flex flex-wrap justify-center gap-x-7 gap-y-4 sm:mt-12">
             <Link
-              href="/login"
+              href={syndicateOtpLoginHref()}
               className="hamburger-attract inline-flex min-h-[56px] min-w-[220px] items-center justify-center rounded-xl border border-amber-300/80 bg-black/80 px-10 py-4 text-lg font-bold tracking-[0.03em] text-amber-100 shadow-[0_0_24px_rgba(251,191,36,0.45)] transition hover:scale-[1.04] hover:bg-black/95 hover:shadow-[0_0_36px_rgba(251,191,36,0.68)]"
             >
               JOIN NOW
