@@ -27,6 +27,7 @@ type OtpFlow = "login" | "signup";
 type AuthScreenProps = {
   mode: AuthMode;
   prefilledEmail?: string;
+  prefilledPlaylistId?: string;
   otpFlow?: OtpFlow;
 };
 
@@ -60,6 +61,7 @@ const DASHBOARD_FALLBACK =
 export default function AuthScreen({
   mode,
   prefilledEmail = "",
+  prefilledPlaylistId = "",
   otpFlow = "login",
 }: AuthScreenProps) {
   const router = useRouter();
@@ -433,7 +435,11 @@ export default function AuthScreen({
           throw new Error("Signup started, but checkout token is missing.");
         }
         setMessage(data.message || "Redirecting to secure checkout...");
-        const checkout = await postJson("/api/auth/checkout/create-session/", { signup_token: signupToken });
+        const checkout = await postJson("/api/auth/checkout/create-session/", {
+          signup_token: signupToken,
+          return_base_url: typeof window !== "undefined" ? window.location.origin : undefined,
+          playlist_id: prefilledPlaylistId || undefined,
+        });
         if (!checkout.response.ok) {
           throw new Error(checkout.data.error || "Could not create checkout session.");
         }

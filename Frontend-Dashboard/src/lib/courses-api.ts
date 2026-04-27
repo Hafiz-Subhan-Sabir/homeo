@@ -12,7 +12,19 @@ function publicApiBaseRaw(): string {
  */
 export function resolveDjangoMediaUrl(mediaPath: string | null | undefined): string | null {
   if (!mediaPath) return null;
-  if (/^https?:\/\//i.test(mediaPath)) return mediaPath;
+  if (/^https?:\/\//i.test(mediaPath)) {
+    try {
+      const u = new URL(mediaPath);
+      // Normalize local Django media URLs to same-origin path so every browser/profile
+      // uses the Next.js rewrite (/media -> backend) consistently.
+      if ((u.hostname === "127.0.0.1" || u.hostname === "localhost") && u.pathname.startsWith("/media/")) {
+        return `${u.pathname}${u.search}`;
+      }
+      return mediaPath;
+    } catch {
+      return mediaPath;
+    }
+  }
   const p = mediaPath.startsWith("/") ? mediaPath : `/${mediaPath}`;
   if (typeof window === "undefined") {
     const b = (process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000").replace(

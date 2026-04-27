@@ -1,5 +1,6 @@
 import uuid
 
+from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -180,3 +181,32 @@ class StreamPlaylistItem(models.Model):
 
     def __str__(self) -> str:
         return f"{self.playlist_id}:{self.stream_video_id}"
+
+
+class StreamPlaylistPurchase(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        PAID = "paid", "Paid"
+        CANCELLED = "cancelled", "Cancelled"
+        FAILED = "failed", "Failed"
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="stream_playlist_purchases")
+    playlist = models.ForeignKey(StreamPlaylist, on_delete=models.CASCADE, related_name="purchases")
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING, db_index=True)
+    # Legacy column kept for older SQLite schemas still enforcing NOT NULL on this field.
+    stripe_session_id = models.CharField(max_length=255, blank=True, default="")
+    stripe_checkout_session_id = models.CharField(max_length=255, blank=True, db_index=True)
+    amount_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(0)])
+    currency = models.CharField(max_length=12, default="gbp")
+    paid_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["user", "playlist"], name="stream_playlist_purchase_unique_user_playlist"),
+        ]
+        ordering = ["-updated_at", "-id"]
+
+    def __str__(self) -> str:
+        return f"{self.user_id}:{self.playlist_id}:{self.status}"

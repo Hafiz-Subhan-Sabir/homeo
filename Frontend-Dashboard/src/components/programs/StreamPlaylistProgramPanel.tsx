@@ -27,9 +27,11 @@ function parsePlaylistNumber(value: string | number | null | undefined): number 
 export function StreamPlaylistProgramPanel({ playlistId }: Props) {
   const [playlist, setPlaylist] = useState<StreamPlaylistDetail | null>(null);
   const [playback, setPlayback] = useState<StreamPayload | null>(null);
+  const [playbackCache, setPlaybackCache] = useState<Record<number, StreamPayload>>({});
   const [activeIdx, setActiveIdx] = useState(0);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [didAutoPickReady, setDidAutoPickReady] = useState(false);
 
   const loadPlaylist = useCallback(async () => {
     setLoading(true);
@@ -38,6 +40,9 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
       const p = await fetchStreamPlaylistDetail(playlistId);
       setPlaylist(p);
       setActiveIdx(0);
+      setPlayback(null);
+      setPlaybackCache({});
+      setDidAutoPickReady(false);
     } catch (e) {
       setPlaylist(null);
       setErr(e instanceof Error ? e.message : "Failed to load playlist.");
@@ -56,17 +61,26 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
   }, [playlist]);
 
   const activeVideo: StreamVideoListItem | null = items[activeIdx]?.stream_video ?? null;
+  const activePlayback = activeVideo?.id ? playbackCache[activeVideo.id] ?? playback : playback;
 
   useEffect(() => {
     if (!activeVideo?.id) {
       setPlayback(null);
       return;
     }
+    const cached = playbackCache[activeVideo.id];
+    if (cached) {
+      setPlayback(cached);
+      return;
+    }
     let cancelled = false;
     void (async () => {
       try {
         const p = await fetchStreamVideoPlayback(activeVideo.id);
-        if (!cancelled) setPlayback(p);
+        if (!cancelled) {
+          setPlayback(p);
+          setPlaybackCache((prev) => ({ ...prev, [activeVideo.id]: p }));
+        }
       } catch {
         if (!cancelled) setPlayback(null);
       }
@@ -74,7 +88,38 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [activeVideo?.id]);
+  }, [activeVideo?.id, playbackCache]);
+
+  useEffect(() => {
+    if (!items.length) return;
+    const idsToPrefetch = items.map((row) => row.stream_video.id).filter(Boolean).slice(0, 8);
+    idsToPrefetch.forEach((videoId) => {
+      if (playbackCache[videoId]) return;
+      void (async () => {
+        try {
+          const p = await fetchStreamVideoPlayback(videoId);
+          setPlaybackCache((prev) => (prev[videoId] ? prev : { ...prev, [videoId]: p }));
+        } catch {
+          // Ignore prefetch failures; active playback effect handles visible errors.
+        }
+      })();
+    });
+  }, [items, playbackCache]);
+
+  useEffect(() => {
+    if (!items.length) return;
+    if (didAutoPickReady) return;
+    const currentStatus = activePlayback?.status ?? "";
+    if (currentStatus === "ready") {
+      setDidAutoPickReady(true);
+      return;
+    }
+    const firstReadyIdx = items.findIndex((row) => playbackCache[row.stream_video.id]?.status === "ready");
+    if (firstReadyIdx >= 0 && firstReadyIdx !== activeIdx) {
+      setActiveIdx(firstReadyIdx);
+      setDidAutoPickReady(true);
+    }
+  }, [items, playbackCache, activeIdx, activePlayback?.status, didAutoPickReady]);
 
   if (loading) {
     return (
@@ -109,8 +154,8 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
     );
   }
 
-  const hlsUrl = playback?.hls_url ?? null;
-  const ready = playback?.status === "ready" && !!hlsUrl;
+  const hlsUrl = activePlayback?.hls_url ?? null;
+  const ready = activePlayback?.status === "ready" && !!hlsUrl;
   const playlistPrice = parsePlaylistNumber(playlist.price);
   const playlistRating = Math.max(0, Math.min(5, parsePlaylistNumber(playlist.rating)));
 
@@ -123,10 +168,10 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
               className={`flex aspect-video max-h-[min(58vh,640px)] w-full flex-col items-center justify-center gap-2 px-4 text-center text-sm text-white/65 sm:max-h-[min(62vh,720px)] ${playerShell}`}
             >
               <span className="rounded-full border border-violet-400/35 bg-violet-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-violet-100/90">
-                {playback?.status === "processing" ? "Processing" : playback?.status ?? "…"}
+                {activePlayback?.status === "processing" ? "Processing" : activePlayback?.status ?? "…"}
               </span>
               <p>
-                {playback?.status === "processing"
+                {activePlayback?.status === "processing"
                   ? "This episode is still being prepared."
                   : "Choose another episode or refresh when the video is ready."}
               </p>

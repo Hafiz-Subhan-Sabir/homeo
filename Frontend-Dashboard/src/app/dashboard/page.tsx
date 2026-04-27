@@ -19,6 +19,8 @@ import { SyndicateAiChallengePanel } from "@/components/SyndicateAiChallengePane
 import { MembershipContentHub } from "@/components/membership/MembershipContentHub";
 import { AffiliatePortalSection } from "@/components/affiliate/AffiliatePortalSection";
 import { ProgramsCourseSection } from "@/components/programs/ProgramsCourseSection";
+import { PlaylistCheckoutSync } from "@/components/programs/PlaylistCheckoutSync";
+import { fetchStreamPlaylistBillingHistory, type StreamPlaylistPurchaseHistoryItem } from "@/lib/streaming-api";
 import { AFFILIATE_REFERRAL_IDS_STORAGE_KEY } from "@/lib/affiliateReferralIds";
 import {
   DEFAULT_DASHBOARD_PROFILE_AVATAR,
@@ -31,7 +33,7 @@ import {
   writeDashboardProfileAvatarRaw,
   writeDashboardProfileDisplayName
 } from "@/lib/dashboardProfileStorage";
-import { STORAGE_SIMPLE_AUTH } from "@/lib/portal-api";
+import { fetchPortalIdentity, hasSimpleAuthSessionClient, STORAGE_SIMPLE_AUTH } from "@/lib/portal-api";
 import { logoutSyndicateSession } from "@/lib/syndicateAuth";
 import { Toaster } from "react-hot-toast";
 
@@ -1464,6 +1466,91 @@ function InstructorSlideshow() {
   );
 }
 
+function formatBillingDate(value: string | null): string {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
+function SettingsBillingSection() {
+  const [rows, setRows] = useState<StreamPlaylistPurchaseHistoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      setLoading(true);
+      try {
+        const data = await fetchStreamPlaylistBillingHistory();
+        if (cancelled) return;
+        setRows(Array.isArray(data) ? data : []);
+        setError(null);
+      } catch (e) {
+        if (cancelled) return;
+        setRows([]);
+        setError(e instanceof Error ? e.message : "Could not load billing history.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <section className="w-full">
+      <div className="rounded-xl border border-[rgba(255,215,0,0.22)] bg-[#060606]/82 p-[clamp(0.8rem,1.6vw,1.25rem)] shadow-[0_0_0_1px_rgba(255,215,0,0.08),0_0_46px_rgba(255,215,0,0.08)]">
+        <div className="mb-3 border-b border-[color:var(--gold-neon-border-mid)]/35 pb-3">
+          <h2 className="text-[clamp(1rem,1.2vw+0.75rem,1.35rem)] font-black uppercase tracking-[0.12em] text-[color:var(--gold)]">
+            Billing History
+          </h2>
+          <p className="mt-1 text-[12px] text-white/72 sm:text-[13px]">
+            View all purchased courses/playlists with payment amount, status, and date/time.
+          </p>
+        </div>
+
+        {loading ? <div className="rounded-lg border border-white/10 bg-black/30 px-3 py-3 text-[12px] text-white/70">Loading billing history...</div> : null}
+        {error ? <div className="rounded-lg border border-rose-500/35 bg-rose-950/30 px-3 py-3 text-[12px] text-rose-100/90">{error}</div> : null}
+        {!loading && !error && rows.length === 0 ? (
+          <div className="rounded-lg border border-white/10 bg-black/30 px-3 py-3 text-[12px] text-white/70">No purchases yet.</div>
+        ) : null}
+
+        {!loading && !error && rows.length > 0 ? (
+          <div className="overflow-x-auto rounded-lg border border-white/10">
+            <table className="min-w-[760px] w-full border-collapse text-left text-[12px] sm:text-[13px]">
+              <thead className="bg-[#111111] text-[color:var(--gold)]/92">
+                <tr>
+                  <th className="px-3 py-2 font-black uppercase tracking-[0.1em]">Course</th>
+                  <th className="px-3 py-2 font-black uppercase tracking-[0.1em]">Amount</th>
+                  <th className="px-3 py-2 font-black uppercase tracking-[0.1em]">Currency</th>
+                  <th className="px-3 py-2 font-black uppercase tracking-[0.1em]">Status</th>
+                  <th className="px-3 py-2 font-black uppercase tracking-[0.1em]">Paid At</th>
+                  <th className="px-3 py-2 font-black uppercase tracking-[0.1em]">Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.id} className="border-t border-white/10 bg-black/35 text-white/88">
+                    <td className="px-3 py-2 font-semibold">{row.playlist_title || `Playlist #${row.playlist_id}`}</td>
+                    <td className="px-3 py-2">{row.amount_paid}</td>
+                    <td className="px-3 py-2 uppercase">{row.currency || "gbp"}</td>
+                    <td className="px-3 py-2 uppercase">{row.status}</td>
+                    <td className="px-3 py-2">{formatBillingDate(row.paid_at)}</td>
+                    <td className="px-3 py-2">{formatBillingDate(row.updated_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
 export default function Page() {
   const router = useRouter();
   const pathname = usePathname();
@@ -1504,6 +1591,7 @@ export default function Page() {
   );
 
   const [selectedNavKey, setNavKeyState] = useState<string>("dashboard");
+  const [authChecked, setAuthChecked] = useState(false);
 
   const applyNavKey = useCallback(
     (key: string) => {
@@ -1601,6 +1689,36 @@ export default function Page() {
   /** ≤820px: in-navbar menu under search + overlay rail behavior (tablet/desktop unchanged). */
   const [isMobileNavUi, setIsMobileNavUi] = useState(false);
   const [navQuickSearch, setNavQuickSearch] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      if (!hasSimpleAuthSessionClient()) {
+        window.location.replace("/login");
+        return;
+      }
+      const identity = await fetchPortalIdentity().catch(() => null);
+      if (cancelled) return;
+      if (!identity) {
+        try {
+          window.localStorage.removeItem(STORAGE_SIMPLE_AUTH);
+          window.localStorage.removeItem(PROFILE_DISPLAY_NAME_KEY);
+          window.localStorage.removeItem(PROFILE_AVATAR_STORAGE_KEY);
+          window.localStorage.removeItem(AFFILIATE_REFERRAL_IDS_STORAGE_KEY);
+          logoutSyndicateSession();
+        } catch {
+          /* ignore */
+        }
+        document.cookie = "simple_auth_session=; path=/; max-age=0; samesite=lax";
+        window.location.replace("/login");
+        return;
+      }
+      setAuthChecked(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   /** Fixed-position overlays portaled to document.body — float above main/instructor without affecting navbar size. */
   useLayoutEffect(() => {
@@ -2231,6 +2349,7 @@ export default function Page() {
         (selectedNavKey === "monk" || selectedNavKey === "affiliate") && "syndicate-mood-context"
       )}
     >
+      <PlaylistCheckoutSync />
       <div className="hud-ambient-glow" aria-hidden="true" />
       <div
         className={cn(
@@ -2785,6 +2904,10 @@ export default function Page() {
                       </div>
                     </div>
                   </section>
+                </div>
+              ) : selectedNavKey === "settings" ? (
+                <div className="min-h-0 min-w-0 w-full max-w-none flex-1 py-1 md:py-2">
+                  <SettingsBillingSection />
                 </div>
               ) : selectedNavKey === "dashboard" ? (
                 <>

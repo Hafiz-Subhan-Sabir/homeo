@@ -1,7 +1,7 @@
 from django.urls import reverse
 from rest_framework import serializers
 
-from apps.video_streaming.models import StreamPlaylist, StreamPlaylistItem, StreamVideo
+from apps.video_streaming.models import StreamPlaylist, StreamPlaylistItem, StreamPlaylistPurchase, StreamVideo
 
 
 class StreamVideoListSerializer(serializers.ModelSerializer):
@@ -80,9 +80,12 @@ class StreamPlaylistListSerializer(serializers.ModelSerializer):
             "video_count",
             "is_published",
             "is_coming_soon",
+            "is_unlocked",
             "created_at",
         )
         read_only_fields = fields
+
+    is_unlocked = serializers.SerializerMethodField()
 
     def get_cover_image_url(self, obj: StreamPlaylist):
         request = self.context.get("request")
@@ -100,9 +103,41 @@ class StreamPlaylistListSerializer(serializers.ModelSerializer):
                 return url
         return None
 
+    def get_is_unlocked(self, obj: StreamPlaylist):
+        request = self.context.get("request")
+        if request is None:
+            return False
+        user = getattr(request, "user", None)
+        if user is not None and getattr(user, "is_authenticated", False) and getattr(user, "is_staff", False):
+            return True
+        unlocked_ids = self.context.get("unlocked_playlist_ids")
+        if isinstance(unlocked_ids, set):
+            return obj.id in unlocked_ids
+        return False
+
 
 class StreamPlaylistDetailSerializer(StreamPlaylistListSerializer):
     items = StreamPlaylistItemSerializer(many=True, read_only=True)
 
     class Meta(StreamPlaylistListSerializer.Meta):
         fields = (*StreamPlaylistListSerializer.Meta.fields, "items")
+
+
+class StreamPlaylistPurchaseHistorySerializer(serializers.ModelSerializer):
+    playlist_id = serializers.IntegerField(source="playlist.id", read_only=True)
+    playlist_title = serializers.CharField(source="playlist.title", read_only=True)
+
+    class Meta:
+        model = StreamPlaylistPurchase
+        fields = (
+            "id",
+            "playlist_id",
+            "playlist_title",
+            "status",
+            "amount_paid",
+            "currency",
+            "paid_at",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = fields

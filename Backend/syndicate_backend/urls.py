@@ -61,6 +61,8 @@ urlpatterns = [
     path("api/auth/signup/verify-otp/", accounts_views.verify_signup_otp_view, name="auth-signup-verify-otp"),
     path("api/auth/checkout/create-session/", accounts_views.create_checkout_session_view, name="auth-checkout-create"),
     path("api/auth/checkout/success/", accounts_views.checkout_success_view, name="auth-checkout-success"),
+    path("api/auth/checkout/create-session", accounts_views.create_checkout_session_view, name="auth-checkout-create-noslash"),
+    path("api/auth/checkout/success", accounts_views.checkout_success_view, name="auth-checkout-success-noslash"),
     path("api/portal/", include("apps.portal.urls")),
     path("api/challenges/", include("apps.challenges.urls")),
     path("api/track/", include("apps.affiliate_tracking.urls_track")),

@@ -1,5 +1,6 @@
 import { NavApp } from '@/components/NavApp'
 import GlobalBottomSections from '@/components/GlobalBottomSections'
+import { PlaylistCardsSection } from '@/components/programs/PlaylistCardsSection'
 
 export default function ProgramsPage() {
   return (
@@ -23,6 +24,14 @@ export default function ProgramsPage() {
           <p className="mx-auto mt-4 max-w-3xl text-sm text-pink-100/75 sm:text-base">
             Choose a focused training track based on your current bottleneck and expand into advanced systems over time.
           </p>
+        </div>
+      </section>
+      <section className="px-[clamp(1rem,3.2vw,1.5rem)] py-10 sm:px-6 sm:py-14">
+        <div className="mx-auto w-full max-w-[1400px]">
+          <PlaylistCardsSection
+            title="Programs Library"
+            subtitle="Explore all admin-published playlists here. Playlist videos stay inside member dashboard."
+          />
         </div>
       </section>
       <GlobalBottomSections />

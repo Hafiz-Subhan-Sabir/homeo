@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-const ARTICLES_HREF = "/?section=resources";
+const ARTICLES_HREF = "/dashboard?section=resources";
 
 /** Shown during client navigation so the route paints chrome before the page bundle runs. */
 export default function MembershipArticleLoading() {

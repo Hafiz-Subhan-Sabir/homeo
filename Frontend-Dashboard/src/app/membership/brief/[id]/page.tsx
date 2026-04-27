@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { loadOperatorBrief, type StoredOperatorBrief } from "@/lib/operator-brief-storage";
 
+const ARTICLES_HREF = "/dashboard?section=resources";
+
 /** Improve readability when the dataset seed is mostly uppercase. */
 function displaySeedText(s: string): string {
   const t = (s || "").trim();
@@ -54,7 +56,7 @@ export default function OperatorBriefDetailPage() {
             Operator briefs.
           </p>
           <Link
-            href="/membership/content"
+            href={ARTICLES_HREF}
             className="mt-6 inline-flex rounded-lg border border-[rgba(250,204,21,0.45)] px-5 py-3 text-[13px] font-black uppercase tracking-[0.16em] text-[color:var(--gold-neon)]"
           >
             Back to articles
@@ -75,7 +77,7 @@ export default function OperatorBriefDetailPage() {
         <div className="relative space-y-10">
           <div>
             <Link
-              href="/membership/content"
+              href={ARTICLES_HREF}
               className="text-[13px] font-bold uppercase tracking-[0.14em] text-amber-300 hover:text-amber-200"
             >
               ← Back to articles

@@ -1,14 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { ChevronLeft, Star } from "lucide-react";
+import { ChevronLeft, Lock, Star } from "lucide-react";
 import ChromaGrid, { type ChromaItem } from "@/components/ChromaGrid";
 import { CourseVideoPlaylist } from "@/components/programs/CourseVideoPlaylist";
 import { StreamPlaylistProgramPanel } from "@/components/programs/StreamPlaylistProgramPanel";
 import { cn } from "@/components/dashboard/dashboardPrimitives";
 import { fetchCoursesList, resolveDjangoMediaUrl, type CourseDto } from "@/lib/courses-api";
 import { fetchPortalIdentity } from "@/lib/portal-api";
-import { fetchStreamPlaylists, type StreamPlaylistListItem } from "@/lib/streaming-api";
+import { createPlaylistCheckoutSession, fetchStreamPlaylists, type StreamPlaylistListItem } from "@/lib/streaming-api";
 
 function coursesListErrorMessage(status: number, data: unknown): string {
   if (typeof data === "object" && data && "detail" in data) {
@@ -184,6 +184,8 @@ export function ProgramsCourseSection({
   const [detailPlaylistId, setDetailPlaylistId] = useState<number | null>(null);
   const [playlistCategoryFilter, setPlaylistCategoryFilter] = useState<PlaylistCategory>(DEFAULT_PLAYLIST_CATEGORY);
   const [playlistTitleQuery, setPlaylistTitleQuery] = useState("");
+  const [checkoutBusyPlaylistId, setCheckoutBusyPlaylistId] = useState<number | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   const reloadApiCourses = useCallback(async () => {
     const res = await fetchCoursesList();
@@ -198,7 +200,7 @@ export function ProgramsCourseSection({
 
   const reloadStreamPlaylists = useCallback(async () => {
     try {
-      const list = await fetchStreamPlaylists();
+      const list = await fetchStreamPlaylists({ allowPublicFallback: false });
       setStreamPlaylists(Array.isArray(list) ? list : []);
       setPlaylistsError(null);
     } catch {
@@ -222,6 +224,37 @@ export function ProgramsCourseSection({
       cancelled = true;
     };
   }, [reloadApiCourses, reloadStreamPlaylists]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const refreshFromCheckout = () => {
+      void reloadStreamPlaylists();
+      try {
+        window.sessionStorage.removeItem("playlist_checkout_confirmed");
+      } catch {
+        // Ignore storage exceptions.
+      }
+    };
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("playlist_checkout") === "success") {
+      const t = window.setTimeout(refreshFromCheckout, 900);
+      return () => window.clearTimeout(t);
+    }
+    try {
+      if (window.sessionStorage.getItem("playlist_checkout_confirmed") === "1") {
+        refreshFromCheckout();
+      }
+    } catch {
+      // Ignore storage exceptions.
+    }
+    const onConfirmed = () => {
+      refreshFromCheckout();
+    };
+    window.addEventListener("playlist-checkout-confirmed", onConfirmed);
+    return () => {
+      window.removeEventListener("playlist-checkout-confirmed", onConfirmed);
+    };
+  }, [reloadStreamPlaylists]);
 
   useEffect(() => {
     if (apiCourses.length === 0) {
@@ -257,12 +290,47 @@ export function ProgramsCourseSection({
     setDetailCourseId(null);
     setDetailPlaylistId(id);
     setSecureView("detail");
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("playlist", String(id));
+      window.history.replaceState({}, "", url.toString());
+    }
   };
+
+  const startPlaylistCheckout = useCallback(async (playlistId: number) => {
+    if (checkoutBusyPlaylistId === playlistId) return;
+    setCheckoutError(null);
+    setCheckoutBusyPlaylistId(playlistId);
+    try {
+      const checkout = await createPlaylistCheckoutSession(playlistId, {
+        returnBaseUrl: typeof window !== "undefined" ? window.location.origin : undefined,
+      });
+      if (checkout.is_unlocked) {
+        await reloadStreamPlaylists();
+        return;
+      }
+      if (checkout.checkout_url) {
+        window.location.href = checkout.checkout_url;
+        return;
+      }
+      throw new Error(checkout.message || "Could not start checkout.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not start checkout.";
+      setCheckoutError(message);
+    } finally {
+      setCheckoutBusyPlaylistId(null);
+    }
+  }, [checkoutBusyPlaylistId, reloadStreamPlaylists]);
 
   const backToProgramGrid = () => {
     setSecureView("grid");
     setDetailCourseId(null);
     setDetailPlaylistId(null);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("playlist");
+      window.history.replaceState({}, "", url.toString());
+    }
   };
 
   const activeDetailCourse = detailCourseId !== null ? apiCourses.find((c) => c.id === detailCourseId) : undefined;
@@ -276,10 +344,17 @@ export function ProgramsCourseSection({
   const inCourseDetail = detailCourseId !== null;
   const normalizedPlaylistTitleQuery = playlistTitleQuery.trim().toLowerCase();
   const searchablePlaylists = useMemo(
-    () =>
-      streamPlaylists.filter((playlist) =>
+    () => {
+      const filtered = streamPlaylists.filter((playlist) =>
         normalizedPlaylistTitleQuery.length === 0 ? true : playlist.title.toLowerCase().includes(normalizedPlaylistTitleQuery)
-      ),
+      );
+      return [...filtered].sort((a, b) => {
+        const aUnlocked = !!a.is_unlocked;
+        const bUnlocked = !!b.is_unlocked;
+        if (aUnlocked !== bUnlocked) return aUnlocked ? -1 : 1;
+        return a.title.localeCompare(b.title);
+      });
+    },
     [streamPlaylists, normalizedPlaylistTitleQuery]
   );
   const businessModelPlaylists = useMemo(
@@ -304,11 +379,27 @@ export function ProgramsCourseSection({
     }));
   }, [showBothPlaylistColumns, visibleBusinessPsychologyPlaylists, visibleBusinessModelPlaylists]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = new URLSearchParams(window.location.search).get("playlist");
+    if (!raw || !/^\d+$/.test(raw)) return;
+    const playlistIdFromUrl = Number(raw);
+    if (!Number.isFinite(playlistIdFromUrl)) return;
+    const target = streamPlaylists.find((pl) => pl.id === playlistIdFromUrl);
+    if (!target) return;
+    if (target.is_coming_soon || !target.is_unlocked) return;
+    if (detailPlaylistId === playlistIdFromUrl && secureView === "detail") return;
+    setDetailCourseId(null);
+    setDetailPlaylistId(playlistIdFromUrl);
+    setSecureView("detail");
+  }, [streamPlaylists, detailPlaylistId, secureView]);
+
   const renderStreamPlaylistCard = (pl: StreamPlaylistListItem, j: number) => {
     const i = j;
     const grad = PROGRAM_CARD_BACKGROUNDS[i % PROGRAM_CARD_BACKGROUNDS.length];
     const coverSrc = resolveDjangoMediaUrl(pl.cover_image_url);
     const comingSoon = !!pl.is_coming_soon;
+    const locked = !pl.is_unlocked;
     const theme = PLAYLIST_CARD_THEMES[j % PLAYLIST_CARD_THEMES.length];
     const rating = parseRating(pl.rating);
     const price = parsePrice(pl.price);
@@ -317,19 +408,20 @@ export function ProgramsCourseSection({
         key={`playlist-${pl.id}`}
         type="button"
         onClick={() => {
-          if (!comingSoon) openStreamPlaylist(pl.id);
+          if (comingSoon) return;
+          if (locked) {
+            void startPlaylistCheckout(pl.id);
+            return;
+          }
+          openStreamPlaylist(pl.id);
         }}
         className={cn(
-          "group/card relative flex aspect-[3/5] w-full flex-col overflow-hidden text-left outline-none sm:aspect-[4/5]",
+          "group/card relative flex aspect-[3/5] w-full flex-col overflow-hidden text-left sm:aspect-[4/5]",
           "rounded-3xl border-2",
           theme.dominantBorder,
           theme.glow,
           "transition-[transform,box-shadow] duration-300 ease-out",
-          comingSoon
-            ? "opacity-95 cursor-not-allowed"
-            : cn("hover:-translate-y-0.5", theme.hoverGlow),
-          "focus-visible:ring-2 focus-visible:ring-violet-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black",
-          "active:translate-y-0"
+          comingSoon ? "cursor-not-allowed opacity-95" : cn("hover:-translate-y-0.5", theme.hoverGlow)
         )}
         aria-disabled={comingSoon}
       >
@@ -352,14 +444,20 @@ export function ProgramsCourseSection({
           <div className="relative z-[3] flex h-full min-h-0 flex-col gap-2 p-3 sm:p-3.5">
             <div className={cn("relative min-h-[9.6rem] overflow-hidden rounded-2xl border-2 sm:min-h-[14.2rem] sm:flex-1", theme.mediaBorder)}>
               {coverSrc ? (
-                <img
-                  src={coverSrc}
-                  alt=""
-                  loading={j < 2 ? "eager" : "lazy"}
-                  decoding="async"
-                  fetchPriority={j < 1 ? "high" : undefined}
-                  className="h-full w-full object-cover object-center [image-rendering:high-quality] [backface-visibility:hidden]"
-                />
+                <>
+                  <div className={cn("h-full w-full bg-gradient-to-t opacity-95", grad)} />
+                  <img
+                    src={coverSrc}
+                    alt=""
+                    loading={j < 2 ? "eager" : "lazy"}
+                    decoding="async"
+                    fetchPriority={j < 1 ? "high" : undefined}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display = "none";
+                    }}
+                    className="absolute inset-0 h-full w-full object-cover object-center [image-rendering:high-quality] [backface-visibility:hidden]"
+                  />
+                </>
               ) : (
                 <div className={cn("h-full w-full bg-gradient-to-t opacity-95", grad)} />
               )}
@@ -370,6 +468,17 @@ export function ProgramsCourseSection({
                 {pl.video_count} videos
               </span>
             </div>
+            {locked && !comingSoon ? (
+              <>
+                <span className="pointer-events-none absolute inset-0 z-[3] bg-black/42" />
+                <span className="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center px-5 text-center">
+                  <span className="inline-flex items-center gap-2 rounded-2xl border border-amber-300/85 bg-black/75 px-6 py-3 text-[26px] font-black uppercase tracking-[0.18em] text-[#f5c814] shadow-[0_0_28px_rgba(245,200,20,0.42)] sm:text-[32px]">
+                    <Lock className="h-7 w-7 sm:h-8 sm:w-8" />
+                    {checkoutBusyPlaylistId === pl.id ? "Redirecting..." : "Unlock"}
+                  </span>
+                </span>
+              </>
+            ) : null}
             {comingSoon ? (
               <>
                 <span className="pointer-events-none absolute inset-0 z-[3] bg-black/35" />
@@ -439,7 +548,7 @@ export function ProgramsCourseSection({
               </div>
               <p className="mt-2 max-w-4xl text-[17px] leading-relaxed text-white/82 sm:text-[24px] sm:leading-[1.35]">
                 {useApiProgramBrowser
-                  ? "Open a playlist, or a course for lesson playlists and progress."
+                  ? "Browse all admin playlists here, and open courses for lesson playlists and progress."
                   : "When published programs are available from the API, you can open any course, watch lessons, and track your learning flow from one place."}
               </p>
             </div>
@@ -449,6 +558,9 @@ export function ProgramsCourseSection({
           ) : null}
           {playlistsError ? (
             <div className="rounded-xl border border-amber-500/30 bg-amber-950/25 px-4 py-3 text-[13px] text-amber-100/90">{playlistsError}</div>
+          ) : null}
+          {checkoutError ? (
+            <div className="rounded-xl border border-rose-500/40 bg-rose-950/30 px-4 py-3 text-[13px] text-rose-100/95">{checkoutError}</div>
           ) : null}
           {!coursesError && staff && apiCourses.length === 0 && streamPlaylists.length === 0 ? (
             <p className="text-[12px] text-white/50">

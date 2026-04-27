@@ -485,10 +485,10 @@ except ValueError:
     CHECKOUT_AMOUNT_PENCE = 33300
 if CHECKOUT_AMOUNT_PENCE < 50:
     CHECKOUT_AMOUNT_PENCE = 50
-_pm_raw = (os.environ.get("STRIPE_CHECKOUT_PAYMENT_METHOD_TYPES") or "card,link,pay_by_bank").strip()
+_pm_raw = (os.environ.get("STRIPE_CHECKOUT_PAYMENT_METHOD_TYPES") or "card,link").strip()
 STRIPE_CHECKOUT_PAYMENT_METHOD_TYPES = tuple(
     x.strip() for x in _pm_raw.split(",") if x.strip()
-) or ("card", "link", "pay_by_bank")
+) or ("card", "link")
 
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

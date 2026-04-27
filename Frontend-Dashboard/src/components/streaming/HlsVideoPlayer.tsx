@@ -78,7 +78,10 @@ export default function HlsVideoPlayer({
     if (Hls.isSupported()) {
       const hls = new Hls({
         enableWorker: true,
-        lowLatencyMode: false
+        lowLatencyMode: false,
+        startFragPrefetch: true,
+        maxBufferLength: 20,
+        backBufferLength: 10
       });
       if (requireAuthHeaders) {
         hls.config.xhrSetup = (xhr) => {
@@ -88,6 +91,17 @@ export default function HlsVideoPlayer({
       }
       hls.loadSource(src);
       hls.attachMedia(video);
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        if (data.fatal) {
+          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+            hls.startLoad();
+          } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+            hls.recoverMediaError();
+          } else {
+            hls.destroy();
+          }
+        }
+      });
       return () => {
         video.removeEventListener("loadedmetadata", emitMetadata);
         hls.destroy();
@@ -121,6 +135,7 @@ export default function HlsVideoPlayer({
         ref={videoRef}
         className="relative z-[1] h-full w-full bg-transparent object-contain [accent-color:#ef4444]"
         controls
+        preload="auto"
         playsInline
         controlsList="nodownload"
         disablePictureInPicture

@@ -114,14 +114,14 @@ STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
 FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:3003")
 POST_LOGIN_REDIRECT_URL = os.getenv("POST_LOGIN_REDIRECT_URL", "https://the-syndicate.com/")
 CHECKOUT_AMOUNT_PENCE = int(os.getenv("CHECKOUT_AMOUNT_PENCE", "33300"))
-# Hosted Checkout: card (cards + Apple Pay / Google Pay when enabled), link, pay_by_bank (UK bank transfer).
-# No PayPal by default — add paypal to the comma list in .env when you enable it in Stripe.
+# Hosted Checkout: card (cards + Apple Pay / Google Pay when enabled) and link.
+# Add extra methods in .env only after enabling them in Stripe dashboard.
 # Dark / gold styling: Stripe Dashboard → Settings → Branding → customize Checkout colors & logo.
 STRIPE_CHECKOUT_PAYMENT_METHOD_TYPES = [
   t.strip()
   for t in os.getenv(
     "STRIPE_CHECKOUT_PAYMENT_METHOD_TYPES",
-    "card,link,pay_by_bank",
+    "card,link",
   ).split(",")
   if t.strip()
 ]

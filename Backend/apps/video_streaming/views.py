@@ -1,13 +1,16 @@
 import mimetypes
 import re
 import time
+from decimal import Decimal
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from botocore.exceptions import ClientError
+import stripe
 from django.conf import settings
-from django.db.models import Count, Prefetch
+from django.db.models import Count, Prefetch, Q
 from django.core import signing
+from django.utils import timezone
 from django.http import FileResponse, Http404, HttpResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
@@ -15,12 +18,14 @@ from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.http import JsonResponse
 
-from apps.video_streaming.models import StreamPlaylist, StreamPlaylistItem, StreamVideo
+from apps.video_streaming.models import StreamPlaylist, StreamPlaylistItem, StreamPlaylistPurchase, StreamVideo
 from apps.video_streaming.transcode_policy import inline_stream_transcode_enabled
 from apps.video_streaming.serializers import (
     StreamPlaylistDetailSerializer,
     StreamPlaylistListSerializer,
+    StreamPlaylistPurchaseHistorySerializer,
     StreamVideoDetailSerializer,
     StreamVideoListSerializer,
     StreamVideoStreamSerializer,
@@ -264,12 +269,14 @@ class StreamHlsMediaView(APIView):
 
 
 class StreamPlaylistListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     serializer_class = StreamPlaylistListSerializer
 
     def get_queryset(self):
         qs = StreamPlaylist.objects.all()
-        if not getattr(self.request.user, "is_staff", False):
+        if not getattr(self.request.user, "is_authenticated", False):
+            qs = qs.filter(is_published=True)
+        elif not getattr(self.request.user, "is_staff", False):
             qs = qs.filter(is_published=True)
         return (
             qs.order_by("title")
@@ -282,6 +289,21 @@ class StreamPlaylistListView(generics.ListAPIView):
             )
         )
 
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        user = getattr(self.request, "user", None)
+        if user is not None and getattr(user, "is_authenticated", False):
+            unlocked_ids = set(
+                StreamPlaylistPurchase.objects.filter(
+                    user=user,
+                    status=StreamPlaylistPurchase.Status.PAID,
+                ).values_list("playlist_id", flat=True)
+            )
+            ctx["unlocked_playlist_ids"] = unlocked_ids
+        else:
+            ctx["unlocked_playlist_ids"] = set()
+        return ctx
+
 
 class StreamPlaylistDetailView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
@@ -292,6 +314,13 @@ class StreamPlaylistDetailView(generics.RetrieveAPIView):
         qs = StreamPlaylist.objects.all()
         if not getattr(self.request.user, "is_staff", False):
             qs = qs.filter(is_published=True)
+            unlocked_ids = set(
+                StreamPlaylistPurchase.objects.filter(
+                    user=self.request.user,
+                    status=StreamPlaylistPurchase.Status.PAID,
+                ).values_list("playlist_id", flat=True)
+            )
+            qs = qs.filter(Q(price__lte=0) | Q(id__in=unlocked_ids))
         return (
             qs.annotate(video_count=Count("items", distinct=True))
             .prefetch_related(
@@ -300,4 +329,228 @@ class StreamPlaylistDetailView(generics.RetrieveAPIView):
                     queryset=StreamPlaylistItem.objects.select_related("stream_video").order_by("order", "id"),
                 )
             )
+        )
+
+
+class StreamPlaylistPurchaseHistoryView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = StreamPlaylistPurchaseHistorySerializer
+
+    def get_queryset(self):
+        return (
+            StreamPlaylistPurchase.objects.filter(user=self.request.user)
+            .select_related("playlist")
+            .order_by("-updated_at", "-id")
+        )
+
+
+def public_stream_playlists_view(request):
+    if request.method != "GET":
+        return JsonResponse({"detail": "Method not allowed."}, status=405)
+    qs = (
+        StreamPlaylist.objects.filter(is_published=True)
+        .order_by("title")
+        .annotate(video_count=Count("items", distinct=True))
+        .prefetch_related(
+            Prefetch(
+                "items",
+                queryset=StreamPlaylistItem.objects.select_related("stream_video").order_by("order", "id"),
+            )
+        )
+    )
+    data = StreamPlaylistListSerializer(qs, many=True, context={"request": request}).data
+    return JsonResponse(data, safe=False)
+
+
+class StreamPlaylistCheckoutSessionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, playlist_id: int, *args, **kwargs):
+        playlist = get_object_or_404(StreamPlaylist, pk=playlist_id, is_published=True)
+        if playlist.is_coming_soon:
+            return Response({"detail": "This playlist is coming soon and cannot be purchased yet."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if playlist.price <= 0:
+            return Response(
+                {"detail": "This playlist price is zero. Set a positive price in admin before checkout."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not settings.STRIPE_SECRET_KEY:
+            return Response({"detail": "Stripe is not configured on backend."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        existing_paid = StreamPlaylistPurchase.objects.filter(
+            user=request.user,
+            playlist=playlist,
+            status=StreamPlaylistPurchase.Status.PAID,
+        ).first()
+        if existing_paid is not None:
+            return Response(
+                {
+                    "is_unlocked": True,
+                    "playlist_id": playlist.id,
+                    "message": "Playlist already unlocked.",
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        amount_pence = int(max(50, round(float(playlist.price) * 100)))
+        frontend_base = settings.FRONTEND_BASE_URL.rstrip("/")
+        requested_base = str(request.data.get("return_base_url", "")).strip() if isinstance(request.data, dict) else ""
+        if requested_base:
+            parsed = urlsplit(requested_base)
+            if parsed.scheme in ("http", "https") and bool(parsed.netloc):
+                frontend_base = f"{parsed.scheme}://{parsed.netloc}"
+
+        def _session_create(pm_types: list[str]):
+            return stripe.checkout.Session.create(
+                mode="payment",
+                payment_method_types=pm_types,
+                customer_email=request.user.email or None,
+                line_items=[
+                    {
+                        "price_data": {
+                            "currency": "gbp",
+                            "product_data": {"name": f"{playlist.title} playlist access"},
+                            "unit_amount": amount_pence,
+                        },
+                        "quantity": 1,
+                    }
+                ],
+                success_url=f"{frontend_base}/dashboard?playlist_checkout=success&session_id={{CHECKOUT_SESSION_ID}}&playlist_id={playlist.id}",
+                cancel_url=f"{frontend_base}/programs?playlist_checkout=cancelled&playlist_id={playlist.id}",
+                metadata={
+                    "checkout_kind": "playlist_unlock",
+                    "playlist_id": str(playlist.id),
+                    "user_id": str(request.user.id),
+                },
+            )
+
+        pm_list = list(settings.STRIPE_CHECKOUT_PAYMENT_METHOD_TYPES)
+        try:
+            session = _session_create(pm_list)
+        except stripe.error.InvalidRequestError as exc:
+            err_txt = str(exc).lower()
+            match = re.search(r"payment method type provided:\s*([a-z0-9_]+)\s+is invalid", err_txt)
+            bad_type = match.group(1) if match else ""
+            pm_retry = [t for t in pm_list if t != bad_type] if bad_type else [t for t in pm_list if t not in ("pay_by_bank",)]
+            if not pm_retry:
+                pm_retry = ["card"]
+            try:
+                session = _session_create(pm_retry)
+            except stripe.error.StripeError as exc2:
+                msg = getattr(exc2, "user_message", None) or str(exc2) or "Stripe could not start checkout."
+                return Response({"detail": msg}, status=status.HTTP_400_BAD_REQUEST)
+        except stripe.error.StripeError as exc:
+            msg = getattr(exc, "user_message", None) or str(exc) or "Stripe could not start checkout."
+            return Response({"detail": msg}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            return Response({"detail": "Unable to create checkout session."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        purchase, created = StreamPlaylistPurchase.objects.get_or_create(
+            user=request.user,
+            playlist=playlist,
+            defaults={
+                "status": StreamPlaylistPurchase.Status.PENDING,
+                "stripe_session_id": session.id,
+                "stripe_checkout_session_id": session.id,
+                "amount_paid": playlist.price,
+                "currency": "gbp",
+                "paid_at": timezone.now(),
+            },
+        )
+        if created or purchase.status != StreamPlaylistPurchase.Status.PAID:
+            purchase.status = StreamPlaylistPurchase.Status.PENDING
+            purchase.stripe_session_id = session.id
+            purchase.stripe_checkout_session_id = session.id
+            purchase.amount_paid = playlist.price
+            purchase.currency = "gbp"
+            purchase.save(update_fields=["status", "stripe_session_id", "stripe_checkout_session_id", "amount_paid", "currency", "updated_at"])
+        return Response({"checkout_url": session.url, "session_id": session.id, "playlist_id": playlist.id}, status=status.HTTP_200_OK)
+
+
+class StreamPlaylistCheckoutSuccessView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        session_id = str(request.data.get("session_id", "")).strip()
+        if not session_id:
+            return Response({"detail": "Session ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+        if not settings.STRIPE_SECRET_KEY:
+            return Response({"detail": "Stripe is not configured on backend."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        try:
+            session = stripe.checkout.Session.retrieve(session_id)
+        except Exception:
+            return Response({"detail": "Invalid checkout session."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if getattr(session, "payment_status", "") != "paid":
+            return Response({"detail": "Payment not completed."}, status=status.HTTP_400_BAD_REQUEST)
+
+        def _session_metadata_dict(session_obj) -> dict:
+            raw = getattr(session_obj, "metadata", None)
+            if not raw:
+                return {}
+            if isinstance(raw, dict):
+                return dict(raw)
+            try:
+                to_dict = getattr(raw, "to_dict_recursive", None)
+                if callable(to_dict):
+                    data = to_dict()
+                    return data if isinstance(data, dict) else {}
+            except Exception:
+                pass
+            data_attr = getattr(raw, "_data", None)
+            if isinstance(data_attr, dict):
+                return dict(data_attr)
+            result = {}
+            for k in ("playlist_id", "checkout_kind", "user_id"):
+                try:
+                    v = raw[k]
+                except Exception:
+                    continue
+                if v is None:
+                    continue
+                result[str(k)] = str(v)
+            return result
+
+        metadata = _session_metadata_dict(session)
+        if str(metadata.get("checkout_kind", "")).strip() != "playlist_unlock":
+            return Response({"detail": "Invalid checkout type."}, status=status.HTTP_400_BAD_REQUEST)
+        if str(metadata.get("user_id", "")).strip() and str(metadata.get("user_id")).strip() != str(request.user.id):
+            return Response({"detail": "Checkout session belongs to another user."}, status=status.HTTP_403_FORBIDDEN)
+
+        playlist_id_raw = str(metadata.get("playlist_id", "")).strip()
+        if not playlist_id_raw.isdigit():
+            return Response({"detail": "Invalid playlist metadata."}, status=status.HTTP_400_BAD_REQUEST)
+        playlist = get_object_or_404(StreamPlaylist, pk=int(playlist_id_raw))
+
+        amount_total = getattr(session, "amount_total", None)
+        amount_paid = Decimal(str(amount_total or 0)) / Decimal("100")
+        currency = str(getattr(session, "currency", "gbp") or "gbp").lower()
+
+        purchase, _ = StreamPlaylistPurchase.objects.get_or_create(
+            user=request.user,
+            playlist=playlist,
+            defaults={
+                "status": StreamPlaylistPurchase.Status.PAID,
+                "stripe_session_id": session_id,
+                "stripe_checkout_session_id": session_id,
+                "amount_paid": amount_paid,
+                "currency": currency,
+                "paid_at": timezone.now(),
+            },
+        )
+        purchase.status = StreamPlaylistPurchase.Status.PAID
+        purchase.stripe_session_id = session_id
+        purchase.stripe_checkout_session_id = session_id
+        purchase.amount_paid = amount_paid
+        purchase.currency = currency
+        purchase.paid_at = timezone.now()
+        purchase.save(update_fields=["status", "stripe_session_id", "stripe_checkout_session_id", "amount_paid", "currency", "paid_at", "updated_at"])
+        return Response(
+            {"message": "Playlist unlocked successfully.", "playlist_id": playlist.id, "is_unlocked": True},
+            status=status.HTTP_200_OK,
         )

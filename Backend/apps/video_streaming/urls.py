@@ -4,6 +4,10 @@ from apps.video_streaming import views
 
 # Mounted at /api/streaming/ (see api/urls.py). Course lesson progress stays at /api/videos/<id>/progress/.
 urlpatterns = [
+    path("playlists/purchases/", views.StreamPlaylistPurchaseHistoryView.as_view(), name="streaming-playlists-purchases"),
+    path("playlists/<int:playlist_id>/checkout/", views.StreamPlaylistCheckoutSessionView.as_view(), name="streaming-playlists-checkout"),
+    path("playlists/checkout/success/", views.StreamPlaylistCheckoutSuccessView.as_view(), name="streaming-playlists-checkout-success"),
+    path("public-playlists/", views.public_stream_playlists_view, name="streaming-playlists-public"),
     path("playlists/<int:pk>/", views.StreamPlaylistDetailView.as_view(), name="streaming-playlists-detail"),
     path("playlists/", views.StreamPlaylistListView.as_view(), name="streaming-playlists-list"),
     path(

@@ -35,6 +35,9 @@ const sameHostHint =
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const authCookie = request.cookies.get("simple_auth_session")?.value;
+  const hasAuthSession = authCookie === "1";
+  const section = (request.nextUrl.searchParams.get("section") || "").trim().toLowerCase();
+  const dashboardSections = new Set(["dashboard", "programs", "monk", "resources", "affiliate", "support", "quickaccess", "settings"]);
   const publicMarketingPath =
     pathname === "/" ||
     pathname === "/what-you-get" ||
@@ -43,6 +46,11 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/our-methods/") ||
     pathname === "/programs" ||
     pathname.startsWith("/programs/");
+  const protectedDashboardPath =
+    pathname === "/dashboard" ||
+    pathname.startsWith("/dashboard/") ||
+    pathname.startsWith("/membership/");
+  const protectedRootSectionPath = pathname === "/" && dashboardSections.has(section);
   const authFreePath =
     publicMarketingPath ||
     pathname === "/login" ||
@@ -57,14 +65,20 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/syndicate-otp/") ||
     pathname.startsWith("/api/") ||
     pathname.startsWith("/_next/") ||
+    pathname.startsWith("/media/") ||
     pathname.startsWith("/assets/") ||
     pathname.startsWith("/fonts/") ||
+    pathname === "/icon" ||
+    pathname.startsWith("/icon?") ||
     pathname === "/favicon.ico";
 
-  if (!authCookie && !authFreePath && !pathname.startsWith("/static/")) {
+  if ((!hasAuthSession && (protectedDashboardPath || protectedRootSectionPath)) || (!hasAuthSession && !authFreePath && !pathname.startsWith("/static/"))) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.search = "";
+    if (!pathname.startsWith("/api/")) {
+      loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
+    }
     return NextResponse.redirect(loginUrl);
   }
 

@@ -8,8 +8,7 @@ export function syndicateOtpUiBase(): string {
 }
 
 export function syndicateOtpLoginHref(prefillEmail = ""): string {
-  const b = syndicateOtpUiBase();
-  return prefillEmail ? `${b}/login?email=${encodeURIComponent(prefillEmail)}` : `${b}/login`;
+  return prefillEmail ? `/login?email=${encodeURIComponent(prefillEmail)}` : "/login";
 }
 
 export function syndicateOtpSignupHref(prefillEmail = ""): string {

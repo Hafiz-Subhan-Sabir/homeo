@@ -5,5 +5,5 @@ import { redirect } from "next/navigation";
  * every other module in the project.
  */
 export default function MembershipContentPage() {
-  redirect("/?section=resources");
+  redirect("/dashboard?section=resources");
 }

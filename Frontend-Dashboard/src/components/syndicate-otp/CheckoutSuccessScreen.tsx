@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import LuxuryRedirectOverlay from "@/components/syndicate-otp/LuxuryRedirectOverlay";
 import { persistSimpleAuthSession } from "@/lib/portal-api";
+import { resolveClientApiUrl } from "@/lib/portal-api";
 import { resolvePostOtpAppRedirect } from "@/lib/syndicate-otp-paths";
 import { syndicateOtpSignupHref } from "@/lib/syndicate-otp-paths";
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
 const SYNDICATE_URL =
   process.env.NEXT_PUBLIC_POST_LOGIN_REDIRECT_URL ?? "https://the-syndicate.com/";
 
@@ -32,6 +32,11 @@ type SuccessPayload = {
     email: string;
   };
 };
+
+function looksLikeHtml(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  return t.startsWith("<!doctype html") || t.startsWith("<html");
+}
 
 export default function CheckoutSuccessScreen({
   sessionId,
@@ -133,17 +138,46 @@ export default function CheckoutSuccessScreen({
         return;
       }
       try {
-        const response = await fetch(`${API_BASE_URL || ""}/api/auth/checkout/success/`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ session_id: sessionId }),
-        });
-        const text = await response.text();
+        const directBase = (process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(/\/$/, "");
+        const candidateUrls = [
+          resolveClientApiUrl("/api/auth/checkout/success/"),
+          typeof window !== "undefined"
+            ? `${window.location.origin}/api/portal-proxy/auth/checkout/success/`
+            : "",
+          directBase ? `${directBase}/api/auth/checkout/success/` : "",
+        ].filter(Boolean);
+
+        let response: Response | null = null;
+        let text = "";
+        for (const url of candidateUrls) {
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ session_id: sessionId }),
+          });
+          const body = await res.text();
+          if (!looksLikeHtml(body)) {
+            response = res;
+            text = body;
+            break;
+          }
+          response = res;
+          text = body;
+        }
+        if (!response) {
+          throw new Error("Checkout confirmation request failed.");
+        }
+
         let data: SuccessPayload = {};
         try {
           data = text ? (JSON.parse(text) as SuccessPayload) : {};
         } catch {
-          throw new Error("Invalid response from checkout confirmation.");
+          const snippet = text.replace(/\s+/g, " ").trim().slice(0, 140);
+          throw new Error(
+            snippet
+              ? `Checkout confirmation returned non-JSON response: ${snippet}`
+              : "Invalid response from checkout confirmation. Restart backend and try again.",
+          );
         }
 
         if (!response.ok) {

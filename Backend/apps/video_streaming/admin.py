@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from apps.video_streaming.models import StreamPlaylist, StreamPlaylistItem, StreamVideo
+from apps.video_streaming.models import StreamPlaylist, StreamPlaylistItem, StreamPlaylistPurchase, StreamVideo
 from apps.video_streaming.transcode_policy import inline_stream_transcode_enabled
 
 
@@ -61,3 +61,11 @@ class StreamVideoAdmin(admin.ModelAdmin):
             else:
                 process_stream_video_to_hls.delay(v.pk)
         self.message_user(request, f"HLS transcoding started for {n} video(s).")
+
+
+@admin.register(StreamPlaylistPurchase)
+class StreamPlaylistPurchaseAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "playlist", "status", "amount_paid", "currency", "paid_at", "updated_at")
+    list_filter = ("status", "currency", "paid_at")
+    search_fields = ("user__username", "user__email", "playlist__title", "stripe_checkout_session_id")
+    autocomplete_fields = ("user", "playlist")
