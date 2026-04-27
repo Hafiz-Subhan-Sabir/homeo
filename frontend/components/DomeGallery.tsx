@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from 'react'
 import { useGesture } from '@use-gesture/react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 
 type ImageItem = string | { src: string; alt?: string }
 
@@ -26,6 +27,7 @@ type DomeGalleryProps = {
   grayscale?: boolean
   autoRotateSpeedDeg?: number
   tileInsetPx?: number
+  clickHref?: string
 }
 
 type ItemDef = {
@@ -129,7 +131,9 @@ export default function DomeGallery({
   grayscale = true,
   autoRotateSpeedDeg = 2,
   tileInsetPx = 14,
+  clickHref,
 }: DomeGalleryProps) {
+  const router = useRouter()
   const rootRef = useRef<HTMLDivElement>(null)
   const mainRef = useRef<HTMLDivElement>(null)
   const sphereRef = useRef<HTMLDivElement>(null)
@@ -295,6 +299,10 @@ export default function DomeGallery({
   )
 
   const openItemFromElement = useCallback((el: HTMLElement) => {
+    if (clickHref) {
+      router.push(clickHref)
+      return
+    }
     if (openingRef.current) return
     openingRef.current = true
     openStartedAtRef.current = performance.now()
@@ -390,7 +398,7 @@ export default function DomeGallery({
       }
       overlay.addEventListener('transitionend', onFirstEnd)
     }
-  }, [enlargeTransitionMs, grayscale, lockScroll, openedImageBorderRadius, openedImageHeight, openedImageWidth, segments, unlockScroll])
+  }, [clickHref, enlargeTransitionMs, grayscale, lockScroll, openedImageBorderRadius, openedImageHeight, openedImageWidth, router, segments, unlockScroll])
 
   useGesture(
     {

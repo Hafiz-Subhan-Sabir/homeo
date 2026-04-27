@@ -1,7 +1,6 @@
 import { readdir } from 'node:fs/promises'
 import path from 'node:path'
 import Image from 'next/image'
-import Link from 'next/link'
 import { PricingPage } from '@/components/AnimatedPricingPage'
 import CertificatesSection from '@/components/CertificatesSection'
 import DomeGallery from '@/components/DomeGallery'
@@ -10,7 +9,6 @@ import FeaturedLogosStrip from '@/components/FeaturedLogosStrip'
 import LetterGlitch from '@/components/LetterGlitch'
 import NeonTypingBadge from '@/components/NeonTypingBadge'
 import PaywallSnapshotsSection from '@/components/PaywallSnapshotsSection'
-import SiteFooter from '@/components/SiteFooter'
 
 const FEATURED_LOGOS = [
   {
@@ -91,8 +89,11 @@ export default async function Home() {
   const bottomRowTrack = [...bottomRowGroup, ...bottomRowGroup]
 
   return (
-    <div className="min-h-screen bg-black">
-      <section id="heroSection" className="relative h-screen w-screen overflow-hidden">
+    <div className="min-h-[100dvh] w-full min-w-0 overflow-x-clip bg-black">
+      <section
+        id="heroSection"
+        className="relative h-[100dvh] min-h-[100dvh] w-full min-w-0 overflow-hidden"
+      >
         <LetterGlitch
           glitchSpeed={70}
           centerVignette
@@ -100,7 +101,7 @@ export default async function Home() {
           smooth
           glitchColors={['#4a2b72', '#61dca3', '#61b3dc']}
           layerOpacity={0.3}
-          className="absolute inset-0 h-screen w-screen"
+          className="absolute inset-0 h-full w-full min-w-0"
         />
         <div
           className="pointer-events-none absolute left-1/2 z-20 w-full -translate-x-1/2 px-4"
@@ -117,29 +118,26 @@ export default async function Home() {
             />
           </div>
         </div>
-        <div className="pointer-events-none absolute left-1/2 top-1/2 z-[19] -translate-x-1/2 -translate-y-1/2">
+        <div className="pointer-events-none absolute left-1/2 top-1/2 z-[19] w-full max-w-[min(1020px,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 px-3 sm:px-4">
           <Image
             src="/Assets/logo.png"
             alt="ONEM Logo"
             width={1020}
             height={720}
             priority
-            className="hamburger-attract block object-contain"
+            className="hamburger-attract mx-auto block h-auto w-full max-w-full object-contain"
             style={{
-              width: 'min(1020px, 92vw)',
-              height: 'min(720px, 76vh)',
-              maxWidth: '1020px',
-              maxHeight: '720px',
+              maxHeight: 'clamp(160px, 76dvh, 720px)',
               filter: 'drop-shadow(0 0 14px rgba(251, 191, 36, 0.35))',
             }}
           />
         </div>
-        <div className="absolute bottom-4 left-1/2 z-20 w-[min(94vw,1180px)] -translate-x-1/2 sm:bottom-6">
+        <div className="absolute bottom-4 left-1/2 z-20 w-full max-w-[1180px] -translate-x-1/2 px-3 sm:bottom-6 sm:px-4">
           <FeaturedLogosStrip logos={FEATURED_LOGOS} speedSeconds={34} compact />
         </div>
-        <div className="relative z-10 h-screen w-screen" />
+        <div className="relative z-10 h-[100dvh] min-h-[100dvh] w-full min-w-0" aria-hidden />
       </section>
-      <section className="relative flex h-screen min-h-screen w-screen items-center overflow-hidden bg-[#050508] px-0 py-0">
+      <section className="relative flex h-[100dvh] min-h-[100dvh] w-full min-w-0 items-center overflow-hidden bg-[#050508] px-0 py-0">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <iframe
             src="https://player.vimeo.com/video/988922121?autoplay=1&muted=1&loop=1&background=1"
@@ -159,7 +157,7 @@ export default async function Home() {
               Featured PROGRAMS
             </span>
           </h2>
-          <div className="h-[calc(100vh-9rem)] min-h-[520px] w-full overflow-hidden rounded-none bg-black/30">
+          <div className="h-[calc(100dvh-9rem)] min-h-[520px] w-full min-w-0 overflow-hidden rounded-none bg-black/30">
             <DomeGallery
               images={FEATURED_PROGRAM_IMAGES}
               fit={0.5}
@@ -169,12 +167,13 @@ export default async function Home() {
               grayscale={false}
               autoRotateSpeedDeg={1.8}
               tileInsetPx={24}
+              clickHref="/programs"
             />
           </div>
         </div>
       </section>
 
-      <section className="relative h-screen min-h-screen w-screen overflow-hidden bg-black">
+      <section className="relative h-[100dvh] min-h-[100dvh] w-full min-w-0 overflow-hidden bg-black">
         <div className="pointer-events-none absolute inset-0">
           <video
             autoPlay
@@ -191,6 +190,9 @@ export default async function Home() {
         <div className="relative z-10 mx-auto flex h-full w-full max-w-[1700px] flex-col justify-center px-4 py-12 sm:px-6 md:px-8">
           {founderImages.length > 0 ? (
             <div className="space-y-4 sm:space-y-5">
+              <h3 className="mb-3 px-1 text-2xl font-black uppercase tracking-[0.16em] text-amber-100 drop-shadow-[0_0_14px_rgba(251,191,36,0.35)] sm:mb-4 sm:text-3xl md:text-4xl">
+                MOST VIEWED
+              </h3>
               <div className="relative w-full overflow-hidden">
                 <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-black via-black/55 to-transparent sm:w-16" />
                 <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-black via-black/55 to-transparent sm:w-16" />
@@ -216,6 +218,9 @@ export default async function Home() {
                 </div>
               </div>
 
+              <h3 className="mb-3 mt-6 px-1 text-2xl font-black uppercase tracking-[0.16em] text-amber-100 drop-shadow-[0_0_14px_rgba(251,191,36,0.35)] sm:mb-4 sm:mt-8 sm:text-3xl md:text-4xl">
+                MOST INFORMATIVE
+              </h3>
               <div className="relative w-full overflow-hidden">
                 <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-black via-black/55 to-transparent sm:w-16" />
                 <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-black via-black/55 to-transparent sm:w-16" />
@@ -253,37 +258,7 @@ export default async function Home() {
       <CertificatesSection />
       <FAQSection />
 
-      <section
-        id="joinNowSection"
-        className="relative overflow-hidden border-y border-amber-300/20 bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.2),rgba(2,6,23,0.95))] px-4 py-16 sm:px-6 sm:py-20"
-      >
-        <div className="mx-auto max-w-4xl text-center">
-          <p className="text-xs uppercase tracking-[0.24em] text-amber-200/80">Join Now</p>
-          <h2 className="mt-3 text-3xl font-bold text-amber-100 sm:text-4xl md:text-5xl">
-            Start your journey with Syndicate
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-sm text-amber-50/80 sm:text-base">
-            Pick the right path for your current level and build real systems for money, power, and freedom.
-          </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link
-              href="/programs"
-              className="rounded-md border border-amber-300/60 bg-amber-300/10 px-5 py-2 text-sm font-semibold text-amber-100 transition hover:bg-amber-300/20"
-            >
-              Explore Programs
-            </Link>
-            <Link
-              href="/what-you-get"
-              className="rounded-md border border-cyan-300/50 bg-cyan-300/10 px-5 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-300/20"
-            >
-              See Benefits
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <FeaturedLogosStrip logos={FEATURED_LOGOS} speedSeconds={40} />
-      <SiteFooter />
+      
     </div>
   )
 }

@@ -2,9 +2,10 @@
 
 import { useMemo, useState, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
-import { Check, Crown, Shield, Sparkles, Star } from 'lucide-react'
+import { Check, Crown, Shield, Star, Swords } from 'lucide-react'
+import Image from 'next/image'
 
-type PlanKey = 'bundle' | 'membership'
+type PlanKey = 'bundle' | 'pawn' | 'knight' | 'king'
 type BillingKey = 'monthly' | 'yearly'
 
 interface PricingTier {
@@ -14,7 +15,7 @@ interface PricingTier {
   title: string
   description: string
   features: string[]
-  accent: 'cyan' | 'purple' | 'gold'
+  accent: 'gold'
   icon: ReactNode
   cta: string
 }
@@ -37,49 +38,77 @@ const pricingData: Record<PlanKey, PricingTier> = {
       'Premium downloadable resources',
       'Priority content releases',
       'Completion certificates',
-      'Community access',
-      'Direct support lane',
     ],
-    accent: 'cyan',
+    accent: 'gold',
     icon: <Shield className="h-4 w-4" />,
     cta: 'Get Full Bundle',
   },
-  membership: {
-    price: { monthly: '£199', yearly: '£1,999' },
-    oldPrice: { monthly: '£299', yearly: '£2,499' },
-    badge: 'EXCLUSIVE MEMBERSHIP CONTENT',
-    title: 'Exclusive Membership Content',
+  pawn: {
+    price: { monthly: '£19.19', yearly: '£191.90' },
+    oldPrice: { monthly: '£29.99', yearly: '£299.90' },
+    badge: 'THE PAWN',
+    title: 'The Pawn',
     description:
-      'Private member-only content, elite drops, strategic insights, and high-signal execution resources.',
+      'Enter the world of The Syndicate. Ideal for newcomers building momentum with structured direction.',
     features: [
-      'Exclusive members-only modules',
-      'Private content vault',
-      'Weekly premium drops',
-      'Priority support',
-      'Private community channels',
-      'Early access to releases',
-      'Monthly insider workshop',
+      'Core foundation vault access',
+      'New member roadmap',
+      'Weekly action prompts',
+      'Private community entry',
+      'Monthly mission briefing',
+      'Starter accountability framework',
+    ],
+    accent: 'gold',
+    icon: <Star className="h-4 w-4" />,
+    cta: 'Join The Pawn',
+  },
+  knight: {
+    price: { monthly: '£33.33', yearly: '£333.30' },
+    oldPrice: { monthly: '£49.99', yearly: '£499.90' },
+    badge: 'THE KNIGHT',
+    title: 'The Knight',
+    description:
+      'Expand your knowledge base with our more indepth offering focused on strategic execution and systems.',
+    features: [
+      'Everything in The Pawn',
+      'Advanced strategy modules',
+      'Deep-dive weekly workshops',
+      'Execution playbooks and SOPs',
+      'Faster support response lane',
+      'Early access to selected releases',
+    ],
+    accent: 'gold',
+    icon: <Swords className="h-4 w-4" />,
+    cta: 'Join The Knight',
+  },
+  king: {
+    price: { monthly: '£77.77', yearly: '£777.70' },
+    oldPrice: { monthly: '£99.99', yearly: '£999.90' },
+    badge: 'THE KING',
+    title: 'The King',
+    description:
+      'Master your mind, money and power with highest-level resources, insider material, and elite support priority.',
+    features: [
+      'Everything in The Knight',
+      'Elite inner-circle content',
+      'Monthly insider workshop access',
+      'Direct support lane',
+      'Private leadership channel',
+      'Highest-priority release access',
     ],
     accent: 'gold',
     icon: <Crown className="h-4 w-4" />,
-    cta: 'Join Membership',
+    cta: 'Join The King',
   },
 }
 
-function AccentGlow({ accent }: { accent: PricingTier['accent'] }) {
-  const cls =
-    accent === 'cyan'
-      ? 'from-[#00f5ff]/30 via-transparent to-transparent'
-      : accent === 'purple'
-        ? 'from-[#bf00ff]/30 via-transparent to-transparent'
-        : 'from-[var(--gold)]/25 via-transparent to-transparent'
-
+function AccentGlow({ accent: _accent }: { accent: PricingTier['accent'] }) {
   return (
     <div
       aria-hidden
       className={cn(
         'pointer-events-none absolute inset-0 rounded-3xl bg-gradient-to-br blur-2xl opacity-70',
-        cls,
+        'from-amber-300/30 via-amber-500/8 to-transparent',
       )}
     />
   )
@@ -96,31 +125,15 @@ function TierCard({
   billing: BillingKey
   highlighted?: boolean
 }) {
-  const accentBorder =
-    tier.accent === 'cyan'
-      ? 'border-[#00f5ff]/35 hover:border-[#00f5ff]/60'
-      : tier.accent === 'purple'
-        ? 'border-[#bf00ff]/35 hover:border-[#bf00ff]/60'
-        : 'border-[var(--gold)]/35 hover:border-[var(--gold)]/60'
-
-  const accentText =
-    tier.accent === 'cyan'
-      ? 'text-[#00f5ff]'
-      : tier.accent === 'purple'
-        ? 'text-[#bf00ff]'
-        : 'text-[var(--gold)]'
-
+  const accentBorder = 'border-amber-300/35 hover:border-amber-300/75'
+  const accentText = 'text-amber-300'
   const accentShadow =
-    tier.accent === 'cyan'
-      ? 'shadow-[0_0_30px_rgba(0,245,255,0.11)] hover:shadow-[0_0_60px_rgba(0,245,255,0.18)]'
-      : tier.accent === 'purple'
-        ? 'shadow-[0_0_30px_rgba(191,0,255,0.12)] hover:shadow-[0_0_60px_rgba(191,0,255,0.2)]'
-        : 'shadow-[0_0_30px_rgba(212,175,55,0.12)] hover:shadow-[0_0_60px_rgba(212,175,55,0.2)]'
+    'shadow-[0_0_0_1px_rgba(251,191,36,0.36),0_0_5px_rgba(251,191,36,0.42),0_0_30px_rgba(251,191,36,0.16)] hover:shadow-[0_0_0_1px_rgba(251,191,36,0.5),0_0_5px_rgba(251,191,36,0.62),0_0_90px_rgba(251,191,36,0.34)] hover:brightness-110'
 
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-3xl border bg-[var(--glass-bg)] backdrop-blur-xl transition-all duration-300 will-change-transform hover:scale-[1.02]',
+        'relative h-full overflow-hidden rounded-3xl border bg-[var(--glass-bg)] backdrop-blur-xl transition-all duration-300 will-change-transform hover:scale-[1.03]',
         accentBorder,
         accentShadow,
         highlighted && 'ring-1 ring-white/10',
@@ -137,11 +150,11 @@ function TierCard({
         }}
       />
 
-      <div className="relative p-6 sm:p-8">
+      <div className="relative p-5 sm:p-6">
         <div className="flex items-center justify-between gap-4">
           <div
             className={cn(
-              'inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold tracking-[0.2em]',
+              'inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-[0.8rem] font-bold tracking-[0.16em] sm:text-[0.86rem]',
               accentText,
             )}
           >
@@ -149,15 +162,15 @@ function TierCard({
             <span>{tier.badge}</span>
           </div>
 
-          {planKey === 'membership' && (
-            <div className="inline-flex items-center gap-1 rounded-full bg-white/5 px-3 py-1 text-xs text-white/75">
-              <Star className="h-3.5 w-3.5 text-[var(--gold)]" />
+          {planKey === 'bundle' && (
+            <div className="inline-flex items-center gap-1 rounded-full bg-white/5 px-3 py-1 text-[0.78rem] font-semibold text-white/80 sm:text-[0.82rem]">
+              <Star className="h-3.5 w-3.5 text-amber-300" />
               Recommended
             </div>
           )}
         </div>
 
-        <div className="mt-6 flex items-end justify-between gap-4">
+        <div className="mt-4 flex items-end justify-between gap-4">
           <motion.div
             key={`${planKey}-${billing}`}
             initial={{ opacity: 0, y: 6 }}
@@ -177,7 +190,7 @@ function TierCard({
 
             <div className="mt-1 flex items-baseline gap-2">
               <div
-                className="text-5xl font-black text-white sm:text-6xl"
+                className="text-4xl font-black text-white sm:text-5xl"
                 style={{ fontFamily: 'Inter, Segoe UI, Roboto, Arial, sans-serif' }}
               >
                 {tier.price[billing]}
@@ -187,28 +200,21 @@ function TierCard({
               </div>
             </div>
 
-            <div className="mt-2 max-w-md text-sm text-white/70 font-body">
+            <div className="mt-2 max-w-[42ch] text-sm text-white/70 font-body">
               {tier.description}
             </div>
           </motion.div>
 
-          <div className="hidden flex-col items-end gap-2 text-xs text-white/55 font-mono sm:flex">
-            <div className="inline-flex items-center gap-2">
-              <Sparkles className={cn('h-4 w-4', accentText)} />
-              <span>THE SYNDICATE</span>
-            </div>
-            <span className="tracking-[0.3em]">ACCESS KEY</span>
-          </div>
         </div>
 
-        <div className="mt-7 grid grid-cols-1 gap-2">
+        <div className="mt-5 grid grid-cols-1 gap-2">
           {tier.features.map((f) => (
             <div
               key={f}
-              className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3"
+              className="flex items-start gap-2.5 rounded-xl border border-white/10 bg-white/5 px-3.5 py-2.5"
             >
               <Check className={cn('mt-0.5 h-4 w-4 shrink-0', accentText)} />
-              <span className="text-sm text-white/80">{f}</span>
+              <span className="text-[13px] leading-snug text-white/80">{f}</span>
             </div>
           ))}
         </div>
@@ -216,9 +222,8 @@ function TierCard({
         <button
           type="button"
           className={cn(
-            'mt-7 w-full rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold tracking-wide text-white transition-all hover:bg-white/10 active:scale-[0.99]',
-            planKey === 'membership' &&
-              'border-[var(--gold)]/35 bg-[var(--gold)]/10 hover:bg-[var(--gold)]/15',
+            'hamburger-attract mt-5 w-full rounded-2xl border border-amber-300/70 bg-black/75 px-5 py-2.5 text-sm font-semibold tracking-wide text-amber-100 shadow-[0_0_16px_rgba(251,191,36,0.3)] transition-all hover:scale-[1.02] hover:bg-black/90 hover:shadow-[0_0_24px_rgba(251,191,36,0.5)] active:scale-[0.99]',
+            planKey === 'bundle' && 'border-amber-200/75 text-amber-50',
           )}
         >
           {tier.cta}
@@ -240,7 +245,9 @@ export function PricingPage({
   const tiers = useMemo(
     () => [
       { key: 'bundle' as const, tier: pricingData.bundle },
-      { key: 'membership' as const, tier: pricingData.membership },
+      { key: 'pawn' as const, tier: pricingData.pawn },
+      { key: 'knight' as const, tier: pricingData.knight },
+      { key: 'king' as const, tier: pricingData.king },
     ],
     [],
   )
@@ -249,53 +256,57 @@ export function PricingPage({
     <section
       id="pricing"
       className={cn(
-        'relative w-full min-h-screen overflow-hidden bg-background px-6 py-20 md:py-24',
+        'relative w-full min-h-screen overflow-hidden bg-background px-[clamp(0.75rem,2.2vw,2rem)] py-20 md:py-24',
         className,
       )}
     >
-      <div className="relative mx-auto flex w-full max-w-6xl flex-col items-center">
-        <header className="mb-12 rounded-2xl border border-[#00f5ff]/30 bg-black/20 px-6 py-10 text-center md:mb-16 md:px-10 md:py-12">
+      <div className="pointer-events-none absolute inset-0">
+        <Image src="/Assets/g.gif" alt="" aria-hidden fill sizes="100vw" className="object-cover opacity-30" unoptimized />
+        <div className="absolute inset-0 bg-black/55" />
+      </div>
+      <div className="relative mx-auto flex w-[min(92vw,1900px)] flex-col items-center">
+        <header className="mb-12 rounded-2xl border border-amber-300/45 bg-black/20 px-6 py-10 text-center shadow-[0_0_0_1px_rgba(251,191,36,0.35),0_0_5px_rgba(251,191,36,0.45),0_0_30px_rgba(251,191,36,0.14)] md:mb-16 md:px-10 md:py-12">
           <h2 className="mt-2 font-display text-4xl font-black uppercase tracking-[0.12em] text-white md:text-5xl">
             Syndicate Offers
           </h2>
           <p className="mx-auto mt-4 max-w-2xl font-mono text-base tracking-[0.1em] text-zinc-400 md:text-lg">
-            Choose your access tier. Bundle for full dominance or membership for exclusive content.
+            Choose your access tier: full bundle coverage or The Pawn, The Knight, and The King membership paths.
           </p>
 
-          <div className="mt-8 flex items-center justify-center gap-4 rounded-xl border border-[#00f5ff]/25 bg-black/30 px-6 py-4 text-sm font-mono tracking-[0.2em] uppercase">
-            <span className={billing === 'monthly' ? 'text-[#00f5ff]' : 'text-zinc-500'}>
+          <div className="mt-8 flex items-center justify-center gap-4 rounded-xl border border-amber-300/40 bg-black/30 px-6 py-4 text-sm font-mono tracking-[0.2em] uppercase shadow-[0_0_0_1px_rgba(251,191,36,0.25),0_0_5px_rgba(251,191,36,0.35)]">
+            <span className={billing === 'monthly' ? 'text-amber-300' : 'text-zinc-500'}>
               Monthly
             </span>
             <button
               type="button"
               onClick={() => setBilling((b) => (b === 'monthly' ? 'yearly' : 'monthly'))}
               className={cn(
-                'relative h-7 w-14 rounded-full border border-[#00f5ff]/25 bg-black/40 p-1 transition-all duration-200',
-                billing === 'yearly' && 'border-[#00f5ff]/40 bg-[#00f5ff]/10',
+                'relative h-7 w-14 rounded-full border border-amber-300/25 bg-black/40 p-1 transition-all duration-200',
+                billing === 'yearly' && 'border-amber-300/45 bg-amber-300/12',
               )}
               aria-label="Toggle billing period"
             >
               <span
                 className={cn(
-                  'block h-5 w-5 rounded-full bg-[#00f5ff] transition-all duration-200',
+                  'block h-5 w-5 rounded-full bg-amber-300 shadow-[0_0_14px_rgba(251,191,36,0.5)] transition-all duration-200',
                   billing === 'yearly' ? 'translate-x-7' : 'translate-x-0',
                 )}
               />
             </button>
-            <span className={billing === 'yearly' ? 'text-[#00f5ff]' : 'text-zinc-500'}>
+            <span className={billing === 'yearly' ? 'text-amber-300' : 'text-zinc-500'}>
               Yearly
             </span>
           </div>
         </header>
 
-        <div className="grid w-full grid-cols-1 gap-8 md:grid-cols-2 md:gap-10">
+        <div className="grid w-full grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4 md:gap-6 xl:gap-5">
           {tiers.map(({ key, tier }) => (
             <div key={key} onClick={() => onSelectPlan?.(key)} className="cursor-default">
               <TierCard
                 planKey={key}
                 tier={tier}
                 billing={billing}
-                highlighted={key === 'membership'}
+                highlighted={key === 'bundle'}
               />
             </div>
           ))}

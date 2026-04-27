@@ -8,6 +8,7 @@ type NeonTypingBadgeProps = {
   deletingSpeed?: number
   pauseMs?: number
   className?: string
+  boxed?: boolean
 }
 
 export default function NeonTypingBadge({
@@ -16,6 +17,7 @@ export default function NeonTypingBadge({
   deletingSpeed = 45,
   pauseMs = 1300,
   className,
+  boxed = true,
 }: NeonTypingBadgeProps) {
   const safePhrases = useMemo(() => phrases.filter((phrase) => phrase.trim().length > 0), [phrases])
   const [phraseIndex, setPhraseIndex] = useState(0)
@@ -63,7 +65,9 @@ export default function NeonTypingBadge({
   return (
     <div
       className={[
-        'neon-badge relative inline-flex max-w-[min(98vw,1080px)] items-center rounded-full px-7 py-3.5 sm:px-9 sm:py-4',
+        boxed
+          ? 'neon-badge relative inline-flex max-w-full items-center rounded-full px-[clamp(1rem,4vw,2.25rem)] py-[clamp(0.65rem,2vw,1.1rem)] sm:px-9 sm:py-4'
+          : 'relative inline-flex max-w-full items-center',
         className ?? '',
       ].join(' ')}
       role="status"

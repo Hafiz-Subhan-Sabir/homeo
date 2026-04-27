@@ -66,8 +66,8 @@ export default function CourseCard({ course, neon }: CourseCardProps) {
         </div>
       </div>
 
-      <h3 className={`mb-2 text-lg font-bold uppercase tracking-[0.08em] ${neon.text}`}>{course.title}</h3>
-      <p className={`mb-5 line-clamp-3 rounded-lg border-l-4 p-3 text-sm text-slate-300 ${neon.quote}`}>{course.description}</p>
+      <h3 className={`mb-2 text-[1.3rem] font-bold uppercase tracking-[0.07em] leading-tight sm:text-[1.45rem] ${neon.text}`}>{course.title}</h3>
+      <p className={`mb-5 line-clamp-3 rounded-lg border-l-4 p-3 text-[1rem] leading-relaxed text-slate-200 sm:text-[1.05rem] ${neon.quote}`}>{course.description}</p>
 
       <div className="mt-auto flex items-end gap-2">
         <span

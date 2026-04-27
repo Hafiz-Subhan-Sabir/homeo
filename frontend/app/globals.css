@@ -7,6 +7,10 @@
 }
 
 :root {
+  /* Layout: avoid 100vw scrollbar overflow; use with width: 100% / w-full */
+  --app-height: 100dvh;
+  --page-gutter-x: clamp(0.75rem, 2.8vw, 1.75rem);
+  --section-pad-y: clamp(2.5rem, 6vw, 5rem);
   --gold: #d4af37;
   --gold-light: #f0d060;
   --gold-lighter: #f5e08a;
@@ -27,12 +31,17 @@ html {
   height: 100%;
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
+  overflow-x: clip;
 }
 
 body {
   height: 100%;
+  min-height: var(--app-height);
   margin: 0;
   background: var(--bg-black);
+  overflow-x: clip;
+  width: 100%;
+  max-width: 100%;
 }
 
 * {

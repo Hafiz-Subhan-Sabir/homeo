@@ -223,7 +223,7 @@ export default function LetterGlitch({
 
   return (
     <div
-      className={`relative h-full w-full overflow-hidden bg-black ${className ?? ''}`.trim()}
+      className={`relative isolate h-full w-full min-w-0 max-w-full overflow-hidden bg-black ${className ?? ''}`.trim()}
       style={{ opacity: safeOpacity }}
     >
       <canvas ref={canvasRef} className="block h-full w-full" />

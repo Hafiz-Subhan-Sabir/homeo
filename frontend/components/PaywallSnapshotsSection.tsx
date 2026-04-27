@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 
 type SnapshotItem = {
   src: string
@@ -37,14 +38,19 @@ const SNAPSHOTS: SnapshotItem[] = [
 
 export default function PaywallSnapshotsSection() {
   return (
-    <section className="relative min-h-screen w-screen overflow-hidden bg-black">
+    <section className="relative min-h-[100dvh] w-full min-w-0 overflow-hidden bg-black">
       <div className="pointer-events-none absolute inset-0">
-        <img
-          src="/Assets/cb.gif"
-          alt=""
-          aria-hidden="true"
-          className="h-full w-full object-cover opacity-30"
-        />
+        <div className="relative h-full w-full">
+          <Image
+            src="/Assets/cb.gif"
+            alt=""
+            aria-hidden
+            fill
+            sizes="100vw"
+            className="object-cover opacity-30"
+            unoptimized
+          />
+        </div>
       </div>
       <div className="pointer-events-none absolute inset-0 bg-black/60" />
 
@@ -84,6 +90,35 @@ export default function PaywallSnapshotsSection() {
               </div>
             </article>
           ))}
+        </div>
+
+        <div className="mx-auto mt-10 max-w-6xl text-center sm:mt-12">
+          <h3 className="mx-auto max-w-[34ch] text-3xl font-black uppercase leading-[1.16] tracking-[0.05em] text-amber-100 drop-shadow-[0_0_16px_rgba(251,191,36,0.42)] sm:text-4xl md:text-5xl">
+            <span className="block">
+              IF YOU WANT TO MASTER MONEY JOIN
+              <span className="hamburger-attract mx-2 inline-block text-amber-100 drop-shadow-[0_0_26px_rgba(251,191,36,0.9)]">THE SYNDICATE</span>
+            </span>
+            <span className="mt-2 block">
+              IF YOU WANT
+              <span className="hamburger-attract mx-2 inline-block text-amber-200 drop-shadow-[0_0_28px_rgba(251,191,36,0.95)]">SUCCESS</span>
+              JOIN
+              <span className="hamburger-attract mx-2 inline-block text-amber-100 drop-shadow-[0_0_26px_rgba(251,191,36,0.9)]">THE SYNDICATE</span>
+            </span>
+          </h3>
+          <div className="mt-8 flex flex-wrap justify-center gap-x-7 gap-y-4 sm:mt-10">
+            <Link
+              href="/#joinNowSection"
+              className="hamburger-attract inline-flex min-h-[54px] min-w-[210px] items-center justify-center rounded-xl border border-amber-300/80 bg-black/80 px-8 py-3 text-base font-bold tracking-[0.04em] text-amber-100 shadow-[0_0_22px_rgba(251,191,36,0.4)] transition hover:scale-[1.03] hover:bg-black/95 hover:shadow-[0_0_30px_rgba(251,191,36,0.62)]"
+            >
+              JOIN NOW
+            </Link>
+            <Link
+              href="/programs"
+              className="hamburger-attract inline-flex min-h-[54px] min-w-[210px] items-center justify-center rounded-xl border border-amber-300/80 bg-black/80 px-8 py-3 text-base font-bold tracking-[0.04em] text-amber-50 shadow-[0_0_22px_rgba(251,191,36,0.4)] transition hover:scale-[1.03] hover:bg-black/95 hover:shadow-[0_0_30px_rgba(251,191,36,0.62)]"
+            >
+              EXPLORE PROGRAMS
+            </Link>
+          </div>
         </div>
       </div>
     </section>

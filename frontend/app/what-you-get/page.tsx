@@ -1,24 +1,4 @@
 import Link from 'next/link'
-import FeaturedLogosStrip from '@/components/FeaturedLogosStrip'
-import SiteFooter from '@/components/SiteFooter'
-
-const FEATURED_LOGOS = [
-  {
-    src: '/Assets/press-forbes.png',
-    alt: 'Forbes logo',
-    href: 'https://forbes.ge/en/how-the-syndicate-uses-mastery-and-empowerment-to-redefine-business/',
-  },
-  {
-    src: '/Assets/press-luxury.png',
-    alt: 'LLM logo',
-    href: 'https://www.luxurylifestylemag.co.uk/money/how-the-syndicate-empowers-individuals-to-master-power-money-and-influence-in-the-money-mastery-course/',
-  },
-  {
-    src: '/Assets/press-gq.png',
-    alt: 'GQ logo',
-    href: 'https://gq.co.za/wealth/2025-02-10-how-the-syndicate-can-disrupt-the-traditional-model-of-influence-and-education-in-the-digital-age/',
-  },
-]
 
 const VALUE_PILLARS = [
   {
@@ -88,22 +68,16 @@ const MONEY_POWER_MASTERY_PARAGRAPHS = [
 
 export default function WhatYouGetPage() {
   return (
-    <div className="min-h-screen bg-black pt-[69px]">
-      <section className="relative overflow-hidden border-b border-cyan-300/20 px-4 py-14 sm:px-6 sm:py-16">
+    <div className="min-h-[100dvh] bg-black">
+      <section className="relative h-[100dvh] min-h-[100dvh] w-full overflow-hidden border-b border-cyan-300/20 px-4 pb-14 pt-[96px] sm:px-6 sm:pb-16 sm:pt-[110px]">
         <div className="pointer-events-none absolute inset-0">
-          <iframe
-            src="https://player.vimeo.com/video/988922121?autoplay=1&muted=1&loop=1&background=1"
-            className="h-full w-full scale-[1.18]"
-            allow="autoplay; fullscreen; picture-in-picture"
-            loading="lazy"
-            referrerPolicy="strict-origin-when-cross-origin"
-            title="What You Get background video"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#020617]/80 to-[#02050b]/90" />
+          <video autoPlay muted loop playsInline preload="metadata" className="h-[100dvh] w-full object-cover opacity-100">
+            <source src="/Assets/video.mp4" type="video/mp4" />
+          </video>
+          <div className="absolute inset-0 bg-gradient-to-b from-[#020617]/84 to-[#02050b]/92" />
         </div>
         <div className="relative z-10 mx-auto max-w-5xl text-center">
-          <p className="text-xs uppercase tracking-[0.24em] text-cyan-200/80">What You Get</p>
-          <h1 className="mt-3 text-3xl font-bold text-cyan-50 sm:text-4xl md:text-5xl">Tools, credentials, and global network access</h1>
+          <h1 className="mt-3 text-3xl font-bold text-cyan-50 sm:text-4xl md:text-5xl">Access to a powerful network and alliance.</h1>
           <p className="mx-auto mt-4 max-w-3xl text-sm text-cyan-100/75 sm:text-base">
             You unlock a complete execution ecosystem: strategy, implementation systems, and structured growth frameworks designed for real-world outcomes.
           </p>
@@ -114,7 +88,6 @@ export default function WhatYouGetPage() {
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_20%,rgba(34,211,238,0.12),transparent_35%),radial-gradient(circle_at_82%_84%,rgba(251,191,36,0.1),transparent_34%)]" />
         <div className="relative z-10 mx-auto max-w-7xl">
           <div className="mb-6">
-            <p className="text-xs uppercase tracking-[0.24em] text-cyan-200/80">Core Value</p>
             <h2 className="mt-2 text-2xl font-semibold text-cyan-100 sm:text-3xl">Built for operators who want structure, not noise</h2>
           </div>
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
@@ -139,7 +112,6 @@ export default function WhatYouGetPage() {
       <section className="px-4 py-12 sm:px-6 sm:py-16">
         <div className="mx-auto grid max-w-7xl gap-8 rounded-2xl border border-amber-300/30 bg-gradient-to-r from-[#0a1014] via-black to-[#130d05] p-6 shadow-[0_0_32px_rgba(251,191,36,0.1)] sm:p-8 lg:grid-cols-[1.1fr_0.9fr]">
           <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-amber-200/80">What Is Included</p>
             <h2 className="mt-2 text-2xl font-semibold text-amber-100 sm:text-3xl">A complete system for money, power, and life mastery</h2>
             <ul className="mt-6 space-y-3 text-sm text-zinc-200/88 sm:text-base">
               {INCLUDED_RESOURCES.map((item, index) => (
@@ -205,7 +177,6 @@ export default function WhatYouGetPage() {
       <section className="border-y border-amber-300/30 bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.14),rgba(2,6,23,0.95))] px-4 py-14 sm:px-6 sm:py-16">
         <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-[1.08fr_0.92fr]">
           <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-amber-200/80">Professional Outcome</p>
             <h2 className="mt-3 text-2xl font-bold text-amber-100 sm:text-4xl">You leave with clarity, discipline, and executable systems</h2>
             <p className="mt-4 max-w-3xl text-sm leading-relaxed text-zinc-200/85 sm:text-base">
               This is not generic education. Every module is engineered to produce practical leverage in your business, finances, and personal leadership.
@@ -229,8 +200,6 @@ export default function WhatYouGetPage() {
         </div>
       </section>
 
-      <FeaturedLogosStrip logos={FEATURED_LOGOS} speedSeconds={20} />
-      <SiteFooter />
     </div>
   )
 }

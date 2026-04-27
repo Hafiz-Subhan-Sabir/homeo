@@ -1,5 +1,4 @@
 import CourseCard, { type CourseCardData, type NeonTheme } from '@/components/CourseCard'
-import SiteFooter from '@/components/SiteFooter'
 
 type ProgramCategory = {
   name: string
@@ -78,12 +77,12 @@ const PROGRAM_CATEGORIES: ProgramCategory[] = [
 
 export default function ProgramsPage() {
   return (
-    <div className="min-h-screen bg-black pt-[69px]">
-      <section className="relative flex min-h-[52vh] w-screen items-center overflow-hidden border-b border-pink-300/20 px-4 py-16 sm:min-h-[60vh] sm:px-6 sm:py-20">
+    <div className="min-h-[100dvh] w-full min-w-0 overflow-x-clip bg-black pt-[69px]">
+      <section className="relative flex h-[100dvh] min-h-[100dvh] w-full min-w-0 items-center overflow-hidden border-b border-pink-300/20 px-[clamp(1rem,3.2vw,1.5rem)] py-[clamp(2.5rem,5vw,5rem)] sm:px-6 sm:py-20">
         <div className="pointer-events-none absolute inset-0">
           <iframe
-            src="https://player.vimeo.com/video/1051218843?muted=1&autoplay=1&loop=1&background=1&app_id=122963"
-            className="h-full w-full scale-[1.35]"
+            src="https://player.vimeo.com/video/988922121?muted=1&autoplay=1&loop=1&background=1&app_id=122963"
+            className="h-[100dvh] w-full scale-[1.15]"
             allow="autoplay; fullscreen; picture-in-picture"
             loading="lazy"
             referrerPolicy="strict-origin-when-cross-origin"
@@ -128,7 +127,6 @@ export default function ProgramsPage() {
           ))}
         </div>
       </section>
-      <SiteFooter />
     </div>
   )
 }

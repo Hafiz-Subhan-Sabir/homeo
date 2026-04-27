@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import SiteFooter from '@/components/SiteFooter'
+import Link from 'next/link'
 
 const METHOD_PILLARS = [
   {
@@ -75,8 +75,8 @@ const SAFEGUARDS = [
 
 export default function OurMethodsPage() {
   return (
-    <div className="min-h-screen bg-black pt-[69px]">
-      <section className="relative overflow-hidden border-b border-amber-300/20 px-4 py-14 sm:px-6 sm:py-20">
+    <div className="min-h-[100dvh] w-full bg-black">
+      <section className="relative h-[100dvh] min-h-[100dvh] w-full overflow-hidden border-b border-amber-300/20 px-4 pb-14 pt-[96px] sm:px-6 sm:pb-20 sm:pt-[110px]">
         <div className="pointer-events-none absolute inset-0">
           <Image
             src="/Assets/cb.gif"
@@ -92,21 +92,26 @@ export default function OurMethodsPage() {
           />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(251,191,36,0.22),transparent_35%),radial-gradient(circle_at_85%_72%,rgba(34,211,238,0.12),transparent_33%)]" />
         </div>
-        <div className="relative z-10 mx-auto grid max-w-7xl items-start gap-8 md:grid-cols-[1.2fr_0.8fr]">
+        <div className="relative z-10 mx-auto grid max-w-7xl items-start gap-8 md:grid-cols-[1.05fr_0.95fr] md:gap-10">
           <div className="methods-fade-up">
-            <p className="text-xs uppercase tracking-[0.24em] text-amber-200/80">Our Methods</p>
-            <h1 className="mt-4 text-3xl font-bold text-fuchsia-50 sm:text-4xl md:text-5xl">
+            <h1 className="mt-4 text-4xl font-black text-fuchsia-50 leading-[0.95] sm:text-5xl md:text-6xl lg:text-7xl">
               <span className="bg-gradient-to-r from-amber-100 via-amber-300 to-amber-500 bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(251,191,36,0.35)]">
-                Achieving True Greatness comes with Mastery
+                Our
+                <br />
+                Methods
+                <br />
+                of
+                <br />
+                Mastery
               </span>
             </h1>
-            <p className="mt-5 max-w-3xl text-sm leading-relaxed text-zinc-200/85 sm:text-base">
-              True greatness is not achieved by chance - it is deliberately built through knowledge, discipline, and action. The Syndicate equips its
-              members with actionable, real-world strategies designed to help them master the systems of wealth and power.
+            <p className="mt-5 max-w-3xl text-base leading-relaxed text-zinc-100/90 sm:text-lg">
+              Greatness is engineered through a repeatable method. The Syndicate teaches structured frameworks for thinking, execution, and leverage so members can
+              build power with precision instead of relying on motivation alone.
             </p>
-            <p className="mt-4 max-w-3xl text-sm leading-relaxed text-zinc-300/80 sm:text-base">
-              Our philosophy is clear: money and power are tools. When wielded with moral integrity, they can create profound personal transformation and
-              societal impact. When misused, they have the potential to enslave and corrupt.
+            <p className="mt-4 max-w-3xl text-base leading-relaxed text-zinc-200/85 sm:text-lg">
+              We combine elite strategy with ethical discipline: master money, influence, and decision-making while staying aligned with honour. Every module is
+              built to create real-world results you can apply immediately.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <a href="#register-interest" className="cta-nav-button text-xs font-semibold">
@@ -133,7 +138,7 @@ export default function OurMethodsPage() {
             </div>
           </div>
           <div className="methods-float">
-            <div className="relative ml-auto w-full max-w-[360px] overflow-hidden rounded-2xl border border-amber-300/45 bg-black/65 shadow-[0_0_40px_rgba(251,191,36,0.2)]">
+            <div className="relative ml-auto w-full max-w-[480px] overflow-hidden rounded-2xl border border-amber-300/45 bg-black/65 shadow-[0_0_48px_rgba(251,191,36,0.24)]">
               <Image
                 src="/Assets/13.png"
                 alt="Rule Money or Be Ruled"
@@ -199,9 +204,9 @@ export default function OurMethodsPage() {
               Greatness is your destination, and The Syndicate is your guide - JOIN NOW!
             </p>
             <div id="register-interest" className="mt-8">
-              <a href="/#joinNowSection" className="cta-nav-button text-xs font-semibold">
+              <Link href="/#joinNowSection" className="cta-nav-button text-xs font-semibold">
                 Register Your Interest
-              </a>
+              </Link>
             </div>
           </div>
           <div className="grid gap-5 sm:grid-cols-2">
@@ -264,15 +269,15 @@ export default function OurMethodsPage() {
               </p>
             </div>
             <div className="mt-7 flex flex-wrap gap-3">
-              <a href="/#joinNowSection" className="cta-nav-button text-xs font-semibold">
+              <Link href="/#joinNowSection" className="cta-nav-button text-xs font-semibold">
                 Register Your Interest
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/programs"
                 className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-cyan-300/65 bg-cyan-300/10 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-cyan-100 shadow-[0_0_16px_rgba(34,211,238,0.2)] transition hover:bg-cyan-300/20"
               >
                 Explore Programs
-              </a>
+              </Link>
             </div>
           </div>
           <div className="grid gap-5 sm:grid-cols-2">
@@ -285,17 +290,6 @@ export default function OurMethodsPage() {
                 <p className="text-sm leading-relaxed text-zinc-200/85">{item}</p>
               </article>
             ))}
-            <div className="methods-float sm:col-span-2">
-              <div className="overflow-hidden rounded-xl border border-cyan-300/40 bg-black/60 shadow-[0_0_24px_rgba(34,211,238,0.2)]">
-                <Image
-                  src="/Assets/programs/cources imnages/13rules.png"
-                  alt="Syndicate 13 Business Rules visual"
-                  width={562}
-                  height={818}
-                  className="h-auto w-full object-cover"
-                />
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -321,28 +315,18 @@ export default function OurMethodsPage() {
           </div>
         </div>
         <div className="mx-auto mt-8 flex max-w-7xl flex-wrap gap-3">
-          <a href="/#joinNowSection" className="cta-nav-button text-xs font-semibold">
+          <Link href="/#joinNowSection" className="cta-nav-button text-xs font-semibold">
             Join Now
-          </a>
-          <a
+          </Link>
+          <Link
             href="/what-you-get"
             className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-cyan-300/65 bg-cyan-300/10 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-cyan-100 shadow-[0_0_16px_rgba(34,211,238,0.2)] transition hover:bg-cyan-300/20"
           >
             See What You Get
-          </a>
+          </Link>
         </div>
       </section>
 
-      <section className="px-4 py-12 sm:px-6 sm:py-14">
-        <div className="mx-auto max-w-7xl text-sm leading-relaxed text-zinc-300/80">
-          <p>
-            This is more than a programme - it is a movement reshaping outdated ideas of money and power. The Syndicate method awards not only figures in bank
-            accounts but also strength of character, strategic control, and long-term impact.
-          </p>
-        </div>
-      </section>
-
-      <SiteFooter />
     </div>
   )
 }
