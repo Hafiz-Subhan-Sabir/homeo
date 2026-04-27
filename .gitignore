@@ -1,30 +1,88 @@
+# ----- Secrets / local config -----
+.env
+.env.*
+!.env.example
+!.env.local.example
+LOCAL_DEV_CREDENTIALS.txt
+*CREDENTIALS*.txt
+
+# ----- Python / Django -----
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Local databases / runtime files
+*.sqlite3
+*.db
+*.log
+*.pid
+
+# Backend (canonical folder name: Backend)
+Backend/.env
+Backend/data/uploads/*
+!Backend/data/uploads/.gitkeep
+Backend/media/
+Backend/staticfiles/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# ----- Node / Next.js -----
+node_modules/
+Frontend-Dashboard/.env
+Frontend-Dashboard/.next/
+Frontend-Dashboard/out/
+Frontend-Dashboard/.turbo/
+Frontend-Dashboard/coverage/
+frontend/.env
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+frontend/coverage/
+.next/
+out/
+dist
+dist-ssr
+*.tsbuildinfo
+
 # Logs
 logs
-*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-.next
-dist
-dist-ssr
-
 # Old Vite app (Next.js lives in /frontend)
 /src
 *.local
 
-# Editor directories and files
-.vscode 
-.vscode/*
+# ----- IDE / OS -----
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
 !.vscode/extensions.json
 !.vscode/settings.json
-.idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+*.swp
+
+# ----- Cursor / local assistant artifacts -----
+.cursor/
+.cursor-cache/

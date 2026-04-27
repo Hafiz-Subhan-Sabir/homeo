@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.sqlite3
+.env
+data/uploads/*
+!data/uploads/.gitkeep
+# Local PDFs for membership seed (place files here or use ~/Downloads — see seed_membership_content)
+data/membership_pdfs/*.pdf
+!data/membership_pdfs/.gitkeep
+venv/
+.venv/
+media/
