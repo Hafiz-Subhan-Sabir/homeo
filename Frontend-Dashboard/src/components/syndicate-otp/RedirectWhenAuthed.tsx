@@ -9,7 +9,7 @@ export default function RedirectWhenAuthed() {
   const router = useRouter();
   useLayoutEffect(() => {
     if (!hasSimpleAuthSessionClient()) return;
-    router.replace("/");
+    router.replace("/dashboard");
   }, [router]);
   return null;
 }

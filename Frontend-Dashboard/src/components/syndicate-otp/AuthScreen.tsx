@@ -55,7 +55,7 @@ type ApiPayload = {
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
 const DASHBOARD_FALLBACK =
-  process.env.NEXT_PUBLIC_POST_LOGIN_REDIRECT_URL ?? "http://localhost:3000/";
+  process.env.NEXT_PUBLIC_POST_LOGIN_REDIRECT_URL ?? "http://localhost:3000/dashboard";
 
 export default function AuthScreen({
   mode,

@@ -45,6 +45,7 @@ Frontend-Dashboard/.next/
 Frontend-Dashboard/out/
 Frontend-Dashboard/.turbo/
 Frontend-Dashboard/coverage/
+/frontend/
 .next/
 out/
 *.tsbuildinfo

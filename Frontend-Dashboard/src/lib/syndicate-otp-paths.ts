@@ -36,17 +36,17 @@ function isSameAppHost(apiHostname: string, pageHostname: string): boolean {
  * current origin (scheme + host + port).
  */
 export function resolvePostOtpAppRedirect(redirectFromApi: string | undefined): string {
-  if (typeof window === "undefined") return "/";
+  if (typeof window === "undefined") return "/dashboard";
   const origin = window.location.origin;
   const pageHost = window.location.hostname;
   const trimmed = (redirectFromApi ?? "").trim();
-  if (!trimmed) return `${origin}/`;
+  if (!trimmed) return `${origin}/dashboard`;
   try {
     const target = new URL(trimmed);
     if (!isSameAppHost(target.hostname, pageHost)) return target.href;
-    const path = target.pathname || "/";
+    const path = target.pathname === "/" ? "/dashboard" : target.pathname || "/dashboard";
     return `${origin}${path}${target.search}${target.hash}`;
   } catch {
-    return `${origin}/`;
+    return `${origin}/dashboard`;
   }
 }
