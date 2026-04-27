@@ -26,12 +26,8 @@ htmlcov/
 *.log
 *.pid
 
-# Backend (canonical folder name: Backend)
-Backend/.env
-Backend/data/uploads/*
-!Backend/data/uploads/.gitkeep
-Backend/media/
-Backend/staticfiles/
+# Django API not tracked in this branch — clone Backend from Syndicate main or run a deployed API
+/Backend/
 
 # Virtual environments
 .venv/
@@ -74,8 +70,6 @@ Thumbs.db
 desktop.ini
 .idea/
 .vscode/
-!.vscode/extensions.json
-!.vscode/settings.json
 *.suo
 *.ntvs*
 *.njsproj

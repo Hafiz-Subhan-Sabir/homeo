@@ -25,31 +25,16 @@ The **`frontend/`** folder contains the **Home** marketing / landing Next.js app
 | AI | OpenAI (`OPENAI_MODEL`, default `gpt-4o-mini`) |
 | UI | Next.js (App Router), React, Tailwind |
 
-## Layout (one backend, two frontends)
+## Layout (this branch)
 
 | Folder | Role |
 |--------|------|
-| **`Backend/`** | Single Django project: `syndicate_backend`, `api`, `apps/challenges`, `apps/portal`, `apps/membership`, **`apps/affiliate_tracking`** (merged from the old standalone affiliate API). |
 | **`Frontend-Dashboard/`** | Next.js app: dashboard, portal proxy usage, streaming UI, and the member OTP + Stripe flow. |
 | **`frontend/`** | Home marketing / landing site (Next.js). |
 
-The old **`affiliate-portal/`** split (separate Next + Django) has been removed; behavior lives in **`Backend/`** + **`Frontend-Dashboard/`**.
+**Django `Backend/`** is not included on this branch. The API still powers **`Frontend-Dashboard`** when you set `NEXT_PUBLIC_SYNDICATE_API_URL` (and related env) to a running Django instance—for example from the [`main` branch of Syndicate_real1](https://github.com/HammadAli64/Syndicate_real1/tree/main/Backend) or a deployed URL.
 
-## Backend setup
-
-```bash
-cd Backend
-python -m venv .venv
-# Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-Copy `Backend/.env.example` to `Backend/.env`, set secrets as needed, then:
-
-```bash
-python manage.py migrate
-python manage.py runserver
-```
+The marketing app in **`frontend/`** is mostly static pages and does not bundle the Backend folder; it does not need a local `Backend/` checkout unless you later add API calls.
 
 ## Frontend setup (dashboard)
 
