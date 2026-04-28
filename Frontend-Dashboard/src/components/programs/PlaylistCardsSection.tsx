@@ -217,7 +217,10 @@ export function PlaylistCardsSection({
                   ))}
                   <span className="ml-1 tabular-nums text-amber-50/95">{rating.toFixed(1)}</span>
                 </span>
-                <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full border border-emerald-300/50 bg-[#03140d]/95 px-2.5 py-0.5 font-sans text-[13px] font-black tracking-tight text-emerald-100 shadow-[0_0_16px_rgba(52,211,153,0.28)] sm:px-3.5 sm:py-1 sm:text-[17px]">
+                <span
+                  className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full border border-emerald-300/50 bg-[#03140d]/95 px-2.5 py-0.5 tabular-nums text-[13px] font-black tracking-normal text-emerald-100 shadow-[0_0_16px_rgba(52,211,153,0.28)] sm:px-3.5 sm:py-1 sm:text-[17px]"
+                  style={{ fontFamily: "Inter, Arial, Helvetica, sans-serif", fontFeatureSettings: '"tnum" 1, "lnum" 1' }}
+                >
                   {`£${price.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
                 </span>
               </div>
@@ -239,16 +242,6 @@ export function PlaylistCardsSection({
 
   return (
     <section className={cn("space-y-5", className)}>
-      <div className="border-b border-[color:var(--gold-neon-border-mid)]/35 pb-4 text-left">
-        <div className="text-[18px] font-black uppercase tracking-[0.16em] text-[color:var(--gold)]/95 [text-shadow:0_0_12px_rgba(250,204,21,0.2)] sm:text-[24px]">
-          {title}
-        </div>
-        <p className="mt-2 max-w-4xl text-[15px] leading-relaxed text-white/82 sm:text-[19px] sm:leading-[1.35]">{subtitle}</p>
-        <p className="mt-2 max-w-4xl text-[13px] font-semibold uppercase tracking-[0.12em] text-amber-200/95 sm:text-[14px]">
-          Buy any playlist to see all videos of that playlist.
-        </p>
-      </div>
-
       {loading ? (
         <div className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-[13px] text-white/70">Loading playlists...</div>
       ) : null}
