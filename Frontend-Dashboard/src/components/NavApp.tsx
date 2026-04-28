@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { startTransition, useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { type NavSectionId, RadialNav } from '@/components/RadialNav'
 
@@ -48,19 +48,35 @@ export function NavApp() {
     return () => window.removeEventListener('hashchange', syncActive)
   }, [pathname])
 
-  const handleSelect = (id: NavSectionId) => {
-    if (id === 'joinNow') {
-      router.push('/login')
-    } else {
-      router.push(SECTION_ROUTES[id])
+  useEffect(() => {
+    // Warm route payloads so menu clicks feel instant.
+    for (const route of Object.values(SECTION_ROUTES)) {
+      router.prefetch(route)
     }
+    router.prefetch('/login')
+  }, [router])
+
+  const handleSelect = (id: NavSectionId) => {
+    const targetRoute = id === 'joinNow' ? '/login' : SECTION_ROUTES[id]
+    if (pathname === targetRoute) {
+      setActiveId(id)
+      handleClose()
+      return
+    }
+
+    router.prefetch(targetRoute)
     setActiveId(id)
     handleClose()
+
+    // Keep the click responsive while route change starts in background.
+    startTransition(() => {
+      router.push(targetRoute)
+    })
   }
 
   return (
     <div
-      className="fixed left-0 right-0 top-0 z-50 flex flex-col bg-gradient-to-b from-black/45 via-black/20 to-transparent transition-[height] duration-500 ease-in-out pt-2"
+      className="fixed left-0 right-0 top-0 z-50 flex flex-col bg-gradient-to-b from-black/45 via-black/20 to-transparent transition-[height] duration-200 ease-in-out pt-2"
       style={{
         height: menuOpen ? '100dvh' : '69px',
         minHeight: menuOpen ? '100dvh' : undefined,
@@ -71,7 +87,7 @@ export function NavApp() {
     >
       <div className="relative z-10 flex flex-1 flex-col min-h-0">
         <div
-          className={`flex h-14 min-h-14 w-full shrink-0 items-center px-4 transition-[justify-content] duration-500 ease-in-out sm:h-16 sm:min-h-16 sm:px-5 ${
+          className={`flex h-14 min-h-14 w-full shrink-0 items-center px-4 transition-[justify-content] duration-200 ease-in-out sm:h-16 sm:min-h-16 sm:px-5 ${
             menuOpen ? 'justify-start' : 'justify-center'
           }`}
         >

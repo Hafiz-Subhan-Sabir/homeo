@@ -1,6 +1,7 @@
 import { readdir } from 'node:fs/promises'
 import path from 'node:path'
 import Image from 'next/image'
+import { unstable_cache } from 'next/cache'
 import { PricingPage } from '@/components/AnimatedPricingPage'
 import CertificatesSection from '@/components/CertificatesSection'
 import DomeGallery from '@/components/DomeGallery'
@@ -94,7 +95,7 @@ const toLabel = (fileName: string) =>
     .replace(/\s+/g, ' ')
     .trim()
 
-async function getFounderImages() {
+async function readFounderImages() {
   for (const dir of FOUNDER_DIRS) {
     const absolute = path.join(process.cwd(), 'public', ...dir.split('/'))
     try {
@@ -117,6 +118,10 @@ async function getFounderImages() {
 
   return []
 }
+
+const getFounderImages = unstable_cache(readFounderImages, ['home-founder-images'], {
+  revalidate: 3600,
+})
 
 export default async function Home() {
   const founderImages = await getFounderImages()
