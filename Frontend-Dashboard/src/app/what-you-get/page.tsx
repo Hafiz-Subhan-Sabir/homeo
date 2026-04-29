@@ -1,36 +1,61 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { NavApp } from '@/components/NavApp'
-import GlobalBottomSections from '@/components/GlobalBottomSections'
+import FeaturedLogosStrip from '@/components/FeaturedLogosStrip'
+import SiteFooter from '@/components/SiteFooter'
 import NeonTypingBadge from '@/components/NeonTypingBadge'
-
-const MASTERY_POINTS = [
-  'Master money and power systems without becoming enslaved by them.',
-  'Use influence with discipline, moral resilience, and long-term intent.',
-  'Transform ambition into structured execution and measurable outcomes.',
-]
-
-const KINGS_PATH_POINTS = [
-  'Study the strategic principles behind kings, emperors, and elite operators.',
-  'Convert historical insight into modern frameworks for power, leadership, and leverage.',
-  'Build integrity and control so growth never compromises your standards.',
-]
+import { syndicateOtpLoginHref } from '@/lib/syndicate-otp-paths'
 
 const MEMBERSHIP_PREVIEW = [
   { name: 'The Pawn', note: 'Entry-level access and foundational momentum systems.' },
   { name: 'The King', note: 'Elite leadership tier with highest-level leverage principles.' },
 ]
 
+const KINGS_EMPERORS_PARAGRAPHS = [
+  'True leaders are not born - they are forged in the crucible of wisdom passed down through the ages. The great figures of history, from monarchs to revolutionaries, have left behind more than mere stories - they have endowed us with a roadmap to greatness. To study their lives is not just to learn tactics and strategy, but to uncover the soul of money and power itself.',
+  'The Syndicate philosophy acknowledges this ancient truth while redefining it for a modern age. Success is not measured by wealth and power alone; these are mere tools, double-edged in nature. They demand mastery, balanced with moral resilience - otherwise, they enslave their wielders with corruption and indulgence. The Syndicate programs will equip you with the skills to dominate money and power networks while fortifying your integrity.',
+  'To achieve greatness is to transcend selfish ambition and become a powerhouse of mastery. The Syndicate teaches that true success lies not in accumulation, but in transformation. Its members move with intent, leveraging their influence for societal impact rather than personal gain.',
+]
+
+const FEATURED_LOGOS = [
+  {
+    src: '/assets/press-forbes.png',
+    alt: 'Forbes logo',
+    href: 'https://forbes.ge/en/how-the-syndicate-uses-mastery-and-empowerment-to-redefine-business/',
+  },
+  {
+    src: '/assets/press-luxury.png',
+    alt: 'LLM logo',
+    href: 'https://www.luxurylifestylemag.co.uk/money/how-the-syndicate-empowers-individuals-to-master-power-money-and-influence-in-the-money-mastery-course/',
+  },
+  {
+    src: '/assets/press-gq.png',
+    alt: 'GQ logo',
+    href: 'https://gq.co.za/wealth/2025-02-10-how-the-syndicate-can-disrupt-the-traditional-model-of-influence-and-education-in-the-digital-age/',
+  },
+]
+
+const CYBER_BORDER_STYLES = [
+  'from-cyan-400 via-blue-500 to-fuchsia-500 shadow-[0_0_0_1px_rgba(34,211,238,0.9),0_0_22px_rgba(34,211,238,0.86),0_0_56px_rgba(34,211,238,0.72),0_0_108px_rgba(34,211,238,0.56),inset_0_0_20px_rgba(34,211,238,0.27)]',
+  'from-fuchsia-400 via-pink-500 to-violet-500 shadow-[0_0_0_1px_rgba(232,121,249,0.9),0_0_22px_rgba(232,121,249,0.86),0_0_56px_rgba(232,121,249,0.72),0_0_108px_rgba(232,121,249,0.56),inset_0_0_20px_rgba(232,121,249,0.27)]',
+  'from-emerald-400 via-cyan-400 to-blue-500 shadow-[0_0_0_1px_rgba(16,185,129,0.9),0_0_22px_rgba(16,185,129,0.86),0_0_56px_rgba(16,185,129,0.72),0_0_108px_rgba(16,185,129,0.56),inset_0_0_20px_rgba(16,185,129,0.27)]',
+  'from-amber-300 via-orange-400 to-rose-500 shadow-[0_0_0_1px_rgba(251,191,36,0.9),0_0_22px_rgba(251,191,36,0.86),0_0_56px_rgba(251,191,36,0.72),0_0_108px_rgba(251,191,36,0.56),inset_0_0_20px_rgba(251,191,36,0.27)]',
+  'from-violet-400 via-indigo-500 to-cyan-400 shadow-[0_0_0_1px_rgba(129,140,248,0.9),0_0_22px_rgba(129,140,248,0.86),0_0_56px_rgba(129,140,248,0.72),0_0_108px_rgba(129,140,248,0.56),inset_0_0_20px_rgba(129,140,248,0.27)]',
+  'from-lime-300 via-emerald-400 to-cyan-400 shadow-[0_0_0_1px_rgba(132,204,22,0.9),0_0_22px_rgba(132,204,22,0.86),0_0_56px_rgba(132,204,22,0.72),0_0_108px_rgba(132,204,22,0.56),inset_0_0_20px_rgba(132,204,22,0.27)]',
+]
+
 const CYBER_PANEL_GLOW = [
-  'border-cyan-300/95 shadow-[0_0_0_1px_rgba(56,236,255,1),0_0_26px_rgba(56,236,255,0.72),0_0_72px_rgba(56,236,255,0.44),0_0_140px_rgba(56,236,255,0.24),inset_0_0_18px_rgba(56,236,255,0.14)]',
-  'border-violet-300/95 shadow-[0_0_0_1px_rgba(193,120,255,1),0_0_26px_rgba(193,120,255,0.72),0_0_72px_rgba(193,120,255,0.44),0_0_140px_rgba(193,120,255,0.24),inset_0_0_18px_rgba(193,120,255,0.14)]',
-  'border-rose-400/95 shadow-[0_0_0_1px_rgba(251,113,133,1),0_0_26px_rgba(251,113,133,0.72),0_0_72px_rgba(251,113,133,0.44),0_0_140px_rgba(251,113,133,0.24),inset_0_0_18px_rgba(251,113,133,0.14)]',
-  'border-cyan-300/95 shadow-[0_0_0_1px_rgba(56,236,255,1),0_0_26px_rgba(56,236,255,0.72),0_0_72px_rgba(56,236,255,0.44),0_0_140px_rgba(56,236,255,0.24),inset_0_0_18px_rgba(56,236,255,0.14)]',
-  'border-fuchsia-300/95 shadow-[0_0_0_1px_rgba(244,114,182,1),0_0_26px_rgba(244,114,182,0.72),0_0_72px_rgba(244,114,182,0.44),0_0_140px_rgba(244,114,182,0.24),inset_0_0_18px_rgba(244,114,182,0.14)]',
-  'border-teal-300/95 shadow-[0_0_0_1px_rgba(94,234,212,1),0_0_26px_rgba(94,234,212,0.72),0_0_72px_rgba(94,234,212,0.44),0_0_140px_rgba(94,234,212,0.24),inset_0_0_18px_rgba(94,234,212,0.14)]',
+  'border-cyan-300/95 shadow-[0_0_0_1px_rgba(56,236,255,0.9),0_0_22px_rgba(56,236,255,0.86),0_0_56px_rgba(56,236,255,0.72),0_0_108px_rgba(56,236,255,0.56),inset_0_0_20px_rgba(56,236,255,0.27)]',
+  'border-violet-300/95 shadow-[0_0_0_1px_rgba(193,120,255,0.9),0_0_22px_rgba(193,120,255,0.86),0_0_56px_rgba(193,120,255,0.72),0_0_108px_rgba(193,120,255,0.56),inset_0_0_20px_rgba(193,120,255,0.27)]',
+  'border-rose-400/95 shadow-[0_0_0_1px_rgba(251,113,133,0.9),0_0_22px_rgba(251,113,133,0.86),0_0_56px_rgba(251,113,133,0.72),0_0_108px_rgba(251,113,133,0.56),inset_0_0_20px_rgba(251,113,133,0.27)]',
+  'border-cyan-300/95 shadow-[0_0_0_1px_rgba(56,236,255,0.9),0_0_22px_rgba(56,236,255,0.86),0_0_56px_rgba(56,236,255,0.72),0_0_108px_rgba(56,236,255,0.56),inset_0_0_20px_rgba(56,236,255,0.27)]',
+  'border-fuchsia-300/95 shadow-[0_0_0_1px_rgba(244,114,182,0.9),0_0_22px_rgba(244,114,182,0.86),0_0_56px_rgba(244,114,182,0.72),0_0_108px_rgba(244,114,182,0.56),inset_0_0_20px_rgba(244,114,182,0.27)]',
+  'border-teal-300/95 shadow-[0_0_0_1px_rgba(94,234,212,0.9),0_0_22px_rgba(94,234,212,0.86),0_0_56px_rgba(94,234,212,0.72),0_0_108px_rgba(94,234,212,0.56),inset_0_0_20px_rgba(94,234,212,0.27)]',
 ]
 
 export default function WhatYouGetPage() {
+  const loginHref = syndicateOtpLoginHref()
+
   return (
     <div className="relative min-h-screen w-full overflow-x-hidden bg-black">
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
@@ -60,7 +85,10 @@ export default function WhatYouGetPage() {
         </div>
         <div className="relative z-10 mx-auto grid h-full w-full max-w-[min(2200px,100vw)] items-center gap-8 max-lg:content-start lg:grid-cols-[1.2fr_0.8fr]">
           <div className="pl-[clamp(0rem,2.8vw,3.4rem)] text-left max-lg:pt-6">
-            <h1 className="mt-4 text-4xl font-bold leading-[1.04] text-amber-200 drop-shadow-[0_0_24px_rgba(251,191,36,0.42)] sm:text-5xl md:text-6xl lg:text-[7.6rem]">
+            <h1
+              className="mt-4 text-4xl font-bold leading-[1.04] text-[#f0d060] sm:text-5xl md:text-6xl lg:text-[7.6rem]"
+              style={{ textShadow: '0 0 10px rgba(240,208,96,0.6), 0 0 24px rgba(212,175,55,0.45), 0 0 42px rgba(156,124,28,0.3)' }}
+            >
               <span className="block">Access To A</span>
               <span className="block">Powerful Network</span>
               <span className="block">And Alliance.</span>
@@ -71,8 +99,7 @@ export default function WhatYouGetPage() {
               <span className="block">growth frameworks designed for real-world outcomes.</span>
             </p>
           </div>
-          <div className="relative mx-auto mt-10 grid h-[40svh] min-h-[230px] w-full max-w-[290px] translate-y-0 place-items-center sm:mt-12 sm:h-[50svh] sm:min-h-[320px] sm:max-w-[370px] lg:mt-0 lg:h-[66vh] lg:min-h-[460px] lg:max-w-[500px] lg:translate-y-[13%]">
-            <div className="absolute left-1/2 top-1/2 h-[94%] w-[78%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(251,191,36,0.34)_0%,rgba(251,191,36,0.1)_42%,rgba(0,0,0,0)_74%)] blur-[14px]" />
+          <div className="relative mx-auto mt-10 grid h-[40svh] min-h-[230px] w-full max-w-[290px] translate-y-0 place-items-center sm:mt-12 sm:h-[50svh] sm:min-h-[320px] sm:max-w-[370px] lg:mt-0 lg:h-[66vh] lg:min-h-[460px] lg:max-w-[500px] lg:translate-y-[40%]">
             <div
               className="relative grid h-full w-full place-items-center"
               style={{ animation: 'whatYouGetKeyFloat 4.6s ease-in-out infinite' }}
@@ -81,102 +108,20 @@ export default function WhatYouGetPage() {
                 src="/assets/Gold-Key.png"
                 alt="Gold key access marker"
                 fill={false}
-                width={440}
-                height={760}
-                sizes="(max-width: 1024px) 320px, 440px"
-                className="mt-8 h-[86%] w-auto object-contain object-center drop-shadow-[0_0_62px_rgba(251,191,36,0.78)] sm:mt-12 lg:mt-16"
+                width={360}
+                height={620}
+                sizes="(max-width: 1024px) 280px, 360px"
+                className="mt-0 h-[74%] w-auto object-contain object-center drop-shadow-[0_0_62px_rgba(251,191,36,0.78)]"
               />
             </div>
           </div>
         </div>
       </section>
 
-      <section className="relative z-10 overflow-hidden px-4 py-14 sm:px-6 sm:py-16">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 bg-black/56" />
-        </div>
-        <div className="relative z-10 mx-auto w-full max-w-[min(1860px,99vw)]">
-          <div className="grid gap-6 lg:grid-cols-2">
-            <article className="cyber-chip-animate group relative border border-amber-300/95 bg-transparent p-[1px] shadow-[0_0_0_1px_rgba(255,198,64,0.92),0_0_48px_rgba(255,198,64,0.62),0_0_118px_rgba(255,198,64,0.32)] animate-[cyberChipGlow_2.2s_ease-in-out_infinite] [clip-path:polygon(14px_0,calc(100%-14px)_0,100%_14px,100%_calc(100%-14px),calc(100%-14px)_100%,14px_100%,0_calc(100%-14px),0_14px)]">
-              <span className="pointer-events-none absolute inset-[-1px] bg-transparent opacity-0 blur-[12px]" />
-              <div className="relative h-full bg-transparent p-7 [clip-path:polygon(14px_0,calc(100%-14px)_0,100%_14px,100%_calc(100%-14px),calc(100%-14px)_100%,14px_100%,0_calc(100%-14px),0_14px)] sm:p-9">
-                <p className="text-xs uppercase tracking-[0.3em] text-amber-300/85">Money and Power Mastery</p>
-                <h2 className="mt-3 text-3xl font-black text-amber-100 sm:text-4xl">Master tools, not illusions.</h2>
-                <p className="mt-4 text-base leading-relaxed text-zinc-200/88 sm:text-lg">
-                  The philosophy trains you to operate inside real money and power systems with control, discipline, and purpose - not chaos.
-                </p>
-                <div className="mt-6 space-y-3">
-                  {MASTERY_POINTS.map((point, index) => (
-                    <div
-                      key={point}
-                      className="relative border border-cyan-300/85 bg-transparent p-[1px] [clip-path:polygon(10px_0,calc(100%-10px)_0,100%_10px,100%_calc(100%-10px),calc(100%-10px)_100%,10px_100%,0_calc(100%-10px),0_10px)] shadow-[0_0_0_1px_rgba(56,236,255,0.92),0_0_24px_rgba(56,236,255,0.52),0_0_64px_rgba(56,236,255,0.28)] animate-[cyberChipGlow_2.6s_ease-in-out_infinite]"
-                    >
-                      <p className="bg-transparent px-4 py-3 text-sm leading-relaxed text-zinc-100 [clip-path:polygon(10px_0,calc(100%-10px)_0,100%_10px,100%_calc(100%-10px),calc(100%-10px)_100%,10px_100%,0_calc(100%-10px),0_10px)] sm:text-base">
-                        {point}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </article>
-            <article className="cyber-chip-animate group relative border border-cyan-300/95 bg-transparent p-[1px] shadow-[0_0_0_1px_rgba(56,236,255,0.92),0_0_48px_rgba(56,236,255,0.62),0_0_118px_rgba(56,236,255,0.3)] animate-[cyberChipGlow_2.2s_ease-in-out_infinite] [clip-path:polygon(14px_0,calc(100%-14px)_0,100%_14px,100%_calc(100%-14px),calc(100%-14px)_100%,14px_100%,0_calc(100%-14px),0_14px)]">
-              <span className="pointer-events-none absolute inset-[-1px] bg-transparent opacity-0 blur-[12px]" />
-              <div className="relative h-full bg-transparent p-7 [clip-path:polygon(14px_0,calc(100%-14px)_0,100%_14px,100%_calc(100%-14px),calc(100%-14px)_100%,14px_100%,0_calc(100%-14px),0_14px)] sm:p-9">
-                <p className="text-xs uppercase tracking-[0.3em] text-cyan-200/85">Path of Kings and Emperors</p>
-                <h2 className="mt-3 text-3xl font-black text-amber-100 sm:text-4xl">Ancient strategy, modern execution.</h2>
-                <p className="mt-4 text-base leading-relaxed text-zinc-200/88 sm:text-lg">
-                  Follow principles of historical leadership and apply them to business, influence, and high-stakes decision making in today&apos;s world.
-                </p>
-                <div className="mt-6 space-y-3">
-                  {KINGS_PATH_POINTS.map((point, index) => (
-                    <div
-                      key={point}
-                      className="relative border border-violet-300/85 bg-transparent p-[1px] [clip-path:polygon(10px_0,calc(100%-10px)_0,100%_10px,100%_calc(100%-10px),calc(100%-10px)_100%,10px_100%,0_calc(100%-10px),0_10px)] shadow-[0_0_0_1px_rgba(193,120,255,0.92),0_0_24px_rgba(193,120,255,0.52),0_0_64px_rgba(193,120,255,0.28)] animate-[cyberChipGlow_2.6s_ease-in-out_infinite]"
-                    >
-                      <p className="bg-transparent px-4 py-3 text-sm leading-relaxed text-zinc-100 [clip-path:polygon(10px_0,calc(100%-10px)_0,100%_10px,100%_calc(100%-10px),calc(100%-10px)_100%,10px_100%,0_calc(100%-10px),0_10px)] sm:text-base">
-                        {point}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section className="relative z-10 overflow-hidden px-4 pb-10 pt-12 sm:px-6 sm:pb-12 sm:pt-14">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 bg-black/58" />
-        </div>
-        <div className="relative z-10 mx-auto w-full max-w-[min(1860px,99vw)]">
-          <p className="text-center text-xs uppercase tracking-[0.34em] text-amber-300/82">Membership Trajectory</p>
-          <h2 className="mt-3 text-center text-3xl font-black text-amber-100 sm:text-4xl md:text-5xl">Choose your operating tier</h2>
-          <div className="mx-auto mt-8 grid max-w-6xl gap-4 md:grid-cols-2">
-            {MEMBERSHIP_PREVIEW.map((tier, index) => (
-              <article
-                key={tier.name}
-                className={`cyber-chip-animate group relative border bg-transparent p-[1px] [clip-path:polygon(12px_0,calc(100%-12px)_0,100%_12px,100%_calc(100%-12px),calc(100%-12px)_100%,12px_100%,0_calc(100%-12px),0_12px)] animate-[cyberChipGlow_2.2s_ease-in-out_infinite] ${CYBER_PANEL_GLOW[(index + 1) % CYBER_PANEL_GLOW.length]}`}
-              >
-                <span className="pointer-events-none absolute inset-[-1px] bg-transparent opacity-0 blur-[10px]" />
-                <div className="relative h-full bg-transparent p-6 [clip-path:polygon(12px_0,calc(100%-12px)_0,100%_12px,100%_calc(100%-12px),calc(100%-12px)_100%,12px_100%,0_calc(100%-12px),0_12px)]">
-                  <p className="text-sm uppercase tracking-[0.22em] text-amber-200/85">Tier</p>
-                  <h3 className="mt-2 text-2xl font-bold text-zinc-100 sm:text-3xl">{tier.name}</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-zinc-200/88 sm:text-base">{tier.note}</p>
-                  <Link
-                    href="/#pricing"
-                    className="mt-5 inline-flex items-center justify-center border border-amber-300/85 bg-transparent px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-amber-100 shadow-[0_0_0_1px_rgba(251,191,36,0.72),0_0_26px_rgba(251,191,36,0.46)] animate-[cyberChipGlow_2s_ease-in-out_infinite] transition duration-300 hover:border-amber-200 hover:shadow-[0_0_0_1px_rgba(252,211,77,0.9),0_0_38px_rgba(252,211,77,0.62)]"
-                  >
-                    View Syndicate Offers
-                  </Link>
-                </div>
-              </article>
-            ))}
-          </div>
-          <p className="mt-10 text-center text-xs uppercase tracking-[0.34em] text-amber-300/82">Pawn Trajectory</p>
-          <h3 className="mt-3 text-center text-3xl font-black text-amber-100 sm:text-4xl md:text-5xl">Rise through the pawn path</h3>
-          <div className="relative mx-auto mt-8 h-[60vh] min-h-[420px] w-full max-w-6xl">
-            <div className="relative mx-auto h-full w-full max-w-[720px]">
+      <section className="relative z-10 flex min-h-[90vh] items-center overflow-hidden px-4 pb-10 pt-12 sm:px-6 sm:pb-12 sm:pt-14">
+        <div className="relative z-10 mx-auto w-full max-w-[min(1860px,90vw)]">
+          <div className="mt-10 grid items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="relative mx-auto h-[72vh] min-h-[560px] w-full max-w-[880px]">
               <div className="pointer-events-none absolute left-1/2 top-1/2 h-[72%] w-[72%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(251,191,36,0.36)_0%,rgba(251,191,36,0.12)_42%,rgba(0,0,0,0)_74%)] blur-[12px]" />
               <div className="cyber-chip-animate absolute left-[16%] top-[26%] h-[35%] w-[28%] min-h-[150px] min-w-[130px]">
                 <Image
@@ -206,20 +151,68 @@ export default function WhatYouGetPage() {
                 />
               </div>
             </div>
+            <article className="relative overflow-hidden bg-transparent p-6 sm:p-10">
+              <h3 className="text-5xl font-black uppercase leading-[1.06] tracking-[0.04em] text-[#d4af37] drop-shadow-[0_0_8px_rgba(212,175,55,0.9)] sm:text-7xl">
+                Money and Power Mastery
+              </h3>
+              <div className="mt-5 space-y-4 text-lg leading-relaxed text-zinc-100/90 sm:text-2xl">
+                <p className="text-justify">
+                  The Syndicate philosophy teaches that money and power go hand in hand. They are like two sides of the same coin. Money and power, if not correctly wielded, has the potential to completely corrupt you, leading you down a dark path of corrupt, degenerate and hedonistic behaviour.
+                </p>
+                <p className="text-justify">
+                  The Syndicate&apos;s mission goes beyond attaining money, power and influence. Its elite training programmes aim to redefine how individuals perceive power and influence, emphasising the importance of moral strength and societal impact. Members are taught to master money and power systems without succumbing to their enslavement or morally corrupting properties.
+                </p>
+                <p className="text-justify">
+                  This is the definition of true success and greatness. This is the true meaning of money, power and life mastery.
+                </p>
+              </div>
+            </article>
           </div>
         </div>
       </section>
 
-      <section className="relative z-10 flex min-h-[100svh] w-full items-center overflow-hidden px-4 py-12 sm:px-6 sm:py-14">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 bg-black/58" />
+      <section className="relative z-10 flex min-h-[90vh] items-center overflow-hidden px-4 py-12 sm:px-6 sm:py-14">
+        <div className="relative z-10 mx-auto w-full max-w-[min(1860px,90vw)]">
+          <div className="grid items-center gap-10 lg:grid-cols-[1.15fr_0.85fr]">
+            <article className="relative overflow-hidden bg-transparent p-6 sm:p-10">
+              <h2 className="text-5xl font-black uppercase leading-[1.06] tracking-[0.04em] text-[#d4af37] drop-shadow-[0_0_8px_rgba(212,175,55,0.9)] sm:text-7xl">
+                Follow The Path of Kings and Emperors
+              </h2>
+              <div className="mt-5 space-y-4 text-lg leading-relaxed text-zinc-100/90 sm:text-2xl">
+                {KINGS_EMPERORS_PARAGRAPHS.map((paragraph) => (
+                  <p key={paragraph} className="text-justify">
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
+            </article>
+            <div className="relative mx-auto mt-16 h-[320px] w-[320px] sm:mt-20 sm:h-[440px] sm:w-[440px] lg:mt-86 lg:h-[560px] lg:w-[560px]">
+              <div className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(251,191,36,0.28)_0%,rgba(251,191,36,0.1)_45%,rgba(0,0,0,0)_74%)] blur-[16px]" />
+              <div className="relative h-full w-full" style={{ animation: 'whatYouGetCoinSpin 15s linear infinite' }}>
+                <Image
+                  src="/assets/coin-gold.png"
+                  alt="Path of kings coin"
+                  fill
+                  sizes="(max-width: 1024px) 440px, 560px"
+                  className="object-contain drop-shadow-[0_0_56px_rgba(251,191,36,0.72)]"
+                />
+              </div>
+            </div>
+          </div>
         </div>
+      </section>
+
+      <section className="relative z-10 overflow-hidden px-4 py-12 sm:px-6 sm:py-14">
         <div className="relative z-10 mx-auto w-full max-w-[min(1860px,99vw)]">
-          <div className="relative bg-transparent">
-            <article className="relative min-h-[clamp(500px,68vh,780px)] overflow-hidden bg-transparent p-8 sm:p-12">
-            <p className="text-base uppercase tracking-[0.24em] text-amber-200/85">Access to a Powerful Network and Alliance</p>
-            <h2 className="mt-3 text-4xl font-bold text-amber-100 sm:text-5xl lg:text-6xl">The path to success is not meant to be walked alone</h2>
-            <div className="mt-6 space-y-5 text-lg leading-relaxed text-zinc-200/90 sm:text-xl">
+          <div className="relative bg-transparent p-4 sm:p-8">
+            <article className="relative overflow-hidden bg-transparent p-4 sm:p-6">
+            <h2
+              className="mt-3 text-6xl font-bold text-[#f0d060] sm:text-7xl lg:text-8xl"
+              style={{ textShadow: '0 0 12px rgba(240, 208, 96, 0.45), 0 0 24px rgba(156, 124, 28, 0.35)' }}
+            >
+              The path to success is not meant to be walked alone
+            </h2>
+            <div className="mt-6 space-y-5 text-2xl leading-relaxed text-zinc-200/90 sm:text-3xl">
               <p>
                 Joining a powerful alliance of disciplined operators is not optional for those who want sustained power and meaningful growth.
               </p>
@@ -227,7 +220,7 @@ export default function WhatYouGetPage() {
                 The Syndicate culture is built on integrity, standards, and strategic accountability so strengths are sharpened and weaknesses are transformed.
               </p>
             </div>
-            <div className="mt-8 grid gap-3 sm:grid-cols-2">
+            <div className="mx-auto mt-8 grid max-w-[1280px] gap-3 sm:grid-cols-2">
               {[
                 'Aligned network of ambitious operators with shared standards.',
                 'Strategic accountability that keeps your execution consistent.',
@@ -236,29 +229,70 @@ export default function WhatYouGetPage() {
               ].map((item) => (
                 <div
                   key={item}
-                  className="rounded-lg border border-amber-300/85 bg-transparent px-4 py-3 text-sm leading-relaxed text-zinc-200/88 shadow-[0_0_0_1px_rgba(251,191,36,0.82),0_0_22px_rgba(251,191,36,0.44),0_0_56px_rgba(251,191,36,0.24)] animate-[cyberChipGlow_2.5s_ease-in-out_infinite] sm:text-base"
+                  className="rounded-lg border border-amber-300/85 bg-transparent px-4 py-3 text-xl leading-relaxed text-zinc-200/90 shadow-[0_0_0_1px_rgba(251,191,36,0.72),0_0_14px_rgba(251,191,36,0.42),0_0_28px_rgba(251,191,36,0.24),inset_0_0_10px_rgba(251,191,36,0.16)] animate-[cyberChipGlow_2.5s_ease-in-out_infinite] sm:text-2xl"
                 >
                   {item}
                 </div>
               ))}
             </div>
-            </article>
-            <div className="cyber-chip-animate mx-auto mb-4 mt-16 h-[220px] w-[220px] sm:mb-6 sm:mt-20 sm:h-[300px] sm:w-[300px]">
-              <div className="relative h-full w-full" style={{ animation: 'whatYouGetCoinSpin 14s linear infinite' }}>
-                <Image
-                  src="/assets/coin-gold.png"
-                  alt="Syndicate coin symbol"
-                  fill
-                  sizes="(max-width: 768px) 220px, 300px"
-                  className="object-contain drop-shadow-[0_0_54px_rgba(251,191,36,0.72)]"
-                />
+
+            <div className="relative mx-auto mt-12 w-full max-w-[min(1600px,96vw)] overflow-hidden rounded-3xl bg-transparent p-5 sm:p-8">
+              <h2 className="bg-gradient-to-r from-amber-100 via-amber-200 to-amber-400 bg-clip-text text-center text-3xl font-black tracking-[0.02em] text-transparent drop-shadow-[0_0_16px_rgba(251,191,36,0.34)] sm:text-5xl">
+                You Leave With Clarity, Discipline, and Executable Systems
+              </h2>
+              <div className="relative mx-auto mt-8 grid w-full max-w-[1300px] grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3">
+                {['Clarity', 'Discipline', 'Execution', 'Leverage', 'Strategy', 'Scale'].map((keyword, index) => (
+                  <div
+                    key={keyword}
+                    className={`cyber-chip-animate group relative bg-gradient-to-r p-[1px] [clip-path:polygon(10px_0,calc(100%-10px)_0,100%_10px,100%_calc(100%-10px),calc(100%-10px)_100%,10px_100%,0_calc(100%-10px),0_10px)] transition duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:brightness-110 ${CYBER_BORDER_STYLES[index % CYBER_BORDER_STYLES.length]}`}
+                    style={{ animationDelay: `${index * 0.18}s` }}
+                  >
+                    <span className="pointer-events-none absolute inset-[-1px] rounded-[10px] bg-inherit opacity-75 blur-[10px] transition duration-300 group-hover:opacity-100" />
+                    <span className="relative inline-flex min-h-[58px] w-full items-center justify-center bg-[#05070c]/92 px-4 py-3 text-sm font-semibold uppercase tracking-[0.15em] text-zinc-100 drop-shadow-[0_0_10px_rgba(255,255,255,0.28)] [clip-path:polygon(10px_0,calc(100%-10px)_0,100%_10px,100%_calc(100%-10px),calc(100%-10px)_100%,10px_100%,0_calc(100%-10px),0_10px)] transition duration-300 group-hover:bg-[#070b14]/96 sm:min-h-[66px] sm:text-base">
+                      {keyword}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
+
+            <h2 className="mx-auto mt-20 max-w-[26ch] text-center text-4xl font-black uppercase leading-[1.08] tracking-[0.05em] text-amber-100 sm:mt-24 sm:text-6xl md:text-7xl">
+              <span className="block">IF YOU WANT TO</span>
+              <span className="mt-1.5 block">
+                <span className="hamburger-attract mx-2 inline-block text-amber-200 drop-shadow-[0_0_30px_rgba(251,191,36,0.9)]">BE POWERFUL</span>
+                <span className="mx-2 inline-block">JOIN</span>
+                <span className="hamburger-attract mx-2 inline-block text-amber-100 drop-shadow-[0_0_32px_rgba(251,191,36,0.92)]">THE SYNDICATE</span>
+              </span>
+            </h2>
+            <div className="mt-12 flex flex-wrap justify-center gap-x-7 gap-y-4 sm:mt-14">
+              <div className="cyber-chip-animate group relative bg-gradient-to-r from-cyan-400 via-blue-500 to-fuchsia-500 p-[1px] [clip-path:polygon(10px_0,calc(100%-10px)_0,100%_10px,100%_calc(100%-10px),calc(100%-10px)_100%,10px_100%,0_calc(100%-10px),0_10px)]">
+                <span className="pointer-events-none absolute inset-[-1px] bg-inherit opacity-70 blur-[10px]" />
+                <Link
+                  href={loginHref}
+                  prefetch
+                  className="hamburger-attract relative inline-flex min-h-[58px] min-w-[240px] items-center justify-center bg-[#05070c]/92 px-10 py-4 text-lg font-bold tracking-[0.08em] text-zinc-100 [clip-path:polygon(10px_0,calc(100%-10px)_0,100%_10px,100%_calc(100%-10px),calc(100%-10px)_100%,10px_100%,0_calc(100%-10px),0_10px)] transition duration-300 hover:scale-[1.04] hover:bg-[#070b14]/95"
+                >
+                  JOIN NOW
+                </Link>
+              </div>
+              <div className="cyber-chip-animate group relative bg-gradient-to-r from-amber-300 via-orange-400 to-rose-500 p-[1px] [clip-path:polygon(10px_0,calc(100%-10px)_0,100%_10px,100%_calc(100%-10px),calc(100%-10px)_100%,10px_100%,0_calc(100%-10px),0_10px)]">
+                <span className="pointer-events-none absolute inset-[-1px] bg-inherit opacity-70 blur-[10px]" />
+                <Link
+                  href="/programs"
+                  prefetch
+                  className="hamburger-attract relative inline-flex min-h-[58px] min-w-[240px] items-center justify-center bg-[#05070c]/92 px-10 py-4 text-lg font-bold tracking-[0.08em] text-zinc-100 [clip-path:polygon(10px_0,calc(100%-10px)_0,100%_10px,100%_calc(100%-10px),calc(100%-10px)_100%,10px_100%,0_calc(100%-10px),0_10px)] transition duration-300 hover:scale-[1.04] hover:bg-[#070b14]/95"
+                >
+                  EXPLORE PROGRAMS
+                </Link>
+              </div>
+            </div>
+            </article>
           </div>
         </div>
       </section>
 
-      <GlobalBottomSections />
+      <FeaturedLogosStrip logos={FEATURED_LOGOS} speedSeconds={40} />
+      <SiteFooter />
 
     </div>
   )

@@ -7,6 +7,8 @@ import { persistSimpleAuthSession } from "@/lib/portal-api";
 import { resolveClientApiUrl } from "@/lib/portal-api";
 import { resolvePostOtpAppRedirect } from "@/lib/syndicate-otp-paths";
 import { syndicateOtpSignupHref } from "@/lib/syndicate-otp-paths";
+import { clearAffiliateAttribution, getAffiliateAttribution } from "@/lib/affiliateAttribution";
+import { trackSale } from "@/lib/affiliateApi";
 
 const SYNDICATE_URL =
   process.env.NEXT_PUBLIC_POST_LOGIN_REDIRECT_URL ?? "https://the-syndicate.com/";
@@ -33,7 +35,22 @@ type SuccessPayload = {
     username: string;
     email: string;
   };
+  amount?: string | number;
+  amount_paid?: string | number;
+  total_amount?: string | number;
+  price_paid?: string | number;
 };
+
+function toNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const clean = value.replace(/[^0-9.]/g, "");
+    if (!clean) return null;
+    const num = Number(clean);
+    return Number.isFinite(num) ? num : null;
+  }
+  return null;
+}
 
 function looksLikeHtml(text: string): boolean {
   const t = text.trim().toLowerCase();
@@ -212,6 +229,42 @@ export default function CheckoutSuccessScreen({
           typeof window !== "undefined"
             ? resolvePostOtpAppRedirect(data.redirect_url)
             : SYNDICATE_URL;
+
+        const attribution = getAffiliateAttribution();
+        const checkoutAmount =
+          toNumber(data.amount_paid) ??
+          toNumber(data.total_amount) ??
+          toNumber(data.price_paid) ??
+          toNumber(data.amount);
+        const buyerEmail = (data.user?.email || data.email || "").trim();
+        if (attribution && buyerEmail) {
+          const purchaseAmountValue = checkoutAmount && checkoutAmount > 0 ? checkoutAmount : 0;
+          const commissionAmount = (purchaseAmountValue * 0.2).toFixed(2);
+          try {
+            await trackLead(
+              attribution.affiliateId,
+              attribution.visitorId,
+              buyerEmail
+            );
+            await trackSale(
+              attribution.affiliateId,
+              attribution.visitorId,
+              buyerEmail,
+              commissionAmount,
+              {
+                purchase_amount: purchaseAmountValue.toFixed(2),
+                commission_rate: 0.2,
+                offer: attribution.offer,
+                tier: attribution.tier,
+                program: attribution.program,
+              }
+            );
+            clearAffiliateAttribution();
+          } catch {
+            // Payment is already successful; keep UX flow even if affiliate sync fails.
+          }
+        }
+
         setLuxuryHref(nextUrl);
         window.history.replaceState({}, "", "/");
         window.setTimeout(() => setLuxuryOpen(true), 80);

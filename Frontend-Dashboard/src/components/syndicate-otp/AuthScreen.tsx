@@ -215,7 +215,7 @@ export default function AuthScreen({
   }, []);
 
   useEffect(() => {
-    const tl = gsap.timeline({ delay: 0.2, defaults: { ease: "power3.out" } });
+    const tl = gsap.timeline({ delay: 0.08, defaults: { ease: "power3.out" } });
 
     tl.from(".hud-corner", {
       scale: 0,
@@ -522,7 +522,7 @@ export default function AuthScreen({
 
   return (
     <>
-      <LuxuryRedirectOverlay active={luxuryOpen} href={luxuryHref} delayMs={650} />
+      <LuxuryRedirectOverlay active={luxuryOpen} href={luxuryHref} delayMs={420} />
 
       <div className="scanline" />
       <div className="noise" />
@@ -659,7 +659,7 @@ export default function AuthScreen({
               </p>
             ) : null}
 
-            <button className="cyber-btn" type="submit" disabled={loading || luxuryOpen}>
+            <button className="cyber-btn hamburger-attract" type="submit" disabled={loading || luxuryOpen}>
               <span className="cyber-btn__text">
                 {loading ? "PLEASE WAIT" : submitLabel.toUpperCase()}
               </span>

@@ -85,6 +85,7 @@ export async function getRecentReferrals(affiliateId: string, limit = 10): Promi
 export async function trackClick(affiliateId: string, visitorId: string) {
   const res = await fetch(`${root()}/track/click`, {
     method: "POST",
+    keepalive: true,
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify({ affiliate_id: affiliateId, visitor_id: visitorId })
   });
@@ -94,17 +95,31 @@ export async function trackClick(affiliateId: string, visitorId: string) {
 export async function trackLead(affiliateId: string, visitorId: string, email: string) {
   const res = await fetch(`${root()}/track/lead`, {
     method: "POST",
+    keepalive: true,
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify({ affiliate_id: affiliateId, visitor_id: visitorId, email })
   });
   return parseJson<{ success: boolean }>(res);
 }
 
-export async function trackSale(affiliateId: string, visitorId: string, email: string, amount: string) {
+export async function trackSale(
+  affiliateId: string,
+  visitorId: string,
+  email: string,
+  amount: string,
+  extras?: { purchase_amount?: string; commission_rate?: number; offer?: string; tier?: string; program?: string }
+) {
   const res = await fetch(`${root()}/track/sale`, {
     method: "POST",
+    keepalive: true,
     headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({ affiliate_id: affiliateId, visitor_id: visitorId, email, amount })
+    body: JSON.stringify({
+      affiliate_id: affiliateId,
+      visitor_id: visitorId,
+      email,
+      amount,
+      ...extras,
+    })
   });
   return parseJson<{ success: boolean }>(res);
 }

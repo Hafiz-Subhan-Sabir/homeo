@@ -78,17 +78,23 @@ export default function PaywallSnapshotsSection() {
               key={snapshot.title}
               className={`group relative overflow-hidden bg-transparent p-[1px] transition duration-300 ${snapshot.frame}`}
             >
-              <article className="relative flex h-full min-h-[clamp(360px,44vh,420px)] flex-col border border-zinc-100/30 bg-[#05070d]/85 p-5 [clip-path:polygon(14px_0,calc(100%-14px)_0,100%_14px,100%_calc(100%-18px),calc(100%-18px)_100%,18px_100%,0_calc(100%-14px),0_14px)]">
+              <article className="relative flex h-full min-h-[clamp(360px,44vh,420px)] flex-col border border-zinc-100/30 bg-[#05070d]/85 p-5 [clip-path:polygon(20px_0,calc(100%-20px)_0,100%_20px,100%_calc(100%-24px),calc(100%-24px)_100%,24px_100%,0_calc(100%-20px),0_20px)]">
                 <span className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${snapshot.tone}`} />
                 <span className="pointer-events-none absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.18)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.14)_1px,transparent_1px)] [background-size:34px_34px]" />
                 <span className="pointer-events-none absolute inset-0 opacity-[0.09] [background-image:repeating-linear-gradient(0deg,transparent_0px,transparent_2px,rgba(255,255,255,0.15)_2px,rgba(255,255,255,0.15)_3px)]" />
+                <span className="pointer-events-none absolute left-0 top-[22%] h-12 w-[2px] bg-zinc-100/65" />
+                <span className="pointer-events-none absolute right-0 top-[22%] h-12 w-[2px] bg-zinc-100/65" />
+                <span className="pointer-events-none absolute bottom-[22%] left-0 h-12 w-[2px] bg-zinc-100/65" />
+                <span className="pointer-events-none absolute bottom-[22%] right-0 h-12 w-[2px] bg-zinc-100/65" />
                 <span className="pointer-events-none absolute left-3 top-3 h-6 w-6 border-l-2 border-t-2 border-zinc-100/90 [clip-path:polygon(0_0,100%_0,100%_34%,34%_34%,34%_100%,0_100%)]" />
                 <span className="pointer-events-none absolute right-3 top-3 h-6 w-6 border-r-2 border-t-2 border-zinc-100/90 [clip-path:polygon(0_0,100%_0,100%_100%,66%_100%,66%_34%,0_34%)]" />
                 <span className="pointer-events-none absolute bottom-3 left-3 h-6 w-6 border-b-2 border-l-2 border-zinc-100/90 [clip-path:polygon(0_0,34%_0,34%_66%,100%_66%,100%_100%,0_100%)]" />
                 <span className="pointer-events-none absolute bottom-3 right-3 h-6 w-6 border-b-2 border-r-2 border-zinc-100/90 [clip-path:polygon(66%_0,100%_0,100%_100%,0_100%,0_66%,66%_66%)]" />
                 <span className="pointer-events-none absolute left-1/2 top-2 h-[2px] w-16 -translate-x-1/2 bg-gradient-to-r from-transparent via-zinc-100/90 to-transparent [clip-path:polygon(8%_0,92%_0,100%_100%,0_100%)]" />
                 <span className="pointer-events-none absolute bottom-2 left-1/2 h-[2px] w-16 -translate-x-1/2 bg-gradient-to-r from-transparent via-zinc-100/90 to-transparent [clip-path:polygon(0_0,100%_0,92%_100%,8%_100%)]" />
-                <div className="relative rounded-md border border-zinc-100/25 bg-black/45 px-4 py-3 backdrop-blur-[1px]">
+                <div className="relative rounded-md border border-zinc-100/25 bg-black/45 px-4 py-3 backdrop-blur-[1px] [clip-path:polygon(12px_0,calc(100%-12px)_0,100%_12px,100%_calc(100%-12px),calc(100%-12px)_100%,12px_100%,0_calc(100%-12px),0_12px)]">
+                  <span className="pointer-events-none absolute right-3 top-2 h-[1px] w-10 bg-zinc-100/55" />
+                  <span className="pointer-events-none absolute bottom-2 left-3 h-[1px] w-10 bg-zinc-100/55" />
                   <h3 className="text-xl font-black uppercase leading-tight text-amber-300 drop-shadow-[0_0_10px_rgba(251,191,36,0.35)] sm:text-2xl">
                     {snapshot.title}
                   </h3>
@@ -96,9 +102,10 @@ export default function PaywallSnapshotsSection() {
                     {snapshot.description}
                   </p>
                 </div>
-                <div className="relative mt-4 flex-1 overflow-hidden border border-zinc-100/30 bg-transparent shadow-[0_0_12px_rgba(255,255,255,0.3)] [clip-path:polygon(12px_0,calc(100%-12px)_0,100%_12px,100%_calc(100%-16px),calc(100%-16px)_100%,16px_100%,0_calc(100%-12px),0_12px)]">
+                <div className="relative mt-4 flex-1 overflow-hidden border border-zinc-100/30 bg-transparent shadow-[0_0_12px_rgba(255,255,255,0.3)] [clip-path:polygon(16px_0,calc(100%-16px)_0,100%_16px,100%_calc(100%-20px),calc(100%-20px)_100%,20px_100%,0_calc(100%-16px),0_16px)]">
                   <span className="pointer-events-none absolute inset-0 z-[3] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(0,0,0,0.24))]" />
                   <span className="pointer-events-none absolute left-1/2 top-2 z-[3] h-[1px] w-20 -translate-x-1/2 bg-gradient-to-r from-transparent via-zinc-100/55 to-transparent" />
+                  <span className="pointer-events-none absolute bottom-2 right-3 z-[3] h-2 w-2 border-r border-b border-zinc-100/65" />
                   <Image
                     src={snapshot.src}
                     alt={snapshot.title}

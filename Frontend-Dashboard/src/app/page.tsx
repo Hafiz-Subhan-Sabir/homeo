@@ -49,7 +49,7 @@ const FEATURED_PROGRAM_IMAGES = [
 
 const SOCIAL_CARD_BORDER_THEMES = [
   {
-    frame: "border-[4px] border-red-400 hover:border-red-300",
+    frame: "border-[6px] border-red-400 hover:border-red-300",
     glow: "shadow-[0_0_0_1px_rgba(248,113,113,0.9),0_0_22px_rgba(248,113,113,0.86),0_0_56px_rgba(248,113,113,0.72),0_0_108px_rgba(248,113,113,0.56),inset_0_0_20px_rgba(248,113,113,0.27)] hover:shadow-[0_0_0_1px_rgba(252,165,165,0.95),0_0_26px_rgba(252,165,165,0.9),0_0_64px_rgba(252,165,165,0.75),0_0_116px_rgba(252,165,165,0.62),inset_0_0_22px_rgba(252,165,165,0.34)]",
     inner: "border-red-500/75",
     chip: "border-red-500 bg-red-900/75 shadow-[0_0_18px_rgba(127,29,29,0.95)]",
@@ -58,7 +58,7 @@ const SOCIAL_CARD_BORDER_THEMES = [
     lightningSoft: 'rgba(248,113,113,0.62)',
   },
   {
-    frame: "border-[4px] border-cyan-300 hover:border-cyan-200",
+    frame: "border-[6px] border-cyan-300 hover:border-cyan-200",
     glow: "shadow-[0_0_0_1px_rgba(34,211,238,0.9),0_0_22px_rgba(34,211,238,0.86),0_0_56px_rgba(34,211,238,0.72),0_0_108px_rgba(34,211,238,0.56),inset_0_0_20px_rgba(34,211,238,0.27)] hover:shadow-[0_0_0_1px_rgba(103,232,249,0.95),0_0_26px_rgba(103,232,249,0.9),0_0_64px_rgba(103,232,249,0.75),0_0_116px_rgba(103,232,249,0.62),inset_0_0_22px_rgba(103,232,249,0.34)]",
     inner: "border-cyan-500/75",
     chip: "border-cyan-500 bg-cyan-900/75 shadow-[0_0_18px_rgba(14,116,144,0.95)]",
@@ -67,7 +67,7 @@ const SOCIAL_CARD_BORDER_THEMES = [
     lightningSoft: 'rgba(56,189,248,0.62)',
   },
   {
-    frame: "border-[4px] border-fuchsia-400 hover:border-fuchsia-300",
+    frame: "border-[6px] border-fuchsia-400 hover:border-fuchsia-300",
     glow: "shadow-[0_0_0_1px_rgba(232,121,249,0.9),0_0_22px_rgba(232,121,249,0.86),0_0_56px_rgba(232,121,249,0.72),0_0_108px_rgba(232,121,249,0.56),inset_0_0_20px_rgba(232,121,249,0.27)] hover:shadow-[0_0_0_1px_rgba(244,114,182,0.95),0_0_26px_rgba(244,114,182,0.9),0_0_64px_rgba(244,114,182,0.75),0_0_116px_rgba(244,114,182,0.62),inset_0_0_22px_rgba(244,114,182,0.34)]",
     inner: "border-violet-500/75",
     chip: "border-violet-500 bg-violet-900/75 shadow-[0_0_18px_rgba(91,33,182,0.95)]",
@@ -76,7 +76,7 @@ const SOCIAL_CARD_BORDER_THEMES = [
     lightningSoft: 'rgba(192,132,252,0.62)',
   },
   {
-    frame: "border-[4px] border-amber-300 hover:border-amber-200",
+    frame: "border-[6px] border-amber-300 hover:border-amber-200",
     glow: "shadow-[0_0_0_1px_rgba(252,211,77,0.9),0_0_22px_rgba(252,211,77,0.86),0_0_56px_rgba(252,211,77,0.72),0_0_108px_rgba(252,211,77,0.56),inset_0_0_20px_rgba(252,211,77,0.27)] hover:shadow-[0_0_0_1px_rgba(253,224,71,0.95),0_0_26px_rgba(253,224,71,0.9),0_0_64px_rgba(253,224,71,0.75),0_0_116px_rgba(253,224,71,0.62),inset_0_0_22px_rgba(253,224,71,0.34)]",
     inner: "border-amber-500/75",
     chip: "border-amber-500 bg-amber-900/75 shadow-[0_0_18px_rgba(146,64,14,0.95)]",
@@ -85,7 +85,7 @@ const SOCIAL_CARD_BORDER_THEMES = [
     lightningSoft: 'rgba(251,191,36,0.62)',
   },
   {
-    frame: "border-[4px] border-lime-300 hover:border-lime-200",
+    frame: "border-[6px] border-lime-300 hover:border-lime-200",
     glow: "shadow-[0_0_0_1px_rgba(163,230,53,0.9),0_0_22px_rgba(163,230,53,0.86),0_0_56px_rgba(163,230,53,0.72),0_0_108px_rgba(163,230,53,0.56),inset_0_0_20px_rgba(163,230,53,0.27)] hover:shadow-[0_0_0_1px_rgba(190,242,100,0.95),0_0_26px_rgba(190,242,100,0.9),0_0_64px_rgba(190,242,100,0.75),0_0_116px_rgba(190,242,100,0.62),inset_0_0_22px_rgba(190,242,100,0.34)]",
     inner: "border-lime-500/75",
     chip: "border-lime-500 bg-lime-900/75 shadow-[0_0_18px_rgba(63,98,18,0.95)]",

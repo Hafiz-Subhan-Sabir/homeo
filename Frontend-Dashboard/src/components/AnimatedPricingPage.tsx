@@ -179,10 +179,10 @@ function TierCard({
   }
   const accentBorder = hudThemeByPlan[planKey].cardFrame
   const gradientShellByPlan: Record<PlanKey, string> = {
-    bundle: 'from-cyan-400/45 via-violet-500/45 to-fuchsia-500/45',
-    pawn: 'from-lime-300/45 via-emerald-400/45 to-cyan-400/45',
-    knight: 'from-cyan-400/45 via-blue-500/45 to-violet-500/45',
-    king: 'from-amber-300/45 via-orange-400/45 to-rose-500/45',
+    bundle: 'from-transparent via-transparent to-transparent',
+    pawn: 'from-transparent via-transparent to-transparent',
+    knight: 'from-transparent via-transparent to-transparent',
+    king: 'from-transparent via-transparent to-transparent',
   }
   const accentShadow = hudThemeByPlan[planKey].cardGlow
 
@@ -202,9 +202,7 @@ function TierCard({
       <div
         className={cn(
           'relative h-full overflow-hidden rounded-3xl border transition-all duration-300 will-change-transform hover:scale-[1.02] [clip-path:polygon(14px_0,calc(100%-14px)_0,100%_14px,100%_calc(100%-14px),calc(100%-14px)_100%,14px_100%,0_calc(100%-14px),0_14px)]',
-          isBundle
-            ? 'bg-[radial-gradient(circle_at_20%_14%,rgba(34,211,238,0.22),transparent_42%),radial-gradient(circle_at_82%_24%,rgba(217,70,239,0.2),transparent_44%),linear-gradient(165deg,rgba(10,20,34,0.92),rgba(20,10,30,0.9))]'
-            : 'bg-[#05060a]/92',
+          'bg-transparent',
           accentBorder,
           highlighted && 'ring-1 ring-white/10',
         )}
@@ -274,7 +272,7 @@ function TierCard({
               key={f}
               className={cn(
                 'flex items-start gap-2.5 rounded-xl border px-3.5 py-2.5',
-                isBundle ? 'border-cyan-200/25 bg-cyan-300/5' : 'border-white/15 bg-transparent',
+                'border-white/15 bg-transparent',
               )}
             >
               <Check className={cn('mt-0.5 h-4 w-4 shrink-0', accentText)} />
@@ -287,9 +285,7 @@ function TierCard({
             type="button"
             className={cn(
               'hamburger-attract mt-5 w-full rounded-2xl border border-white/35 px-5 py-2.5 text-sm font-semibold tracking-wide text-zinc-100 shadow-[0_0_20px_rgba(34,211,238,0.2)] transition-all hover:scale-[1.02] hover:shadow-[0_0_34px_rgba(236,72,153,0.24)] active:scale-[0.99]',
-              isBundle
-                ? 'bg-gradient-to-r from-cyan-500/20 via-violet-500/24 to-fuchsia-500/20 text-amber-50'
-                : 'bg-transparent',
+              'bg-transparent',
               hudThemeByPlan[planKey].frame,
               hudThemeByPlan[planKey].glow,
             )}

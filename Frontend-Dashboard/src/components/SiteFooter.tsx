@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import LetterGlitch from '@/components/LetterGlitch'
+import NeonTypingBadge from '@/components/NeonTypingBadge'
 
 const footerLinkClass =
   'relative inline-flex pb-1 transition duration-300 ease-out hover:scale-105 hover:brightness-110 focus-visible:scale-105 focus-visible:outline-none after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-full after:origin-left after:scale-x-0 after:rounded-full after:bg-amber-200/90 after:shadow-[0_0_10px_rgba(251,191,36,0.45)] after:transition-transform after:duration-300 after:ease-out hover:after:scale-x-100 focus-visible:after:scale-x-100'
@@ -42,13 +43,15 @@ export default function SiteFooter() {
             />
           </div>
 
-          <div className="mx-auto flex w-full max-w-[min(900px,100%)] justify-center px-[clamp(0.25rem,1vw,0.75rem)] py-[clamp(0.25rem,1vw,0.6rem)] text-center">
-            <p
-              className="text-[0.62rem] font-semibold uppercase tracking-[0.24em] text-amber-100/90 sm:text-[0.7rem] md:text-[0.78rem]"
-              style={{ textShadow: '0 0 8px rgba(251, 191, 36, 0.25)' }}
-            >
-              Honour · Money · Power · Freedom
-            </p>
+          <div className="mx-auto flex w-full max-w-[min(900px,100%)] justify-center px-[clamp(0.25rem,1vw,0.75rem)] py-[clamp(0.25rem,1vw,0.6rem)] text-center md:mx-0 md:justify-self-start md:justify-start md:pr-8 md:text-left lg:pr-14">
+            <NeonTypingBadge
+              phrases={['HONOUR · MONEY · POWER · FREEDOM']}
+              typingSpeed={34}
+              deletingSpeed={24}
+              pauseMs={420}
+              boxed={false}
+              className="footer-typing"
+            />
           </div>
 
           <div className="rounded-xl p-[clamp(0.4rem,1vw,0.75rem)] text-center md:justify-self-end md:text-right">

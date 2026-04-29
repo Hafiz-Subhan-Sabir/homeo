@@ -1,8 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { trackClick, trackLead, trackSale } from "@/lib/affiliateApi";
+import {
+  resolveAffiliateDestination,
+  saveAffiliateAttribution,
+} from "@/lib/affiliateAttribution";
 
 function getVisitorId(): string {
   const key = "affiliate_test_visitor_id";
@@ -15,25 +19,51 @@ function getVisitorId(): string {
 
 export function ReferralLanding() {
   const params = useParams<{ affiliateId: string }>();
+  const router = useRouter();
   const search = useSearchParams();
   const [visitorId, setVisitorId] = useState("");
   const [email, setEmail] = useState("");
   const [amount, setAmount] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const affiliateId = decodeURIComponent(params?.affiliateId ?? "");
+  const offer = search.get("offer") ?? "affiliate-offer";
+  const tier = search.get("tier") ?? undefined;
+  const program = search.get("program") ?? undefined;
 
   const contextText = useMemo(() => {
-    const offer = search.get("offer") ?? "affiliate-offer";
     return offer.replace(/-/g, " ");
-  }, [search]);
+  }, [offer]);
 
   useEffect(() => {
+    let isCancelled = false;
     const vid = getVisitorId();
     setVisitorId(vid);
-    trackClick(affiliateId, vid)
-      .then(() => setMessage("Click tracked for this visitor."))
-      .catch(() => setMessage("Could not auto-track click."));
-  }, [affiliateId]);
+    saveAffiliateAttribution({
+      affiliateId,
+      visitorId: vid,
+      offer,
+      tier,
+      program,
+    });
+    const destination = resolveAffiliateDestination(offer);
+
+    (async () => {
+      try {
+        await trackClick(affiliateId, vid);
+        if (!isCancelled) setMessage("Click tracked for this visitor.");
+      } catch {
+        if (!isCancelled) setMessage("Could not auto-track click.");
+      } finally {
+        if (!isCancelled) {
+          router.replace(destination);
+        }
+      }
+    })();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [affiliateId, offer, program, router, tier]);
 
   async function submitLead() {
     if (!email.trim()) return setMessage("Enter email first.");

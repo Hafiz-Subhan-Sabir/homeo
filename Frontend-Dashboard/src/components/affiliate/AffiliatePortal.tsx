@@ -109,10 +109,10 @@ export default function AffiliatePortal({ displayName, referralIds, onLogout, em
   const earningsValue = Number(overallStats?.earnings_total ?? "0") || 0;
   const earningsCardToneClass =
     earningsValue <= 0
-      ? "border-[rgba(255,59,59,0.72)] bg-[linear-gradient(180deg,rgba(255,59,59,0.12),rgba(0,0,0,0.3))] shadow-[0_0_22px_rgba(255,59,59,0.35)]"
+      ? "border-red-400/85 bg-[linear-gradient(180deg,rgba(255,59,59,0.14),rgba(0,0,0,0.3))] shadow-[0_0_0_1px_rgba(248,113,113,0.9),0_0_22px_rgba(248,113,113,0.86),0_0_56px_rgba(248,113,113,0.72),0_0_108px_rgba(248,113,113,0.56),inset_0_0_20px_rgba(248,113,113,0.27)]"
       : earningsValue < 100
-        ? "border-[rgba(255,215,0,0.78)] bg-[linear-gradient(180deg,rgba(255,215,0,0.12),rgba(0,0,0,0.3))] shadow-[0_0_22px_rgba(255,215,0,0.34)]"
-        : "border-[rgba(0,255,122,0.78)] bg-[linear-gradient(180deg,rgba(0,255,122,0.12),rgba(0,0,0,0.3))] shadow-[0_0_26px_rgba(0,255,122,0.44)]";
+        ? "border-amber-300/85 bg-[linear-gradient(180deg,rgba(255,215,0,0.14),rgba(0,0,0,0.3))] shadow-[0_0_0_1px_rgba(252,211,77,0.9),0_0_22px_rgba(252,211,77,0.86),0_0_56px_rgba(252,211,77,0.72),0_0_108px_rgba(252,211,77,0.56),inset_0_0_20px_rgba(252,211,77,0.27)]"
+        : "border-lime-300/85 bg-[linear-gradient(180deg,rgba(0,255,122,0.14),rgba(0,0,0,0.3))] shadow-[0_0_0_1px_rgba(163,230,53,0.9),0_0_22px_rgba(163,230,53,0.86),0_0_56px_rgba(163,230,53,0.72),0_0_108px_rgba(163,230,53,0.56),inset_0_0_20px_rgba(163,230,53,0.27)]";
 
   const [conversionRing, setConversionRing] = useState(0);
   useEffect(() => {
@@ -130,18 +130,16 @@ export default function AffiliatePortal({ displayName, referralIds, onLogout, em
   useEffect(() => {}, [displayName]);
 
   const linkTemplateMap = useMemo<Record<ProgramKind, string>>(() => {
-    const base =
-      process.env.NEXT_PUBLIC_REFERRAL_BASE_URL?.trim() ||
-      (typeof window !== "undefined" ? window.location.origin : "http://127.0.0.1:3000");
+    const base = "http://localhost:3000";
     const completeId = encodeURIComponent((referralIds?.complete ?? affiliateId).trim() || "affiliate");
     const singleId = encodeURIComponent((referralIds?.single ?? affiliateId).trim() || "affiliate");
     const pawnId = encodeURIComponent((referralIds?.pawn ?? referralIds?.single ?? affiliateId).trim() || "affiliate");
     const kingId = encodeURIComponent((referralIds?.king ?? referralIds?.exclusive ?? affiliateId).trim() || "affiliate");
     return {
-      complete: `${base}/affiliate/${completeId}?offer=complete-programs&tier=standard`,
-      single: `${base}/affiliate/${singleId}?offer=single-program&program=program-01`,
-      pawn: `${base}/affiliate/${pawnId}?offer=the-pawn&tier=pawn`,
-      king: `${base}/affiliate/${kingId}?offer=the-king&tier=king`,
+      complete: `${base}/affiliate/${completeId}?offer=fullbundle`,
+      single: `${base}/affiliate/${singleId}?offer=singleprogram`,
+      pawn: `${base}/affiliate/${pawnId}?offer=thepawn`,
+      king: `${base}/affiliate/${kingId}?offer=theking`,
     };
   }, [affiliateId, referralIds]);
   const activeReferralLink = generatedLinks[programKind];
@@ -274,11 +272,11 @@ export default function AffiliatePortal({ displayName, referralIds, onLogout, em
       >
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-xl font-black uppercase tracking-[0.08em] text-[#f7d774] sm:text-2xl">Affiliate Dashboard</h2>
+            <h2 className="text-2xl font-black uppercase tracking-[0.08em] text-[#f7d774] drop-shadow-[0_0_12px_rgba(247,215,116,0.55)] sm:text-3xl">Affiliate Dashboard</h2>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div
-              className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] ${
+              className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-xs font-black uppercase tracking-[0.18em] drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] ${
                 dashboardSignal.tone === "good" ? "badge-live" : dashboardSignal.tone === "warn" ? "badge-warn" : "badge-danger"
               }`}
             >
@@ -305,48 +303,45 @@ export default function AffiliatePortal({ displayName, referralIds, onLogout, em
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-auto pr-1 no-scrollbar">
+        <div className="min-h-0 flex-1 overflow-auto pr-1 pb-16 no-scrollbar">
           {error ? null : null}
 
-          <div className="cut-frame-sm border border-cyan-300/55 bg-black/45 p-4 shadow-[0_0_0_1px_rgba(56,236,255,0.4),0_0_34px_rgba(56,236,255,0.2)]">
-            <div className="mx-auto w-full max-w-[1720px] cut-frame-sm border border-violet-300/45 bg-black/30 p-3 shadow-[0_0_0_1px_rgba(193,120,255,0.28),0_0_28px_rgba(193,120,255,0.16)]">
+          <div className="cut-frame-sm border border-cyan-300/75 bg-black/45 p-4 shadow-[0_0_0_1px_rgba(34,211,238,0.9),0_0_22px_rgba(34,211,238,0.86),0_0_56px_rgba(34,211,238,0.72),0_0_108px_rgba(34,211,238,0.56),inset_0_0_20px_rgba(34,211,238,0.27)]">
+            <div className="mx-auto w-full max-w-[1720px] cut-frame-sm border border-violet-300/65 bg-black/30 p-3 shadow-[0_0_0_1px_rgba(193,120,255,0.9),0_0_22px_rgba(193,120,255,0.86),0_0_56px_rgba(193,120,255,0.72),0_0_108px_rgba(193,120,255,0.56),inset_0_0_20px_rgba(193,120,255,0.27)]">
               <div className="flex flex-col gap-2 md:flex-row md:items-end">
                 <div className="flex-1">
-                  <div className="mb-1 h-[25px] text-[10px] font-black uppercase tracking-[0.16em] text-white/70">Referral Link</div>
+                  <div className="mb-1 h-[25px] text-xs font-black uppercase tracking-[0.16em] text-white/80 drop-shadow-[0_0_8px_rgba(255,255,255,0.35)]">Referral Link</div>
                   <input
                     value={activeReferralLink}
                     placeholder="Generate a referral link"
                     readOnly
-                    className={`cut-frame-sm focus-ring-gold w-full border px-3 py-3 text-[14px] font-semibold text-white/90 outline-none placeholder:text-white/35 ${
+                    className={`cut-frame-sm focus-ring-gold w-full border px-3 py-3 text-base font-semibold text-white/90 drop-shadow-[0_0_6px_rgba(255,255,255,0.2)] outline-none placeholder:text-white/35 ${
                       copiedLink === activeReferralLink && activeReferralLink
                         ? "border-[rgba(0,255,122,0.75)] bg-[rgba(0,60,30,0.5)] shadow-[0_0_16px_rgba(0,255,122,0.35)]"
                         : "border-[rgba(255,215,0,0.38)] bg-black/70"
                     }`}
                   />
-                  <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/50">
-                    Format: emailname_card_6digits (stored once, reused on next logins)
-                  </div>
                 </div>
                 {activeReferralLink ? (
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setShowProgramOptions((prev) => !prev)}
-                      className="cut-frame-sm hud-hover-glow border border-amber-300/80 bg-[linear-gradient(180deg,rgba(255,198,64,0.2),rgba(38,22,0,0.45))] px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-amber-100 shadow-[0_0_0_1px_rgba(255,198,64,0.7),0_0_24px_rgba(255,198,64,0.35)] transition duration-300 hover:scale-[1.02] hover:border-amber-200/95 hover:shadow-[0_0_0_1px_rgba(255,220,115,0.9),0_0_34px_rgba(255,210,90,0.5)]"
+                    className="cut-frame-sm hud-hover-glow border border-amber-300/80 bg-[linear-gradient(180deg,rgba(255,198,64,0.2),rgba(38,22,0,0.45))] px-4 py-2 text-sm font-black uppercase tracking-[0.16em] text-amber-100 shadow-[0_0_0_1px_rgba(255,198,64,0.7),0_0_24px_rgba(255,198,64,0.35)] transition duration-300 hover:scale-[1.02] hover:border-amber-200/95 hover:shadow-[0_0_0_1px_rgba(255,220,115,0.9),0_0_34px_rgba(255,210,90,0.5)]"
                     >
                       Get Referral
                     </button>
                     <button
                       type="button"
                       onClick={() => copyLink(activeReferralLink)}
-                      className="cut-frame-sm hud-hover-glow border border-cyan-300/80 bg-[linear-gradient(180deg,rgba(56,236,255,0.2),rgba(0,24,34,0.45))] px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-cyan-100 shadow-[0_0_0_1px_rgba(56,236,255,0.7),0_0_24px_rgba(56,236,255,0.35)] transition duration-300 hover:scale-[1.02] hover:border-cyan-200/95 hover:shadow-[0_0_0_1px_rgba(130,245,255,0.9),0_0_34px_rgba(56,236,255,0.5)]"
+                    className="cut-frame-sm hud-hover-glow border border-cyan-300/80 bg-[linear-gradient(180deg,rgba(56,236,255,0.2),rgba(0,24,34,0.45))] px-4 py-2 text-sm font-black uppercase tracking-[0.16em] text-cyan-100 shadow-[0_0_0_1px_rgba(56,236,255,0.7),0_0_24px_rgba(56,236,255,0.35)] transition duration-300 hover:scale-[1.02] hover:border-cyan-200/95 hover:shadow-[0_0_0_1px_rgba(130,245,255,0.9),0_0_34px_rgba(56,236,255,0.5)]"
                     >
                       Copy
                     </button>
                     <button
                       type="button"
                       onClick={() => shareLink(activeReferralLink)}
-                      className="cut-frame-sm hud-hover-glow border border-violet-300/80 bg-[linear-gradient(180deg,rgba(193,120,255,0.2),rgba(25,6,38,0.45))] px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-violet-100 shadow-[0_0_0_1px_rgba(193,120,255,0.7),0_0_24px_rgba(193,120,255,0.35)] transition duration-300 hover:scale-[1.02] hover:border-violet-200/95 hover:shadow-[0_0_0_1px_rgba(221,173,255,0.9),0_0_34px_rgba(193,120,255,0.5)]"
+                    className="cut-frame-sm hud-hover-glow border border-violet-300/80 bg-[linear-gradient(180deg,rgba(193,120,255,0.2),rgba(25,6,38,0.45))] px-4 py-2 text-sm font-black uppercase tracking-[0.16em] text-violet-100 shadow-[0_0_0_1px_rgba(193,120,255,0.7),0_0_24px_rgba(193,120,255,0.35)] transition duration-300 hover:scale-[1.02] hover:border-violet-200/95 hover:shadow-[0_0_0_1px_rgba(221,173,255,0.9),0_0_34px_rgba(193,120,255,0.5)]"
                     >
                       Share
                     </button>
@@ -413,32 +408,32 @@ export default function AffiliatePortal({ displayName, referralIds, onLogout, em
             ) : null}
           </div>
 
-          <div className="mt-4 cut-frame-sm border border-violet-300/55 bg-black/45 p-3 shadow-[0_0_0_1px_rgba(193,120,255,0.34),0_0_36px_rgba(193,120,255,0.18)] sm:p-4">
+          <div className="mt-4 cut-frame-sm border border-violet-300/75 bg-black/45 p-3 shadow-[0_0_0_1px_rgba(193,120,255,0.9),0_0_22px_rgba(193,120,255,0.86),0_0_56px_rgba(193,120,255,0.72),0_0_108px_rgba(193,120,255,0.56),inset_0_0_20px_rgba(193,120,255,0.27)] sm:p-4">
             <div className="mb-3 flex items-center justify-between gap-2">
-              <div className="text-xs font-black uppercase tracking-[0.2em] text-white/70">Performance Snapshot</div>
+              <div className="text-sm font-black uppercase tracking-[0.2em] text-white/80 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">Performance Snapshot</div>
             </div>
             <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
               {[
-                { label: "Clicks", value: overallStats?.click_count ?? "-", tone: "border-cyan-300/70 bg-[linear-gradient(180deg,rgba(56,236,255,0.1),rgba(0,0,0,0.3))] shadow-[0_0_22px_rgba(56,236,255,0.28)]" },
-                { label: "Leads", value: overallStats?.lead_count ?? "-", tone: "border-violet-300/70 bg-[linear-gradient(180deg,rgba(193,120,255,0.1),rgba(0,0,0,0.3))] shadow-[0_0_22px_rgba(193,120,255,0.28)]" },
-                { label: "Sales", value: overallStats?.sale_count ?? 0, tone: "border-lime-300/70 bg-[linear-gradient(180deg,rgba(120,255,90,0.1),rgba(0,0,0,0.3))] shadow-[0_0_22px_rgba(120,255,90,0.28)]" },
-                { label: "Rate", value: `${conversionRing}%`, tone: "border-amber-300/75 bg-[linear-gradient(180deg,rgba(255,198,64,0.12),rgba(0,0,0,0.3))] shadow-[0_0_22px_rgba(255,198,64,0.3)]" },
-                { label: "Points", value: overallStats?.point_total ?? 0, tone: "border-fuchsia-300/70 bg-[linear-gradient(180deg,rgba(232,121,249,0.1),rgba(0,0,0,0.3))] shadow-[0_0_22px_rgba(232,121,249,0.28)]" },
+                { label: "Clicks", value: overallStats?.click_count ?? "-", tone: "border-cyan-300/75 bg-[linear-gradient(180deg,rgba(56,236,255,0.12),rgba(0,0,0,0.3))] shadow-[0_0_0_1px_rgba(34,211,238,0.9),0_0_22px_rgba(34,211,238,0.86),0_0_56px_rgba(34,211,238,0.72),0_0_108px_rgba(34,211,238,0.56),inset_0_0_20px_rgba(34,211,238,0.27)]" },
+                { label: "Leads", value: overallStats?.lead_count ?? "-", tone: "border-violet-300/75 bg-[linear-gradient(180deg,rgba(193,120,255,0.12),rgba(0,0,0,0.3))] shadow-[0_0_0_1px_rgba(193,120,255,0.9),0_0_22px_rgba(193,120,255,0.86),0_0_56px_rgba(193,120,255,0.72),0_0_108px_rgba(193,120,255,0.56),inset_0_0_20px_rgba(193,120,255,0.27)]" },
+                { label: "Sales", value: overallStats?.sale_count ?? 0, tone: "border-lime-300/75 bg-[linear-gradient(180deg,rgba(120,255,90,0.12),rgba(0,0,0,0.3))] shadow-[0_0_0_1px_rgba(163,230,53,0.9),0_0_22px_rgba(163,230,53,0.86),0_0_56px_rgba(163,230,53,0.72),0_0_108px_rgba(163,230,53,0.56),inset_0_0_20px_rgba(163,230,53,0.27)]" },
+                { label: "Rate", value: `${conversionRing}%`, tone: "border-amber-300/75 bg-[linear-gradient(180deg,rgba(255,198,64,0.14),rgba(0,0,0,0.3))] shadow-[0_0_0_1px_rgba(252,211,77,0.9),0_0_22px_rgba(252,211,77,0.86),0_0_56px_rgba(252,211,77,0.72),0_0_108px_rgba(252,211,77,0.56),inset_0_0_20px_rgba(252,211,77,0.27)]" },
+                { label: "Points", value: overallStats?.point_total ?? 0, tone: "border-fuchsia-300/75 bg-[linear-gradient(180deg,rgba(232,121,249,0.12),rgba(0,0,0,0.3))] shadow-[0_0_0_1px_rgba(232,121,249,0.9),0_0_22px_rgba(232,121,249,0.86),0_0_56px_rgba(232,121,249,0.72),0_0_108px_rgba(232,121,249,0.56),inset_0_0_20px_rgba(232,121,249,0.27)]" },
                 { label: "Earnings", value: `$${overallStats?.earnings_total ?? "0.00"}`, tone: earningsCardToneClass },
               ].map((item) => (
                 <div
                   key={item.label}
                   className={`cut-frame-sm border px-3 py-2 ${item.tone ?? "border-[rgba(255,215,0,0.28)] bg-black/35"}`}
                 >
-                  <div className="text-[10px] font-black uppercase tracking-[0.14em] text-white/58">{item.label}</div>
-                  <div className="mt-1 text-xl font-black text-[#f8d778]">{item.value}</div>
+                  <div className="text-xs font-black uppercase tracking-[0.14em] text-white/68 drop-shadow-[0_0_8px_rgba(255,255,255,0.25)]">{item.label}</div>
+                  <div className="mt-1 text-2xl font-black text-[#f8d778] drop-shadow-[0_0_12px_rgba(248,215,120,0.5)]">{item.value}</div>
                 </div>
               ))}
             </div>
 
-            <div className="mt-3 relative cut-frame-sm border border-cyan-300/45 bg-black/30 p-3 shadow-[0_0_0_1px_rgba(56,236,255,0.28),0_0_24px_rgba(56,236,255,0.12)]">
+            <div className="mt-3 relative cut-frame-sm border border-cyan-300/65 bg-black/30 p-3 shadow-[0_0_0_1px_rgba(34,211,238,0.9),0_0_22px_rgba(34,211,238,0.86),0_0_56px_rgba(34,211,238,0.72),0_0_108px_rgba(34,211,238,0.56),inset_0_0_20px_rgba(34,211,238,0.27)]">
               <div className="mb-2 flex items-center justify-between gap-2">
-                <div className="text-[10px] font-black uppercase tracking-[0.16em] text-white/60">Revenue Flow</div>
+                <div className="text-xs font-black uppercase tracking-[0.16em] text-white/70 drop-shadow-[0_0_8px_rgba(255,255,255,0.25)]">Revenue Flow</div>
               </div>
               <div className="grid grid-cols-[74px_1fr] gap-x-2 gap-y-2">
                 {(funnel.length
@@ -452,7 +447,7 @@ export default function AffiliatePortal({ displayName, referralIds, onLogout, em
                   const pct = Math.max(2, Math.round((row.value / max) * 100));
                   return (
                     <div key={row.stage} className="contents">
-                      <div className="pt-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white/62">{row.stage}</div>
+                      <div className="pt-1.5 text-xs font-bold uppercase tracking-[0.14em] text-white/72">{row.stage}</div>
                       <div className="relative overflow-visible pt-4">
                         <div className="h-7 rounded border border-cyan-300/25 bg-black/38" />
                         <div
@@ -462,7 +457,7 @@ export default function AffiliatePortal({ displayName, referralIds, onLogout, em
                           onMouseLeave={() => setFunnelHover(null)}
                         />
                         {funnelHover?.stage === row.stage ? (
-                          <div className="pointer-events-none absolute -top-0.5 right-0 cut-frame-sm border border-violet-200/60 bg-black/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-violet-100 shadow-[0_0_14px_rgba(193,120,255,0.32)]">
+                          <div className="pointer-events-none absolute -top-0.5 right-0 cut-frame-sm border border-violet-200/60 bg-black/80 px-2 py-0.5 text-sm font-black uppercase tracking-[0.1em] text-violet-100 shadow-[0_0_14px_rgba(193,120,255,0.32)]">
                             {row.value.toLocaleString()}
                           </div>
                         ) : null}
@@ -474,9 +469,9 @@ export default function AffiliatePortal({ displayName, referralIds, onLogout, em
             </div>
           </div>
 
-          <div className="mt-5 cut-frame-sm border border-amber-300/55 bg-black/45 p-4 shadow-[0_0_0_1px_rgba(255,198,64,0.3),0_0_28px_rgba(255,198,64,0.14)]">
+          <div className="mt-5 cut-frame-sm border border-amber-300/75 bg-black/45 p-4 shadow-[0_0_0_1px_rgba(252,211,77,0.9),0_0_22px_rgba(252,211,77,0.86),0_0_56px_rgba(252,211,77,0.72),0_0_108px_rgba(252,211,77,0.56),inset_0_0_20px_rgba(252,211,77,0.27)]">
             <div className="mb-3 flex items-center justify-between gap-2">
-              <div className="text-xs font-black uppercase tracking-[0.2em] text-white/70">Recent Referrals</div>
+              <div className="text-sm font-black uppercase tracking-[0.2em] text-white/80 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">Recent Referrals</div>
             </div>
             <div className="space-y-3">
               {recentReferrals.length ? (
@@ -490,26 +485,26 @@ export default function AffiliatePortal({ displayName, referralIds, onLogout, em
                         {(r.visitor_id || "U").slice(0, 1).toUpperCase()}
                       </div>
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-bold text-white/88">{r.visitor_id}</div>
+                        <div className="truncate text-base font-bold text-white/90">{r.visitor_id}</div>
                         <div className={`text-[11px] font-black uppercase tracking-[0.16em] ${r.status === "purchased" ? "text-[#86ffbf]" : "text-white/55"}`}>
                           {r.status}
                         </div>
                       </div>
                     </div>
-                    <div className="shrink-0 text-[11px] font-bold uppercase tracking-[0.14em] text-white/55">{formatAgo(r.at)}</div>
+                    <div className="shrink-0 text-xs font-bold uppercase tracking-[0.14em] text-white/65">{formatAgo(r.at)}</div>
                   </div>
                 ))
               ) : (
-                <div className="text-sm text-white/55">No referral activity yet.</div>
+                <div className="text-base text-white/65">No referral activity yet.</div>
               )}
             </div>
           </div>
 
-          <div className="mt-5 cut-frame-sm border border-cyan-300/55 bg-black/45 p-4 shadow-[0_0_0_1px_rgba(56,236,255,0.3),0_0_28px_rgba(56,236,255,0.14)]">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white/70">Affiliate Visitors</h3>
+          <div className="mt-5 cut-frame-sm border border-cyan-300/75 bg-black/45 p-4 shadow-[0_0_0_1px_rgba(34,211,238,0.9),0_0_22px_rgba(34,211,238,0.86),0_0_56px_rgba(34,211,238,0.72),0_0_108px_rgba(34,211,238,0.56),inset_0_0_20px_rgba(34,211,238,0.27)]">
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white/80 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">Affiliate Visitors</h3>
             <div className="mt-3 overflow-auto no-scrollbar">
-              <table className="w-full min-w-[700px] text-left text-sm">
-                <thead className="text-[11px] uppercase tracking-[0.14em] text-white/60">
+              <table className="w-full min-w-[700px] text-left text-base">
+                <thead className="text-xs uppercase tracking-[0.14em] text-white/70">
                   <tr className="border-b border-[rgba(255,215,0,0.2)]">
                     <th className="px-2 py-2">Visitor</th>
                     <th className="px-2 py-2">Clicked At</th>
