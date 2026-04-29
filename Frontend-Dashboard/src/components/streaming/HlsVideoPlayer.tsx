@@ -21,6 +21,10 @@ type Props = {
   /** Hint from transcoding (ffprobe); refined when the browser fires loadedmetadata. */
   sourceWidth?: number | null;
   sourceHeight?: number | null;
+  onTimeProgress?: (payload: { currentTime: number; duration: number }) => void;
+  onPlaybackEnded?: () => void;
+  startAtSeconds?: number;
+  onSeekSegment?: (payload: { from: number; to: number; duration: number }) => void;
 };
 
 /**
@@ -37,7 +41,11 @@ export default function HlsVideoPlayer({
   onMetadata,
   playerLayout = "auto",
   sourceWidth = null,
-  sourceHeight = null
+  sourceHeight = null,
+  onTimeProgress,
+  onPlaybackEnded,
+  startAtSeconds = 0,
+  onSeekSegment
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [measured, setMeasured] = useState<{ width: number; height: number } | null>(null);
@@ -72,8 +80,44 @@ export default function HlsVideoPlayer({
         setMeasured({ width, height });
         onMetadataRef.current?.({ width, height });
       }
+      if (startAtSeconds > 0 && Number.isFinite(video.duration) && video.duration > 0) {
+        const target = Math.min(Math.max(0, startAtSeconds), Math.max(0, video.duration - 1));
+        if (target > 0) {
+          suppressNextSeekEvent = true;
+          video.currentTime = target;
+        }
+      }
+    };
+    const emitTimeProgress = () => {
+      const currentTime = Number(video.currentTime || 0);
+      const duration = Number(video.duration || 0);
+      if (!Number.isFinite(currentTime) || !Number.isFinite(duration) || duration <= 0) return;
+      onTimeProgress?.({ currentTime, duration });
+    };
+    const emitEnded = () => {
+      onPlaybackEnded?.();
+    };
+    let lastSeekStart = 0;
+    let suppressNextSeekEvent = false;
+    const onSeeking = () => {
+      lastSeekStart = Number.isFinite(video.currentTime) ? video.currentTime : 0;
+    };
+    const onSeeked = () => {
+      const to = Number.isFinite(video.currentTime) ? video.currentTime : 0;
+      const duration = Number.isFinite(video.duration) ? video.duration : 0;
+      if (suppressNextSeekEvent) {
+        suppressNextSeekEvent = false;
+        return;
+      }
+      if (duration > 0 && to - lastSeekStart > 2) {
+        onSeekSegment?.({ from: Math.max(0, lastSeekStart), to: Math.min(duration, to), duration });
+      }
     };
     video.addEventListener("loadedmetadata", emitMetadata);
+    video.addEventListener("timeupdate", emitTimeProgress);
+    video.addEventListener("ended", emitEnded);
+    video.addEventListener("seeking", onSeeking);
+    video.addEventListener("seeked", onSeeked);
 
     if (Hls.isSupported()) {
       const hls = new Hls({
@@ -104,6 +148,10 @@ export default function HlsVideoPlayer({
       });
       return () => {
         video.removeEventListener("loadedmetadata", emitMetadata);
+        video.removeEventListener("timeupdate", emitTimeProgress);
+        video.removeEventListener("ended", emitEnded);
+        video.removeEventListener("seeking", onSeeking);
+        video.removeEventListener("seeked", onSeeked);
         hls.destroy();
       };
     }
@@ -112,8 +160,12 @@ export default function HlsVideoPlayer({
     video.src = src;
     return () => {
       video.removeEventListener("loadedmetadata", emitMetadata);
+      video.removeEventListener("timeupdate", emitTimeProgress);
+      video.removeEventListener("ended", emitEnded);
+      video.removeEventListener("seeking", onSeeking);
+      video.removeEventListener("seeked", onSeeked);
     };
-  }, [src, requireAuthHeaders]);
+  }, [src, requireAuthHeaders, onPlaybackEnded, onSeekSegment, onTimeProgress]);
 
   return (
     <div

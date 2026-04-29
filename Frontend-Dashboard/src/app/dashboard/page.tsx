@@ -36,6 +36,7 @@ import {
 import { fetchPortalIdentity, hasSimpleAuthSessionClient, STORAGE_SIMPLE_AUTH } from "@/lib/portal-api";
 import { logoutSyndicateSession } from "@/lib/syndicateAuth";
 import { Toaster } from "react-hot-toast";
+import QRCode from "qrcode";
 
 type NavItem = { label: string; key: string; active?: boolean };
 type Course = {
@@ -1652,6 +1653,235 @@ function SettingsBillingSection() {
   );
 }
 
+type IssuedCertificate = {
+  key: string;
+  certificateId: string;
+  playlistTitle: string;
+  name: string;
+  issuedAt: string;
+};
+
+const SETTINGS_CERTIFICATE_PREFIX = "syn_playlist_certificate_v1:";
+
+function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+async function buildCertificateSvg(cert: IssuedCertificate, assetBaseUrl: string): Promise<string> {
+  const owner = escapeXml(cert.name || "Operator");
+  const course = escapeXml(cert.playlistTitle || "Syndicate Program");
+  const certId = escapeXml(cert.certificateId);
+  const qrSize = 104;
+  const qrX = 1076;
+  const qrY = 332;
+  const qrPad = 8;
+  const qrFrameX = qrX - qrPad;
+  const qrFrameY = qrY - qrPad;
+  const qrFrameSize = qrSize + qrPad * 2;
+  const qrPayload = cert.certificateId || "SYN-TOKEN";
+  const qrDataUrl = escapeXml(
+    await QRCode.toDataURL(qrPayload, {
+      margin: 2,
+      width: qrSize,
+      color: {
+        dark: "#0a1022",
+        light: "#ffffff",
+      },
+    }),
+  );
+  const qrMarkup = `<rect x="${qrFrameX}" y="${qrFrameY}" width="${qrFrameSize}" height="${qrFrameSize}" rx="6" fill="#ffffff" stroke="#bde8ff" stroke-opacity="0.45" stroke-width="1.5"/><image href="${qrDataUrl}" x="${qrX}" y="${qrY}" width="${qrSize}" height="${qrSize}" preserveAspectRatio="xMidYMid meet"/>`;
+  const issued = escapeXml(new Date(cert.issuedAt).toLocaleDateString(undefined, { dateStyle: "long" }));
+  const pageW = 1920;
+  const pageH = 1280;
+  const designW = 1260;
+  const designH = 1080;
+  const certW = 920;
+  const certH = 1180;
+  const scaleX = certW / designW;
+  const scaleY = certH / designH;
+  const offsetX = Math.round((pageW - certW) / 2);
+  const offsetY = 42;
+  const safeBase = escapeXml(assetBaseUrl.replace(/\/$/, ""));
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${pageW}" height="${pageH}" viewBox="0 0 ${pageW} ${pageH}">
+  <defs>
+    <style>
+      .tech { font-family: Orbitron, "BankGothic Md BT", "Eurostile", "Arial Black", Arial, sans-serif; }
+      .body { font-family: Inter, "Segoe UI", Tahoma, Arial, sans-serif; }
+    </style>
+    <linearGradient id="bgMain" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#070a1a"/>
+      <stop offset="45%" stop-color="#0d1230"/>
+      <stop offset="100%" stop-color="#121a39"/>
+    </linearGradient>
+    <radialGradient id="glowCenter" cx="50%" cy="30%" r="58%">
+      <stop offset="0%" stop-color="rgba(56,189,248,0.35)"/>
+      <stop offset="100%" stop-color="rgba(56,189,248,0)"/>
+    </radialGradient>
+    <radialGradient id="glowLeft" cx="18%" cy="78%" r="50%">
+      <stop offset="0%" stop-color="rgba(236,72,153,0.22)"/>
+      <stop offset="100%" stop-color="rgba(236,72,153,0)"/>
+    </radialGradient>
+    <radialGradient id="glowRight" cx="82%" cy="24%" r="54%">
+      <stop offset="0%" stop-color="rgba(249,115,22,0.22)"/>
+      <stop offset="100%" stop-color="rgba(249,115,22,0)"/>
+    </radialGradient>
+    <pattern id="dots" width="8" height="8" patternUnits="userSpaceOnUse">
+      <circle cx="1.6" cy="1.6" r="1.1" fill="#c7d2fe" fill-opacity="0.24"/>
+    </pattern>
+  </defs>
+  <rect width="${pageW}" height="${pageH}" fill="#030614"/>
+  <g transform="translate(${offsetX}, ${offsetY}) scale(${scaleX}, ${scaleY})">
+  <rect width="${designW}" height="${designH}" fill="url(#bgMain)"/>
+  <rect width="${designW}" height="${designH}" fill="url(#glowCenter)"/>
+  <rect width="${designW}" height="${designH}" fill="url(#glowLeft)"/>
+  <rect width="${designW}" height="${designH}" fill="url(#glowRight)"/>
+  <rect width="${designW}" height="${designH}" fill="url(#dots)"/>
+
+  <rect x="28" y="28" width="1204" height="1024" rx="22" fill="none" stroke="#7dd3fc" stroke-opacity="0.9" stroke-width="4"/>
+  <rect x="42" y="42" width="1176" height="996" rx="18" fill="none" stroke="#7dd3fc" stroke-opacity="0.45" stroke-width="2"/>
+  <rect x="58" y="58" width="1144" height="964" rx="14" fill="none" stroke="#7dd3fc" stroke-opacity="0.28" stroke-width="2"/>
+
+  <path d="M74 74 h48 v4 h-44 v44 h-4 z" fill="#fb7185"/>
+  <path d="M1186 74 h-48 v4 h44 v44 h4 z" fill="#fb7185"/>
+  <path d="M74 1006 h48 v-4 h-44 v-44 h-4 z" fill="#fb7185"/>
+  <path d="M1186 1006 h-48 v-4 h44 v-44 h4 z" fill="#fb7185"/>
+
+  <image href="${safeBase}/assets/logo.webp" x="84" y="82" width="250" height="98" preserveAspectRatio="xMidYMid meet"/>
+  <text x="372" y="132" fill="#fdd02f" font-size="22" class="tech" font-weight="700" letter-spacing="3">MONEY · POWER · HONOUR · FREEDOM</text>
+
+  <text x="630" y="250" fill="#cffafe" font-size="62" class="tech" font-weight="700" text-anchor="middle">SYN TOKEN</text>
+  <text x="630" y="286" fill="#dbeafe" font-size="20" class="tech" text-anchor="middle" letter-spacing="3">OF ACHIEVEMENT</text>
+
+  <rect x="74" y="322" width="1112" height="120" rx="12" fill="rgba(9,13,35,0.5)" stroke="#e879f9" stroke-opacity="0.5" stroke-width="2"/>
+  <text x="128" y="358" fill="#bde8ff" font-size="18" class="tech" letter-spacing="2">TOKEN OWNER :</text>
+  <text x="358" y="360" fill="#fdd02f" font-size="30" class="tech" font-weight="700">${owner}</text>
+  <text x="128" y="416" fill="#bde8ff" font-size="18" class="tech" letter-spacing="2">COURSE :</text>
+  <text x="358" y="416" fill="#fdd02f" font-size="30" class="tech" font-weight="700">${course}</text>
+  <text x="1182" y="358" fill="#bde8ff" font-size="14" class="tech" letter-spacing="1.8" text-anchor="end">TOKEN QR</text>
+  ${qrMarkup}
+
+  <rect x="74" y="450" width="1112" height="158" rx="12" fill="rgba(5,8,22,0.55)" stroke="#e879f9" stroke-opacity="0.45" stroke-width="2"/>
+  <text x="630" y="484" fill="#bde8ff" font-size="18" class="tech" letter-spacing="2" text-anchor="middle">CREDENTIAL OVERVIEW</text>
+  <text x="630" y="520" fill="#b8c6d9" font-size="18" class="body" font-weight="700" text-anchor="middle">
+    Awarded for high-performance completion of the ${course} track with verified execution milestones.
+  </text>
+  <text x="630" y="552" fill="#b8c6d9" font-size="18" class="body" font-weight="700" text-anchor="middle">
+    Strategic delivery consistency, secure credential validation, and cross-network capability are confirmed.
+  </text>
+  <text x="630" y="584" fill="#b8c6d9" font-size="18" class="body" font-weight="700" text-anchor="middle">
+    Holder authorization is recognized across Syndicate partner ecosystems for verified performance.
+  </text>
+
+  <rect x="74" y="620" width="546" height="60" rx="10" fill="rgba(0,0,0,0.36)" stroke="#e879f9" stroke-opacity="0.45" stroke-width="2"/>
+  <text x="100" y="643" fill="#bde8ff" font-size="11" class="tech" letter-spacing="2">ISSUED</text>
+  <text x="100" y="668" fill="#e2f4ff" font-size="14" class="tech">${issued}</text>
+
+  <rect x="640" y="620" width="546" height="60" rx="10" fill="rgba(0,0,0,0.36)" stroke="#e879f9" stroke-opacity="0.55" stroke-width="2"/>
+  <text x="666" y="643" fill="#bde8ff" font-size="11" class="tech" letter-spacing="2">STATUS</text>
+  <text x="666" y="668" fill="#9bf38d" font-size="14" class="tech" font-weight="700">Verified</text>
+
+  <rect x="74" y="690" width="1112" height="44" rx="10" fill="rgba(0,0,0,0.36)" stroke="#e879f9" stroke-opacity="0.55" stroke-width="2"/>
+  <text x="100" y="718" fill="#bde8ff" font-size="11" class="tech" letter-spacing="2">TOKEN ID</text>
+  <text x="238" y="718" fill="#dff7ff" font-size="14" class="tech">${certId}</text>
+
+  <image href="${safeBase}/assets/coin-gold.png" x="500" y="748" width="260" height="220" preserveAspectRatio="xMidYMid meet"/>
+  <text x="630" y="992" fill="#bde8ff" font-size="16" class="tech" text-anchor="middle" letter-spacing="2">SYNDICATE CREDENTIAL TOKEN</text>
+  </g>
+</svg>`;
+}
+
+async function downloadCertificateSvg(cert: IssuedCertificate) {
+  const assetBaseUrl = typeof window !== "undefined" ? window.location.origin : "";
+  const svg = await buildCertificateSvg(cert, assetBaseUrl);
+  const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const safeCourse = (cert.playlistTitle || "course").replace(/[^a-z0-9-_]+/gi, "-").replace(/-+/g, "-");
+  a.href = url;
+  a.download = `SYN-Certificate-${safeCourse}-${cert.certificateId}.svg`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function SettingsCertificatesSection() {
+  const [certs, setCerts] = useState<IssuedCertificate[]>([]);
+
+  useEffect(() => {
+    const readCertificates = () => {
+      if (typeof window === "undefined") return;
+      const rows: IssuedCertificate[] = [];
+      for (let i = 0; i < window.localStorage.length; i += 1) {
+        const key = window.localStorage.key(i);
+        if (!key || !key.startsWith(SETTINGS_CERTIFICATE_PREFIX)) continue;
+        const raw = window.localStorage.getItem(key);
+        if (!raw) continue;
+        try {
+          const parsed = JSON.parse(raw) as Omit<IssuedCertificate, "key">;
+          rows.push({
+            key,
+            certificateId: String(parsed.certificateId || "").trim(),
+            playlistTitle: String(parsed.playlistTitle || "").trim(),
+            name: String(parsed.name || "").trim(),
+            issuedAt: String(parsed.issuedAt || ""),
+          });
+        } catch {
+          // ignore bad rows
+        }
+      }
+      rows.sort((a, b) => +new Date(b.issuedAt) - +new Date(a.issuedAt));
+      setCerts(rows);
+    };
+    readCertificates();
+    window.addEventListener("syn-certificates-updated", readCertificates);
+    return () => window.removeEventListener("syn-certificates-updated", readCertificates);
+  }, []);
+
+  return (
+    <section className="w-full">
+      <div className="rounded-xl border border-sky-300/28 bg-[#040814]/85 p-[clamp(0.8rem,1.6vw,1.2rem)] shadow-[0_0_0_1px_rgba(56,189,248,0.08),0_0_18px_rgba(56,189,248,0.1)]">
+        <div className="mb-3 border-b border-sky-300/20 pb-3">
+          <h2 className="text-[clamp(1.1rem,1.2vw+0.75rem,1.5rem)] font-black uppercase tracking-[0.12em] text-sky-100">
+            Certificates
+          </h2>
+          <p className="mt-1 text-[13px] text-slate-200/78">Download issued course certificates from completed playlists.</p>
+        </div>
+        {certs.length === 0 ? (
+          <div className="rounded-lg border border-white/10 bg-black/30 px-3 py-3 text-[14px] text-white/70">
+            No certificates issued yet. Complete a playlist and apply for SYN token.
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {certs.map((cert) => (
+              <div key={cert.key} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/12 bg-black/30 px-3 py-3">
+                <div className="min-w-0">
+                  <div className="text-[14px] font-black text-white">{cert.playlistTitle || "Course"}</div>
+                  <div className="mt-1 text-[12px] text-slate-200/80">Name: {cert.name || "Member"}</div>
+                  <div className="text-[12px] text-amber-200/90">Certificate ID: {cert.certificateId}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void downloadCertificateSvg(cert)}
+                  className="rounded-md border border-emerald-300/45 bg-emerald-500/12 px-3 py-2 text-[12px] font-black uppercase tracking-[0.08em] text-emerald-100 transition hover:bg-emerald-500/20"
+                >
+                  Download
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export default function Page() {
   const router = useRouter();
   const pathname = usePathname();
@@ -3024,6 +3254,7 @@ export default function Page() {
                       onResetProfile={resetProfileSettings}
                       onLogout={handleLogout}
                     />
+                    <SettingsCertificatesSection />
                     <SettingsBillingSection />
                   </div>
                 </div>
