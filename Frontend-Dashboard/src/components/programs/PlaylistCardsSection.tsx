@@ -23,29 +23,37 @@ const PROGRAM_CARD_BACKGROUNDS: readonly string[] = [
 
 const PLAYLIST_CARD_THEMES = [
   {
-    glow: "shadow-[0_10px_34px_rgba(0,0,0,0.5),0_0_0_1px_rgba(196,181,253,0.4),0_0_44px_rgba(139,92,246,0.32)]",
+    glow: "shadow-[0_14px_38px_rgba(0,0,0,0.58),0_0_0_1px_rgba(196,181,253,0.42),0_0_58px_rgba(139,92,246,0.5),0_0_110px_rgba(217,70,239,0.26)]",
     ring: "from-violet-300/95 via-purple-400/95 to-fuchsia-300/95",
+    aura: "bg-[radial-gradient(circle_at_center,rgba(217,70,239,0.42)_0%,rgba(139,92,246,0.28)_35%,rgba(0,0,0,0)_75%)]",
+    spark: "from-fuchsia-200/0 via-fuchsia-200/85 to-white/0",
     title: "text-white",
     infoPanel: "border-fuchsia-300/35 bg-fuchsia-950/28",
     dominantBorder: "border-fuchsia-300/75",
   },
   {
-    glow: "shadow-[0_10px_34px_rgba(0,0,0,0.5),0_0_0_1px_rgba(103,232,249,0.4),0_0_44px_rgba(34,211,238,0.32)]",
+    glow: "shadow-[0_14px_38px_rgba(0,0,0,0.58),0_0_0_1px_rgba(103,232,249,0.42),0_0_58px_rgba(34,211,238,0.5),0_0_110px_rgba(14,165,233,0.24)]",
     ring: "from-cyan-300/95 via-sky-400/95 to-blue-300/95",
+    aura: "bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.4)_0%,rgba(14,165,233,0.28)_35%,rgba(0,0,0,0)_75%)]",
+    spark: "from-cyan-200/0 via-cyan-100/85 to-white/0",
     title: "text-white",
     infoPanel: "border-cyan-300/35 bg-cyan-950/28",
     dominantBorder: "border-cyan-300/75",
   },
   {
-    glow: "shadow-[0_10px_34px_rgba(0,0,0,0.5),0_0_0_1px_rgba(110,231,183,0.4),0_0_44px_rgba(52,211,153,0.32)]",
+    glow: "shadow-[0_14px_38px_rgba(0,0,0,0.58),0_0_0_1px_rgba(110,231,183,0.42),0_0_58px_rgba(52,211,153,0.5),0_0_110px_rgba(16,185,129,0.24)]",
     ring: "from-emerald-300/95 via-teal-400/95 to-lime-300/95",
+    aura: "bg-[radial-gradient(circle_at_center,rgba(52,211,153,0.42)_0%,rgba(16,185,129,0.28)_35%,rgba(0,0,0,0)_75%)]",
+    spark: "from-emerald-200/0 via-emerald-100/85 to-white/0",
     title: "text-white",
     infoPanel: "border-emerald-300/35 bg-emerald-950/28",
     dominantBorder: "border-emerald-300/75",
   },
   {
-    glow: "shadow-[0_10px_34px_rgba(0,0,0,0.5),0_0_0_1px_rgba(251,191,36,0.4),0_0_44px_rgba(245,158,11,0.32)]",
+    glow: "shadow-[0_14px_38px_rgba(0,0,0,0.58),0_0_0_1px_rgba(251,191,36,0.42),0_0_58px_rgba(245,158,11,0.52),0_0_110px_rgba(245,158,11,0.26)]",
     ring: "from-amber-300/95 via-yellow-400/95 to-orange-300/95",
+    aura: "bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.45)_0%,rgba(234,88,12,0.28)_35%,rgba(0,0,0,0)_75%)]",
+    spark: "from-amber-100/0 via-amber-100/90 to-white/0",
     title: "text-white",
     infoPanel: "border-amber-300/35 bg-amber-950/28",
     dominantBorder: "border-amber-300/75",
@@ -166,15 +174,31 @@ export function PlaylistCardsSection({
           theme.glow
         )}
       >
+        <span className={cn("pointer-events-none absolute inset-[-22%] z-0 rounded-[2.2rem] blur-[38px]", theme.aura)} aria-hidden />
         <span
           className={cn(
-            "pointer-events-none absolute left-1/2 top-1/2 z-0 aspect-square w-[185%] max-w-none -translate-x-1/2 -translate-y-1/2 will-change-transform animate-[spin_5.5s_linear_infinite] motion-reduce:animate-none bg-gradient-to-r",
+            "pointer-events-none absolute left-[-40%] top-[8%] z-[1] h-[24%] w-[180%] -rotate-[28deg] bg-gradient-to-r opacity-85 mix-blend-screen blur-[10px] animate-[pulse_1.3s_ease-in-out_infinite]",
+            theme.spark
+          )}
+          aria-hidden
+        />
+        <span
+          className={cn(
+            "pointer-events-none absolute right-[-28%] top-[58%] z-[1] h-[17%] w-[130%] -rotate-[24deg] bg-gradient-to-r opacity-70 mix-blend-screen blur-[12px] animate-[pulse_1.8s_ease-in-out_infinite]",
+            theme.spark
+          )}
+          aria-hidden
+        />
+        <span className="pointer-events-none absolute right-3 top-3 z-[2] h-10 w-10 rounded-full bg-white/45 blur-[14px] mix-blend-screen animate-pulse" aria-hidden />
+        <span
+          className={cn(
+            "pointer-events-none absolute left-1/2 top-1/2 z-[1] aspect-square w-[185%] max-w-none -translate-x-1/2 -translate-y-1/2 will-change-transform animate-[spin_5.5s_linear_infinite] motion-reduce:animate-none bg-gradient-to-r",
             theme.ring
           )}
           style={{ animationDuration: `${5.3 + (j % 5) * 0.42}s` }}
           aria-hidden
         />
-        <span className="relative z-[1] m-[1px] flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.45rem] bg-[#04060d] ring-1 ring-black/70">
+        <span className="relative z-[2] m-[1px] flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.45rem] bg-[#04060d] ring-1 ring-black/70">
           <div className="relative z-[3] flex h-full min-h-0 flex-col gap-2 p-3 sm:p-3.5">
             <div className="relative min-h-[9.6rem] overflow-hidden rounded-2xl border-2 border-white/20 sm:min-h-[14.2rem] sm:flex-1">
               {coverSrc ? (
@@ -249,7 +273,14 @@ export function PlaylistCardsSection({
   };
 
   return (
-    <section className={cn("space-y-5", className)}>
+    <section className={cn("relative space-y-5 overflow-hidden rounded-3xl px-1 py-2 sm:px-2 sm:py-3", className)}>
+      <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden>
+        <div className="absolute left-[-8%] top-[12%] h-[250px] w-[250px] rounded-full bg-fuchsia-500/20 blur-[90px] sm:h-[380px] sm:w-[380px] sm:blur-[125px]" />
+        <div className="absolute right-[-10%] top-[20%] h-[260px] w-[260px] rounded-full bg-cyan-400/18 blur-[95px] sm:h-[400px] sm:w-[400px] sm:blur-[130px]" />
+        <div className="absolute left-1/2 top-[48%] h-[220px] w-[220px] -translate-x-1/2 rounded-full bg-amber-300/14 blur-[90px] sm:h-[340px] sm:w-[340px] sm:blur-[120px]" />
+        <div className="absolute bottom-[-15%] left-[20%] h-[230px] w-[230px] rounded-full bg-violet-400/16 blur-[95px] sm:h-[360px] sm:w-[360px] sm:blur-[130px]" />
+        <div className="absolute bottom-[-12%] right-[16%] h-[230px] w-[230px] rounded-full bg-sky-300/14 blur-[95px] sm:h-[350px] sm:w-[350px] sm:blur-[125px]" />
+      </div>
       {loading ? (
         <div className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-[13px] text-white/70">Loading playlists...</div>
       ) : null}

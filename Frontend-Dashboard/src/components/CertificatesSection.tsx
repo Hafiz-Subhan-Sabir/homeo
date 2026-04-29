@@ -176,6 +176,19 @@ export default function CertificatesSection({
           <p className="mx-auto mt-4 max-w-2xl text-sm text-slate-200/80 sm:text-base" style={{ textShadow: '0 0 12px rgba(34,211,238,0.14)' }}>
             Complete our courses and earn verified credentials that elevate your profile. Join leaders who prove their expertise.
           </p>
+          <div className="mt-6 flex justify-center">
+            <div className="relative">
+              <div className="pointer-events-none absolute inset-0 rounded-xl bg-[radial-gradient(circle_at_center,rgba(253,208,47,0.35)_0%,rgba(253,208,47,0.15)_40%,transparent_75%)] blur-[16px]" />
+              <Image
+                src="/assets/footer-tagline.png"
+                alt="The Syndicate money power honour freedom"
+                width={980}
+                height={120}
+                className="relative z-[1] h-auto w-[min(92vw,760px)] object-contain"
+                priority={false}
+              />
+            </div>
+          </div>
         </motion.header>
 
         <motion.div
@@ -233,10 +246,15 @@ export default function CertificatesSection({
               >
                 <div className="relative z-[2] flex w-full flex-col items-center justify-center p-6 text-center">
                   <div
-                    className="mb-6 flex h-32 w-32 items-center justify-center rounded-full border-2"
-                    style={{ borderColor: '#22d3ee', background: 'rgba(3, 15, 26, 0.75)', boxShadow: '0 0 42px rgba(34,211,238,0.58), inset 0 0 28px rgba(167,139,250,0.24)' }}
+                    className="mb-6 flex h-32 w-32 items-center justify-center rounded-full"
+                    style={{ background: 'transparent', boxShadow: 'none' }}
                   >
-                    <Award className="h-16 w-16 text-cyan-200" strokeWidth={2.2} style={{ filter: 'drop-shadow(0 0 14px rgba(34,211,238,0.95))' }} />
+                    <div className="pointer-events-none absolute h-28 w-28 rounded-full bg-[radial-gradient(circle,rgba(253,208,47,0.42)_0%,rgba(253,208,47,0.18)_42%,transparent_75%)] blur-[14px] sm:h-36 sm:w-36" />
+                    <Award
+                      className="h-20 w-20 text-cyan-200 sm:h-24 sm:w-24"
+                      strokeWidth={2.2}
+                      style={{ filter: 'drop-shadow(0 0 14px rgba(34,211,238,0.95))' }}
+                    />
                   </div>
                   <div className="w-full max-w-[420px]">
                     <div className="mt-1 flex w-full items-center justify-center gap-2 border-2 py-3 text-sm tracking-wider text-cyan-300 [clip-path:polygon(10px_0,calc(100%-10px)_0,100%_10px,100%_calc(100%-10px),calc(100%-10px)_100%,10px_100%,0_calc(100%-10px),0_10px)]"
@@ -387,7 +405,7 @@ export default function CertificatesSection({
                 <div className="pointer-events-none absolute bottom-[20px] right-[20px] h-12 w-12 border-b-2 border-r-2 border-red-400/90" />
 
                 <div className="relative z-10 flex flex-col px-2 pb-2 pt-3 text-cyan-100 sm:px-3 sm:pb-3 sm:pt-4">
-                  <div className="mt-2 ml-2 flex flex-wrap items-center gap-1.5 sm:mt-3 sm:ml-8 sm:gap-3">
+                  <div className="mt-2 ml-2 flex flex-wrap items-center gap-4 sm:mt-3 sm:ml-8 sm:gap-6">
                     <Image
                       src="/assets/logo.webp"
                       alt="Syndicate logo"
@@ -396,7 +414,7 @@ export default function CertificatesSection({
                       className="h-auto w-[88px] object-contain brightness-125 contrast-125 sm:w-[130px]"
                       priority={false}
                     />
-                    <div>
+                    <div className="pl-1 sm:pl-2">
                       <p className="text-[9px] uppercase tracking-[0.14em] text-[#fdd02f] sm:text-[13px] sm:tracking-[0.2em]">Money · Power · Honour · Freedom</p>
                     </div>
                   </div>
@@ -442,10 +460,15 @@ export default function CertificatesSection({
                   </div>
 
                   <div className="mt-4 flex flex-col items-center justify-center pb-2 sm:mt-5 sm:pb-3">
-                    <div className="relative flex h-28 w-28 items-center justify-center rounded-full border border-cyan-200/85 bg-cyan-400/10 shadow-[0_0_20px_rgba(56,189,248,0.55),0_0_48px_rgba(56,189,248,0.35)] sm:h-44 sm:w-44">
-                      <div className="absolute inset-3 rounded-full border border-cyan-200/70 shadow-[0_0_12px_rgba(56,189,248,0.45)]" />
-                      <div className="absolute inset-8 rounded-full border border-cyan-300/45" />
-                      <Award className="h-16 w-16 text-cyan-50" style={{ filter: 'drop-shadow(0 0 16px rgba(56,189,248,1))' }} />
+                    <div className="relative flex h-28 w-28 items-center justify-center rounded-full sm:h-44 sm:w-44">
+                      <div className="pointer-events-none absolute h-32 w-32 rounded-full bg-[radial-gradient(circle,rgba(253,208,47,0.42)_0%,rgba(253,208,47,0.18)_42%,transparent_75%)] blur-[16px] sm:h-44 sm:w-44" />
+                      <Image
+                        src="/assets/coin-gold.png"
+                        alt="Gold key certificate icon"
+                        width={380}
+                        height={380}
+                        className="h-32 w-32 object-contain sm:h-44 sm:w-44"
+                      />
                     </div>
                     <p className="mt-3 text-[10px] uppercase tracking-[0.2em] text-cyan-100/80 sm:tracking-[0.24em]">Syndicate Credential Token</p>
                     <div className="mt-2 h-[2px] w-40 rounded-full bg-cyan-300/75 blur-[0.5px]" />
