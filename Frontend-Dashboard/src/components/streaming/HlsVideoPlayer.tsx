@@ -25,6 +25,7 @@ type Props = {
   onPlaybackEnded?: () => void;
   startAtSeconds?: number;
   onSeekSegment?: (payload: { from: number; to: number; duration: number }) => void;
+  seekRequest?: { id: number; seconds: number; autoplay?: boolean } | null;
 };
 
 /**
@@ -45,11 +46,14 @@ export default function HlsVideoPlayer({
   onTimeProgress,
   onPlaybackEnded,
   startAtSeconds = 0,
-  onSeekSegment
+  onSeekSegment,
+  seekRequest = null
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [measured, setMeasured] = useState<{ width: number; height: number } | null>(null);
   const onMetadataRef = useRef(onMetadata);
+  const suppressNextSeekEventRef = useRef(false);
+  const lastSeekStartRef = useRef(0);
   useEffect(() => {
     onMetadataRef.current = onMetadata;
   }, [onMetadata]);
@@ -83,7 +87,7 @@ export default function HlsVideoPlayer({
       if (startAtSeconds > 0 && Number.isFinite(video.duration) && video.duration > 0) {
         const target = Math.min(Math.max(0, startAtSeconds), Math.max(0, video.duration - 1));
         if (target > 0) {
-          suppressNextSeekEvent = true;
+          suppressNextSeekEventRef.current = true;
           video.currentTime = target;
         }
       }
@@ -97,20 +101,18 @@ export default function HlsVideoPlayer({
     const emitEnded = () => {
       onPlaybackEnded?.();
     };
-    let lastSeekStart = 0;
-    let suppressNextSeekEvent = false;
     const onSeeking = () => {
-      lastSeekStart = Number.isFinite(video.currentTime) ? video.currentTime : 0;
+      lastSeekStartRef.current = Number.isFinite(video.currentTime) ? video.currentTime : 0;
     };
     const onSeeked = () => {
       const to = Number.isFinite(video.currentTime) ? video.currentTime : 0;
       const duration = Number.isFinite(video.duration) ? video.duration : 0;
-      if (suppressNextSeekEvent) {
-        suppressNextSeekEvent = false;
+      if (suppressNextSeekEventRef.current) {
+        suppressNextSeekEventRef.current = false;
         return;
       }
-      if (duration > 0 && to - lastSeekStart > 2) {
-        onSeekSegment?.({ from: Math.max(0, lastSeekStart), to: Math.min(duration, to), duration });
+      if (duration > 0 && to - lastSeekStartRef.current > 2) {
+        onSeekSegment?.({ from: Math.max(0, lastSeekStartRef.current), to: Math.min(duration, to), duration });
       }
     };
     video.addEventListener("loadedmetadata", emitMetadata);
@@ -166,6 +168,32 @@ export default function HlsVideoPlayer({
       video.removeEventListener("seeked", onSeeked);
     };
   }, [src, requireAuthHeaders, onPlaybackEnded, onSeekSegment, onTimeProgress]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !seekRequest || !Number.isFinite(seekRequest.seconds)) return;
+    const applySeek = () => {
+      const duration = Number(video.duration || 0);
+      if (!Number.isFinite(duration) || duration <= 0) return;
+      const target = Math.min(Math.max(0, seekRequest.seconds), Math.max(0, duration - 0.05));
+      suppressNextSeekEventRef.current = true;
+      video.currentTime = target;
+      if (seekRequest.autoplay) {
+        void video.play().catch(() => {
+          // Browser autoplay restrictions may block this in some states.
+        });
+      }
+    };
+    if (Number.isFinite(video.duration) && video.duration > 0) {
+      applySeek();
+      return;
+    }
+    const onLoadedMetadata = () => applySeek();
+    video.addEventListener("loadedmetadata", onLoadedMetadata, { once: true });
+    return () => {
+      video.removeEventListener("loadedmetadata", onLoadedMetadata);
+    };
+  }, [seekRequest]);
 
   return (
     <div

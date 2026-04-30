@@ -20,6 +20,10 @@ type Props = {
 const playerShell = "overflow-hidden rounded-xl border border-white/10 bg-black/50";
 const WATCH_PROGRESS_PREFIX = "syn_playlist_watch_progress_v1";
 const CERTIFICATE_PREFIX = "syn_playlist_certificate_v1";
+const MAX_REAL_PLAYBACK_DELTA_SECONDS = 6;
+const SEEK_COOLDOWN_MS = 1400;
+const MIN_WATCHED_INCREMENT_SECONDS = 0.2;
+const DISPLAY_GAP_SMOOTH_SECONDS = 1.2;
 
 function parsePlaylistNumber(value: string | number | null | undefined): number {
   const n = typeof value === "number" ? value : Number.parseFloat(String(value ?? "0"));
@@ -54,6 +58,81 @@ function mergeRanges(ranges: Array<{ start: number; end: number }>): Array<{ sta
   return merged;
 }
 
+function mergeRangesWithGap(
+  ranges: Array<{ start: number; end: number }>,
+  gapSeconds: number
+): Array<{ start: number; end: number }> {
+  if (!ranges.length) return [];
+  const sorted = [...ranges]
+    .filter((r) => Number.isFinite(r.start) && Number.isFinite(r.end) && r.end > r.start)
+    .sort((a, b) => a.start - b.start);
+  if (!sorted.length) return [];
+  const merged: Array<{ start: number; end: number }> = [{ ...sorted[0] }];
+  for (let i = 1; i < sorted.length; i += 1) {
+    const cur = sorted[i];
+    const last = merged[merged.length - 1];
+    if (cur.start <= last.end + Math.max(0, gapSeconds)) {
+      last.end = Math.max(last.end, cur.end);
+    } else {
+      merged.push({ ...cur });
+    }
+  }
+  return merged;
+}
+
+function subtractRange(
+  ranges: Array<{ start: number; end: number }>,
+  remove: { start: number; end: number }
+): Array<{ start: number; end: number }> {
+  const removeStart = Math.min(remove.start, remove.end);
+  const removeEnd = Math.max(remove.start, remove.end);
+  if (!Number.isFinite(removeStart) || !Number.isFinite(removeEnd) || removeEnd <= removeStart) {
+    return ranges;
+  }
+  const next: Array<{ start: number; end: number }> = [];
+  ranges.forEach((range) => {
+    if (range.end <= removeStart || range.start >= removeEnd) {
+      next.push(range);
+      return;
+    }
+    if (range.start < removeStart) {
+      next.push({ start: range.start, end: removeStart });
+    }
+    if (range.end > removeEnd) {
+      next.push({ start: removeEnd, end: range.end });
+    }
+  });
+  return mergeRanges(next);
+}
+
+function invertRanges(duration: number, ranges: Array<{ start: number; end: number }>): Array<{ start: number; end: number }> {
+  const safeDuration = Math.max(0, duration);
+  if (safeDuration <= 0) return [];
+  const merged = mergeRanges(
+    ranges.map((r) => ({
+      start: Math.max(0, Math.min(r.start, safeDuration)),
+      end: Math.max(0, Math.min(r.end, safeDuration)),
+    }))
+  );
+  const inverted: Array<{ start: number; end: number }> = [];
+  let cursor = 0;
+  merged.forEach((r) => {
+    if (r.start > cursor) inverted.push({ start: cursor, end: r.start });
+    cursor = Math.max(cursor, r.end);
+  });
+  if (cursor < safeDuration) inverted.push({ start: cursor, end: safeDuration });
+  return inverted.filter((r) => r.end - r.start > 0.12);
+}
+
+function totalRangeDuration(ranges: Array<{ start: number; end: number }>, maxDuration?: number): number {
+  const merged = mergeRanges(ranges);
+  const total = merged.reduce((sum, r) => sum + Math.max(0, r.end - r.start), 0);
+  if (typeof maxDuration === "number" && Number.isFinite(maxDuration)) {
+    return Math.min(Math.max(0, maxDuration), Math.max(0, total));
+  }
+  return Math.max(0, total);
+}
+
 export function StreamPlaylistProgramPanel({ playlistId }: Props) {
   const [playlist, setPlaylist] = useState<StreamPlaylistDetail | null>(null);
   const [playback, setPlayback] = useState<StreamPayload | null>(null);
@@ -71,6 +150,7 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
         currentPositionSeconds: number;
         completed: boolean;
         skippedRanges?: Array<{ start: number; end: number }>;
+        watchedRanges?: Array<{ start: number; end: number }>;
       }
     >
   >({});
@@ -78,7 +158,9 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
   const [certificateName, setCertificateName] = useState("");
   const [certificateMessage, setCertificateMessage] = useState<string | null>(null);
   const [progressHydrated, setProgressHydrated] = useState(false);
+  const [seekRequest, setSeekRequest] = useState<{ id: number; seconds: number; autoplay?: boolean } | null>(null);
   const lastPlaybackPositionRef = useRef<Record<number, number>>({});
+  const ignorePlaybackUntilRef = useRef(0);
 
   const loadPlaylist = useCallback(async () => {
     setLoading(true);
@@ -111,9 +193,46 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
     try {
       const parsed = JSON.parse(raw) as Record<
         number,
-        { watchedSeconds: number; durationSeconds: number; currentPositionSeconds?: number; completed: boolean }
+        {
+          watchedSeconds: number;
+          durationSeconds: number;
+          currentPositionSeconds?: number;
+          completed: boolean;
+          skippedRanges?: Array<{ start: number; end: number }>;
+          watchedRanges?: Array<{ start: number; end: number }>;
+        }
       >;
-      setProgressMap(parsed ?? {});
+      const upgraded = Object.fromEntries(
+        Object.entries(parsed ?? {}).map(([videoId, value]) => {
+          const duration = Math.max(0, Number(value?.durationSeconds ?? 0));
+          const watched = Math.min(duration, Math.max(0, Number(value?.watchedSeconds ?? 0)));
+          const hasWatchedRanges = Array.isArray(value?.watchedRanges) && value.watchedRanges.length > 0;
+          const watchedRanges = hasWatchedRanges ? mergeRanges(value.watchedRanges ?? []) : watched > 0 ? [{ start: 0, end: watched }] : [];
+          const watchedFromRanges = totalRangeDuration(watchedRanges, duration);
+          return [
+            Number(videoId),
+            {
+              watchedSeconds: watchedFromRanges,
+              durationSeconds: duration,
+              currentPositionSeconds: Math.max(0, Number(value?.currentPositionSeconds ?? 0)),
+              completed: Boolean(value?.completed),
+              skippedRanges: Array.isArray(value?.skippedRanges) ? value.skippedRanges : [],
+              watchedRanges,
+            },
+          ];
+        })
+      ) as Record<
+        number,
+        {
+          watchedSeconds: number;
+          durationSeconds: number;
+          currentPositionSeconds: number;
+          completed: boolean;
+          skippedRanges: Array<{ start: number; end: number }>;
+          watchedRanges: Array<{ start: number; end: number }>;
+        }
+      >;
+      setProgressMap(upgraded);
     } catch {
       setProgressMap({});
     } finally {
@@ -162,6 +281,13 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
   const completionPercent = totalDuration > 0 ? Math.min(100, (watchedDuration / totalDuration) * 100) : 0;
   const isPlaylistCompleted = items.length > 0 && completedCount === items.length;
   const activeProgress = activeVideo?.id ? progressMap[activeVideo.id] : undefined;
+  const activeUnwatchedRanges = useMemo(() => {
+    if (!activeProgress?.durationSeconds) return [];
+    return mergeRangesWithGap(
+      invertRanges(activeProgress.durationSeconds, activeProgress.watchedRanges ?? []),
+      DISPLAY_GAP_SMOOTH_SECONDS
+    );
+  }, [activeProgress?.durationSeconds, activeProgress?.watchedRanges]);
 
   useEffect(() => {
     if (!activeVideo?.id) {
@@ -228,25 +354,32 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
       const now = Math.min(Math.max(currentTime, 0), duration);
       const prevPosition = lastPlaybackPositionRef.current[videoId];
       lastPlaybackPositionRef.current[videoId] = now;
+      const inSeekCooldown = Date.now() < ignorePlaybackUntilRef.current;
 
       // Prevent seek/forward jumps from inflating watched time.
-      // Count only small forward deltas that represent real playback progression.
+      // Count only realistic forward deltas that represent real playback progression.
       const delta = typeof prevPosition === "number" ? now - prevPosition : 0;
-      const playbackIncrement = delta > 0 && delta <= 1.75 ? delta : 0;
+      const playbackIncrement =
+        !inSeekCooldown && delta > 0 && delta <= MAX_REAL_PLAYBACK_DELTA_SECONDS ? delta : 0;
+      const hasMeaningfulPlayback = playbackIncrement >= MIN_WATCHED_INCREMENT_SECONDS;
 
       setProgressMap((prev) => {
         const existing = prev[videoId];
         const existingRanges = existing?.skippedRanges ?? [];
+        const existingWatchedRanges = existing?.watchedRanges ?? [];
         // Fallback: treat large positive jumps as skipped/forwarded segments.
         const autoSkipRange =
-          typeof prevPosition === "number" && delta > 2
+          !inSeekCooldown && typeof prevPosition === "number" && delta > MAX_REAL_PLAYBACK_DELTA_SECONDS
             ? { start: Math.max(0, prevPosition), end: Math.min(duration, now) }
             : null;
-        const nextRanges = autoSkipRange ? mergeRanges([...existingRanges, autoSkipRange]) : existingRanges;
-        const nextWatched = Math.min(
-          duration,
-          Math.max(0, (existing?.watchedSeconds ?? 0) + playbackIncrement)
-        );
+        const watchedRange =
+          typeof prevPosition === "number" && hasMeaningfulPlayback
+            ? { start: Math.max(0, prevPosition), end: Math.min(duration, now) }
+            : null;
+        const nextWatchedRanges = watchedRange ? mergeRanges([...existingWatchedRanges, watchedRange]) : existingWatchedRanges;
+        const withAutoSkip = autoSkipRange ? mergeRanges([...existingRanges, autoSkipRange]) : existingRanges;
+        const nextRanges = watchedRange ? subtractRange(withAutoSkip, watchedRange) : withAutoSkip;
+        const nextWatched = totalRangeDuration(nextWatchedRanges, duration);
         const completed = (existing?.completed ?? false) || nextWatched >= duration * 0.98;
         return {
           ...prev,
@@ -256,6 +389,7 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
             currentPositionSeconds: now,
             completed,
             skippedRanges: nextRanges,
+            watchedRanges: nextWatchedRanges,
           },
         };
       });
@@ -268,7 +402,8 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
     setProgressMap((prev) => {
       const existing = prev[activeVideo.id];
       const duration = Math.max(existing?.durationSeconds ?? 0, 1);
-      const watched = Math.min(duration, Math.max(existing?.watchedSeconds ?? 0, 0));
+      const watchedRanges = mergeRanges([...(existing?.watchedRanges ?? []), { start: 0, end: duration }]);
+      const watched = totalRangeDuration(watchedRanges, duration);
       const completed = watched >= duration * 0.98;
       return {
         ...prev,
@@ -278,6 +413,7 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
           currentPositionSeconds: duration,
           completed,
           skippedRanges: existing?.skippedRanges ?? [],
+          watchedRanges,
         },
       };
     });
@@ -289,6 +425,8 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
       const safeFrom = Math.max(0, Math.min(from, duration));
       const safeTo = Math.max(0, Math.min(to, duration));
       if (safeTo - safeFrom <= 1) return;
+      ignorePlaybackUntilRef.current = Date.now() + SEEK_COOLDOWN_MS;
+      lastPlaybackPositionRef.current[activeVideo.id] = safeTo;
       setProgressMap((prev) => {
         const existing = prev[activeVideo.id];
         const currentRanges = existing?.skippedRanges ?? [];
@@ -301,11 +439,39 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
             currentPositionSeconds: existing?.currentPositionSeconds ?? safeTo,
             completed: existing?.completed ?? false,
             skippedRanges: nextRanges,
+            watchedRanges: existing?.watchedRanges ?? [],
           },
         };
       });
     },
     [activeVideo?.id]
+  );
+
+  const handleTimelineSeek = useCallback(
+    (seconds: number) => {
+      if (!activeVideo?.id) return;
+      const duration = Math.max(activeProgress?.durationSeconds ?? 0, 0);
+      if (!Number.isFinite(duration) || duration <= 0) return;
+      const target = Math.min(Math.max(0, seconds), Math.max(0, duration - 0.05));
+      ignorePlaybackUntilRef.current = Date.now() + SEEK_COOLDOWN_MS;
+      lastPlaybackPositionRef.current[activeVideo.id] = target;
+      setProgressMap((prev) => {
+        const existing = prev[activeVideo.id];
+        return {
+          ...prev,
+          [activeVideo.id]: {
+            watchedSeconds: existing?.watchedSeconds ?? 0,
+            durationSeconds: Math.max(existing?.durationSeconds ?? 0, duration),
+            currentPositionSeconds: target,
+            completed: existing?.completed ?? false,
+            skippedRanges: existing?.skippedRanges ?? [],
+            watchedRanges: existing?.watchedRanges ?? [],
+          },
+        };
+      });
+      setSeekRequest({ id: Date.now(), seconds: target, autoplay: true });
+    },
+    [activeProgress?.durationSeconds, activeVideo?.id]
   );
 
   const handleApplyForToken = useCallback(() => {
@@ -397,15 +563,34 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
               onPlaybackEnded={handlePlaybackEnded}
               startAtSeconds={activeVideo?.id ? progressMap[activeVideo.id]?.currentPositionSeconds ?? 0 : 0}
               onSeekSegment={handleSeekSegment}
+              seekRequest={seekRequest}
             />
           )}
           {activeProgress?.durationSeconds ? (
             <div className="mt-2 rounded-md border border-cyan-300/25 bg-cyan-950/12 p-2">
               <div className="mb-1 flex items-center justify-between text-[10px]">
                 <span className="font-bold uppercase tracking-[0.1em] text-cyan-100/90">Video Timeline</span>
-                <span className="text-rose-100/85">red = skipped</span>
+                <span className="text-rose-100/85">red = not watched</span>
               </div>
-              <div className="relative h-2.5 overflow-hidden rounded-full bg-black/60">
+              <div
+                className="relative h-2.5 cursor-pointer overflow-hidden rounded-full bg-black/60"
+                onClick={(event) => {
+                  const duration = Math.max(activeProgress.durationSeconds, 1);
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  const x = Math.min(Math.max(0, event.clientX - rect.left), rect.width);
+                  const ratio = rect.width > 0 ? x / rect.width : 0;
+                  handleTimelineSeek(ratio * duration);
+                }}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter" && event.key !== " ") return;
+                  event.preventDefault();
+                  const duration = Math.max(activeProgress.durationSeconds, 1);
+                  handleTimelineSeek((activeProgress.currentPositionSeconds ?? 0) + duration * 0.03);
+                }}
+                aria-label="Seek video from timeline"
+              >
                 <span
                   className="absolute left-0 top-0 h-full bg-white/75"
                   style={{
@@ -415,15 +600,23 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
                     )}%`,
                   }}
                 />
-                {(activeProgress.skippedRanges ?? []).map((range, idx) => {
+                {activeUnwatchedRanges.map((range, idx) => {
                   const dur = Math.max(1, activeProgress.durationSeconds);
                   const left = (Math.max(0, range.start) / dur) * 100;
                   const width = (Math.max(0, range.end - range.start) / dur) * 100;
                   return (
                     <span
                       key={`skip-${idx}-${range.start}-${range.end}`}
-                      className="absolute top-0 h-full bg-rose-500/95"
+                      className="absolute top-0 h-full cursor-pointer bg-rose-500/95"
                       style={{ left: `${left}%`, width: `${Math.max(width, 0.8)}%` }}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        const rect = event.currentTarget.getBoundingClientRect();
+                        const x = Math.min(Math.max(0, event.clientX - rect.left), rect.width);
+                        const ratio = rect.width > 0 ? x / rect.width : 0;
+                        const segmentSeconds = range.start + ratio * Math.max(0, range.end - range.start);
+                        handleTimelineSeek(segmentSeconds);
+                      }}
                     />
                   );
                 })}
@@ -448,7 +641,7 @@ export function StreamPlaylistProgramPanel({ playlistId }: Props) {
           {(activeVideo?.description || "").trim() ? (
             <div className="mt-3 max-w-4xl rounded-xl border border-white/12 bg-black/35 px-4 py-3">
               <div className="mb-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-[#f5c814]">Description</div>
-              <p className="font-sans whitespace-pre-line text-left text-[15px] font-normal leading-7 tracking-normal text-white/92 antialiased">
+              <p className="font-sans whitespace-pre-line break-words [overflow-wrap:anywhere] text-left text-[15px] font-normal leading-7 tracking-normal text-white/92 antialiased">
                 {(activeVideo?.description || "").trim()}
               </p>
             </div>
