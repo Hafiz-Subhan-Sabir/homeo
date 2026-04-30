@@ -13,7 +13,7 @@ import {
 } from "react";
 import { gsap } from "gsap";
 import LuxuryRedirectOverlay from "@/components/syndicate-otp/LuxuryRedirectOverlay";
-import { getApiDisplayHint, persistSimpleAuthSession, resolveClientApiUrl } from "@/lib/portal-api";
+import { getApiDisplayHint, getAuthorizationHeader, persistSimpleAuthSession, resolveClientApiUrl } from "@/lib/portal-api";
 import {
   resolvePostOtpAppRedirect,
   syndicateOtpLoginHref,
@@ -28,6 +28,9 @@ type AuthScreenProps = {
   mode: AuthMode;
   prefilledEmail?: string;
   prefilledPlaylistId?: string;
+  selectedPlan?: string;
+  selectedBilling?: string;
+  selectedAmount?: string;
   otpFlow?: OtpFlow;
 };
 
@@ -63,6 +66,9 @@ export default function AuthScreen({
   mode,
   prefilledEmail = "",
   prefilledPlaylistId = "",
+  selectedPlan = "",
+  selectedBilling = "",
+  selectedAmount = "",
   otpFlow = "login",
 }: AuthScreenProps) {
   const router = useRouter();
@@ -83,19 +89,31 @@ export default function AuthScreen({
   const heading = isOtp ? "VERIFY" : isSignup ? "SIGN UP" : "LOGIN";
   const submitLabel = isOtp ? "Verify code" : isSignup ? "Sign up" : "Continue";
   const otpValue = otpDigits.join("");
+  const normalizedPlan = selectedPlan.trim();
+  const normalizedBilling = selectedBilling.trim();
+  const normalizedAmount = selectedAmount.trim();
+  const appendOfferParams = (baseHref: string) => {
+    if (!normalizedPlan && !normalizedBilling && !normalizedAmount) return baseHref;
+    const params = new URLSearchParams();
+    if (normalizedPlan) params.set("plan", normalizedPlan);
+    if (normalizedBilling) params.set("billing", normalizedBilling);
+    if (normalizedAmount) params.set("amount", normalizedAmount);
+    return `${baseHref}${baseHref.includes("?") ? "&" : "?"}${params.toString()}`;
+  };
 
   const emailFieldMinCh = useMemo(() => {
     const len = email.trim().length || 10;
     return Math.min(56, Math.max(20, len + 4));
   }, [email]);
 
-  const switchHref = isSignup
+  const switchHrefBase = isSignup
     ? syndicateOtpLoginHref()
     : isOtp
       ? isSignupOtp
         ? syndicateOtpSignupHref(email.trim())
         : syndicateOtpLoginHref(email.trim())
       : syndicateOtpSignupHref();
+  const switchHref = appendOfferParams(switchHrefBase);
   const switchText = isSignup
     ? "Already a member? Log in"
     : isOtp
@@ -424,6 +442,19 @@ export default function AuthScreen({
       if (isSignup) {
         const { response, data } = await postJson("/api/auth/signup/", requestBody);
         if (!response.ok) {
+          const normalizedErrorCode = (data.code || "").toString().trim().toUpperCase();
+          const normalizedErrorText = (data.error || "").toString().trim().toLowerCase();
+          const emailAlreadyExists =
+            normalizedErrorCode === "USER_EXISTS" ||
+            normalizedErrorCode === "EMAIL_EXISTS" ||
+            normalizedErrorCode === "ALREADY_EXISTS" ||
+            (normalizedErrorText.includes("already") && normalizedErrorText.includes("exist"));
+          if (emailAlreadyExists) {
+            const existingEmail = (data.email || email.trim()).trim();
+            setMessage("Email already exists. Redirecting to login...");
+            router.replace(appendOfferParams(syndicateOtpLoginHref(existingEmail)));
+            return;
+          }
           throw new Error(data.error || "Request failed");
         }
         const directCheckoutUrl = typeof data.checkout_url === "string" ? data.checkout_url.trim() : "";
@@ -436,11 +467,22 @@ export default function AuthScreen({
           throw new Error("Signup started, but checkout token is missing.");
         }
         setMessage(data.message || "Redirecting to secure checkout...");
-        const checkout = await postJson("/api/auth/checkout/create-session/", {
+        const checkoutPayload: Record<string, string | undefined> = {
           signup_token: signupToken,
           return_base_url: typeof window !== "undefined" ? window.location.origin : undefined,
           playlist_id: prefilledPlaylistId || undefined,
-        });
+          selected_plan: normalizedPlan || undefined,
+          selected_billing: normalizedBilling || undefined,
+          selected_amount: normalizedAmount || undefined,
+        };
+        let checkout = await postJson("/api/auth/checkout/create-session/", checkoutPayload);
+        if (!checkout.response.ok && (normalizedPlan || normalizedAmount || normalizedBilling)) {
+          checkout = await postJson("/api/auth/checkout/create-session/", {
+            signup_token: signupToken,
+            return_base_url: typeof window !== "undefined" ? window.location.origin : undefined,
+            playlist_id: prefilledPlaylistId || undefined,
+          });
+        }
         if (!checkout.response.ok) {
           throw new Error(checkout.data.error || "Could not create checkout session.");
         }
@@ -483,6 +525,29 @@ export default function AuthScreen({
               : undefined,
           );
         }
+        if (!isSignupOtp && normalizedAmount) {
+          const authHeader = getAuthorizationHeader();
+          const checkoutResponse = await fetch(resolveClientApiUrl("/api/auth/checkout/create-session/"), {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(authHeader ? { Authorization: authHeader } : {}),
+            },
+            body: JSON.stringify({
+              return_base_url: typeof window !== "undefined" ? window.location.origin : undefined,
+              selected_plan: normalizedPlan || undefined,
+              selected_billing: normalizedBilling || undefined,
+              selected_amount: normalizedAmount || undefined,
+            }),
+          });
+          const checkoutData = (await checkoutResponse.json().catch(() => ({}))) as { checkout_url?: string };
+          const checkoutUrl = typeof checkoutData.checkout_url === "string" ? checkoutData.checkout_url.trim() : "";
+          if (checkoutResponse.ok && checkoutUrl) {
+            window.location.assign(checkoutUrl);
+            return;
+          }
+        }
+
         const nextUrl =
           typeof window !== "undefined"
             ? resolvePostOtpAppRedirect(data.redirect_url)
@@ -508,7 +573,7 @@ export default function AuthScreen({
         throw new Error("Verification step not started. Please try again.");
       }
       setMessage(data.message || "Check your inbox for the code.");
-      router.replace(syndicateOtpVerifyHref(data.email || email.trim(), "login"));
+      router.replace(appendOfferParams(syndicateOtpVerifyHref(data.email || email.trim(), "login")));
     } catch (submitError) {
       setError(
         submitError instanceof Error
@@ -656,6 +721,11 @@ export default function AuthScreen({
             {isSignup && !isOtp ? (
               <p className="form-hint">
                 Enter your email to continue directly to secure checkout.
+              </p>
+            ) : null}
+            {isSignup && !isOtp && normalizedAmount ? (
+              <p className="form-hint">
+                Selected offer: {normalizedPlan || "membership"} ({normalizedBilling || "monthly"}) - £{normalizedAmount}
               </p>
             ) : null}
 

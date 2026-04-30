@@ -1,305 +1,201 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { NavApp } from '@/components/NavApp'
 import GlobalBottomSections from '@/components/GlobalBottomSections'
 
-const METHOD_PILLARS = [
+type MethodBlock = {
+  id: string
+  title: string
+  summary: string
+  paragraphs: [string, string]
+  image: string
+  imageAlt: string
+  accent: 'cyan' | 'violet' | 'amber'
+}
+
+const METHOD_BLOCKS: MethodBlock[] = [
   {
-    title: 'Strategic Clarity',
-    description:
-      'Cut through noise and focus on high-leverage decisions that directly impact income, influence, and execution quality.',
+    id: 'greatness',
+    title: 'Achieving True Greatness comes with Mastery',
+    summary:
+      'Greatness is engineered through discipline and strategic education, not by chance.',
+    paragraphs: [
+      'True greatness is not achieved by chance - it is deliberately built through knowledge, discipline, and action. The Syndicate equips its members with actionable, real-world strategies designed to help them master the systems of wealth and power.',
+      'The Syndicate brings clarity to wealth systems with immediate implementation methods. Every lesson is built for practical execution from day one while preserving moral integrity and purpose.',
+    ],
+    image: '/assets/pawn2.png',
+    imageAlt: 'Dystopian operator portrait',
+    accent: 'cyan',
   },
   {
-    title: 'Disciplined Execution',
-    description:
-      'Build non-negotiable routines and repeatable operating systems that keep momentum consistent under pressure.',
+    id: 'break-free',
+    title: 'BREAK FREE FROM THE SYSTEM',
+    summary:
+      'Reject passive compliance and build strategic autonomy through alliance and execution.',
+    paragraphs: [
+      'The Syndicate stands as an elite and exclusive organisation of individuals committed to achieving the zenith of power, wealth, and mastery. This private network is for those who yearn for true greatness and the ability to shape their destiny.',
+      'This is not a shortcut scheme. It is a disciplined alliance for people willing to master themselves, build leverage, and reshape outcomes under pressure.',
+    ],
+    image: '/assets/pawn.png',
+    imageAlt: 'Syndicate resistance figure',
+    accent: 'amber',
   },
   {
-    title: 'Ethical Power',
-    description:
-      'Learn to use money and influence with moral responsibility so growth strengthens your life instead of corrupting it.',
+    id: 'money-power',
+    title: 'Money and Power Mastery',
+    summary:
+      'Money and power are inseparable systems that demand control, ethics, and strategic awareness.',
+    paragraphs: [
+      'The Syndicate philosophy teaches that money and power go hand in hand. They are like two sides of the same coin. Money and power, if not correctly wielded, has the potential to completely corrupt you, leading you down a dark path of corrupt, degenerate and hedonistic behaviour.',
+      'The mission goes beyond accumulation. Members are trained to navigate influence structures without moral collapse, turning power into disciplined, constructive force.',
+    ],
+    image: '/assets/pawn1.png',
+    imageAlt: 'Neon chess warrior',
+    accent: 'violet',
   },
 ]
 
-const EXECUTION_STEPS = [
+const METHOD_TIMELINE = [
   {
     step: '01',
-    title: 'Learn The System',
-    description:
-      'Absorb elite frameworks designed for practical implementation, not passive theory.',
+    title: 'Decode The System',
+    detail:
+      'Map the hidden incentive structures controlling outcomes in money, influence, and status.',
+    border: 'border-rose-500/90',
+    glow: 'shadow-[0_0_0_2px_rgba(244,63,94,0.82),0_0_48px_rgba(225,29,72,0.74),0_0_92px_rgba(136,19,55,0.58)]',
+    bg: 'bg-[linear-gradient(132deg,rgba(244,63,94,0.72),rgba(190,24,93,0.66),rgba(136,19,55,0.62))]',
+    aura: 'bg-[radial-gradient(90%_80%_at_50%_40%,rgba(244,63,94,0.64),rgba(136,19,55,0.5)_48%,transparent_74%)]',
+    stepBorder: 'border-rose-700/90',
+    stepText: 'text-rose-200',
+    titleText: 'text-rose-200',
   },
   {
     step: '02',
-    title: 'Apply Immediately',
-    description:
-      'Execute each lesson straight away with clear actions that produce measurable movement.',
+    title: 'Build Strategic Clarity',
+    detail:
+      'Convert chaos into executable frameworks with clear priorities, leverage points, and constraints.',
+    border: 'border-fuchsia-500/90',
+    glow: 'shadow-[0_0_0_2px_rgba(217,70,239,0.82),0_0_48px_rgba(192,38,211,0.74),0_0_92px_rgba(134,25,143,0.58)]',
+    bg: 'bg-[linear-gradient(132deg,rgba(217,70,239,0.74),rgba(162,28,175,0.68),rgba(126,34,206,0.64))]',
+    aura: 'bg-[radial-gradient(90%_80%_at_50%_40%,rgba(217,70,239,0.64),rgba(126,34,206,0.5)_48%,transparent_74%)]',
+    stepBorder: 'border-fuchsia-700/90',
+    stepText: 'text-fuchsia-200',
+    titleText: 'text-fuchsia-200',
   },
   {
     step: '03',
-    title: 'Compound Results',
-    description:
-      'Scale your outcomes through disciplined repetition, strategic refinement, and long-term consistency.',
-  },
-]
-
-const SYSTEM_FEATURES = [
-  {
-    title: 'Execution Blueprints',
-    detail: 'Battle-tested playbooks with step-by-step actions for business, positioning, and leverage.',
-  },
-  {
-    title: 'Decision Filters',
-    detail: 'Simple frameworks to separate high-value moves from distractions and low-return activity.',
+    title: 'Execute Relentlessly',
+    detail:
+      'Deploy disciplined daily actions, track feedback loops, and adapt faster than competitors.',
+    border: 'border-cyan-500/90',
+    glow: 'shadow-[0_0_0_2px_rgba(34,211,238,0.82),0_0_48px_rgba(6,182,212,0.74),0_0_92px_rgba(14,116,144,0.58)]',
+    bg: 'bg-[linear-gradient(132deg,rgba(34,211,238,0.74),rgba(8,145,178,0.68),rgba(14,116,144,0.64))]',
+    aura: 'bg-[radial-gradient(90%_80%_at_50%_40%,rgba(34,211,238,0.66),rgba(14,116,144,0.5)_48%,transparent_74%)]',
+    stepBorder: 'border-cyan-700/90',
+    stepText: 'text-cyan-200',
+    titleText: 'text-cyan-200',
   },
   {
-    title: 'Accountability Rhythm',
-    detail: 'Structured check-ins and standards that keep performance consistent, even under pressure.',
-  },
-  {
-    title: 'Influence Strategy',
-    detail: 'Practical communication and positioning methods to build authority without losing integrity.',
-  },
-]
-
-const OUTCOME_METRICS = [
-  { label: 'Practical Lessons', value: '100%' },
-  { label: 'Immediate Application', value: 'Day 1' },
-  { label: 'Systems Thinking Focus', value: 'High' },
-]
-
-const SAFEGUARDS = [
-  'Power without discipline leads to self-destruction.',
-  'Wealth without ethics leads to corruption.',
-  'Influence without purpose leads to emptiness.',
-  'The Syndicate method builds all three with moral control.',
-]
-
-const WORKFLOW_NODES = [
-  { id: '01', title: 'Scan Doctrine', detail: 'Understand the strategic model.', href: '#mastery-section' },
-  { id: '02', title: 'Lock Targets', detail: 'Pick high-leverage actions only.', href: '#mastery-section' },
-  { id: '03', title: 'Deploy Daily', detail: 'Run execution loops with discipline.', href: '#register-interest' },
-  { id: '04', title: 'Track Signal', detail: 'Measure outcomes and refine.', href: '#register-interest' },
-  { id: '05', title: 'Scale Influence', detail: 'Compound authority and income.', href: '/login' },
-] as const
-
-const MISSION_PHASES = ['Recon', 'Execute', 'Calibrate', 'Scale'] as const
-
-const COMMAND_STATS = [
-  { label: 'Execution Streak', value: '21 Days' },
-  { label: 'Signal Strength', value: '94%' },
-  { label: 'Focus Score', value: 'A+' },
-  { label: 'Win Rate', value: 'High' },
-] as const
-
-const CYBER_THEMES = [
-  {
-    name: 'red',
-    frame: 'border-red-300/95',
-    glow: 'shadow-[0_0_0_1px_rgba(255,70,70,0.85),0_0_42px_rgba(255,70,70,0.55),0_0_110px_rgba(255,70,70,0.24)]',
-    tone: 'from-rose-500/26 via-red-500/14 to-orange-600/20',
-    aura: 'from-red-400/42 via-rose-500/24 to-transparent',
-    chip: 'border-red-50 bg-red-200/75 shadow-[0_0_18px_rgba(255,70,70,1)]',
-    text: 'text-red-100',
-  },
-  {
-    name: 'purple',
-    frame: 'border-violet-300/95',
-    glow: 'shadow-[0_0_0_1px_rgba(193,120,255,0.85),0_0_42px_rgba(193,120,255,0.55),0_0_110px_rgba(193,120,255,0.24)]',
-    tone: 'from-violet-500/26 via-fuchsia-500/14 to-indigo-600/20',
-    aura: 'from-violet-400/42 via-fuchsia-500/24 to-transparent',
-    chip: 'border-violet-50 bg-violet-200/75 shadow-[0_0_18px_rgba(193,120,255,1)]',
-    text: 'text-violet-100',
-  },
-  {
-    name: 'yellow',
-    frame: 'border-amber-300/95',
-    glow: 'shadow-[0_0_0_1px_rgba(255,198,64,0.85),0_0_42px_rgba(255,198,64,0.55),0_0_110px_rgba(255,198,64,0.24)]',
-    tone: 'from-amber-500/26 via-orange-500/14 to-yellow-600/20',
-    aura: 'from-amber-400/42 via-orange-500/24 to-transparent',
-    chip: 'border-amber-50 bg-amber-200/75 shadow-[0_0_18px_rgba(255,198,64,1)]',
-    text: 'text-amber-100',
-  },
-  {
-    name: 'green',
-    frame: 'border-lime-300/95',
-    glow: 'shadow-[0_0_0_1px_rgba(120,255,90,0.85),0_0_42px_rgba(120,255,90,0.55),0_0_110px_rgba(120,255,90,0.24)]',
-    tone: 'from-lime-500/26 via-emerald-500/14 to-teal-600/20',
-    aura: 'from-lime-400/42 via-emerald-500/24 to-transparent',
-    chip: 'border-lime-50 bg-lime-200/75 shadow-[0_0_18px_rgba(120,255,90,1)]',
-    text: 'text-lime-100',
-  },
-  {
-    name: 'cyan',
-    frame: 'border-cyan-300/95',
-    glow: 'shadow-[0_0_0_1px_rgba(56,236,255,0.85),0_0_42px_rgba(56,236,255,0.55),0_0_110px_rgba(56,236,255,0.24)]',
-    tone: 'from-cyan-500/26 via-sky-500/14 to-indigo-600/20',
-    aura: 'from-cyan-400/42 via-sky-500/24 to-transparent',
-    chip: 'border-cyan-50 bg-cyan-200/75 shadow-[0_0_18px_rgba(56,236,255,1)]',
-    text: 'text-cyan-100',
+    step: '04',
+    title: 'Compound Power',
+    detail:
+      'Scale from isolated wins to durable systems that produce authority, capital, and autonomy.',
+    border: 'border-blue-500/90',
+    glow: 'shadow-[0_0_0_2px_rgba(59,130,246,0.82),0_0_48px_rgba(37,99,235,0.74),0_0_92px_rgba(30,64,175,0.58)]',
+    bg: 'bg-[linear-gradient(132deg,rgba(59,130,246,0.74),rgba(37,99,235,0.68),rgba(30,64,175,0.64))]',
+    aura: 'bg-[radial-gradient(90%_80%_at_50%_40%,rgba(59,130,246,0.64),rgba(30,64,175,0.5)_48%,transparent_74%)]',
+    stepBorder: 'border-blue-700/90',
+    stepText: 'text-blue-200',
+    titleText: 'text-blue-200',
   },
 ] as const
-
-function HudPanel({
-  toneIndex,
-  eyebrow,
-  title,
-  body,
-  cornerLabel,
-}: {
-  toneIndex: number
-  eyebrow: string
-  title: string
-  body: string
-  cornerLabel?: string
-}) {
-  const theme = CYBER_THEMES[toneIndex % CYBER_THEMES.length]
-  return (
-    <article
-      className={`relative overflow-hidden border bg-black/40 p-6 sm:p-7 backdrop-blur-0 [clip-path:polygon(22px_0,calc(100%-22px)_0,100%_22px,100%_calc(100%-24px),calc(100%-24px)_100%,24px_100%,0_calc(100%-22px),0_22px)] ${theme.frame} ${theme.glow}`}
-    >
-      <span className={`pointer-events-none absolute -inset-6 -z-10 bg-gradient-to-br ${theme.aura} blur-[38px]`} />
-      <span className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${theme.tone}`} />
-      <div className="pointer-events-none absolute inset-0 opacity-[0.18] [background-image:repeating-linear-gradient(0deg,transparent_0px,transparent_2px,rgba(255,255,255,0.12)_2px,rgba(255,255,255,0.12)_3px)]" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_55%_at_50%_0%,rgba(255,255,255,0.16),transparent_70%)] opacity-70" />
-      <span className="pointer-events-none absolute left-3 top-3 h-6 w-6 border-l-2 border-t-2 border-zinc-100/90 [clip-path:polygon(0_0,100%_0,100%_28%,28%_28%,28%_100%,0_100%)]" />
-      <span className="pointer-events-none absolute right-3 bottom-3 h-6 w-6 border-r-2 border-b-2 border-zinc-100/90 [clip-path:polygon(72%_0,100%_0,100%_100%,0_100%,0_72%,72%_72%)]" />
-      <div className="relative z-10">
-        <div className="flex items-start justify-between gap-3">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-200/80">{eyebrow}</p>
-          {cornerLabel ? (
-            <span className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${theme.chip} ${theme.text}`}>
-              {cornerLabel}
-            </span>
-          ) : null}
-        </div>
-        <h3 className={`mt-3 text-2xl font-semibold ${theme.text}`}>{title}</h3>
-        <p className="mt-3 text-base leading-relaxed text-zinc-100/90">{body}</p>
-      </div>
-    </article>
-  )
-}
 
 export default function OurMethodsPage() {
+  const accentStyles: Record<MethodBlock['accent'], { border: string; glow: string; title: string; chip: string }> = {
+    cyan: {
+      border: 'border-cyan-300/65',
+      glow: 'shadow-[0_0_0_1px_rgba(34,211,238,0.42),0_0_70px_rgba(34,211,238,0.24)]',
+      title: 'text-cyan-100',
+      chip: 'text-cyan-200 border-cyan-300/70',
+    },
+    violet: {
+      border: 'border-violet-300/65',
+      glow: 'shadow-[0_0_0_1px_rgba(167,139,250,0.42),0_0_70px_rgba(167,139,250,0.24)]',
+      title: 'text-violet-100',
+      chip: 'text-violet-200 border-violet-300/70',
+    },
+    amber: {
+      border: 'border-amber-300/65',
+      glow: 'shadow-[0_0_0_1px_rgba(245,158,11,0.36),0_0_70px_rgba(245,158,11,0.2)]',
+      title: 'text-amber-100',
+      chip: 'text-amber-200 border-amber-300/70',
+    },
+  }
+
   return (
-    <div className="min-h-[100dvh] w-full bg-black">
+    <div className="relative min-h-[100dvh] w-full overflow-x-clip bg-black">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <video
+          className="absolute inset-0 h-full w-full object-cover opacity-25"
+          autoPlay
+          muted
+          loop
+          playsInline
+        >
+          <source src="/assets/video.mp4" type="video/mp4" />
+        </video>
+        <div className="absolute left-[-10%] top-[8%] h-[400px] w-[400px] rounded-full bg-cyan-400/18 blur-[140px]" />
+        <div className="absolute right-[-12%] top-[14%] h-[440px] w-[440px] rounded-full bg-violet-500/20 blur-[150px]" />
+        <div className="absolute left-[36%] top-[54%] h-[500px] w-[500px] rounded-full bg-rose-500/10 blur-[160px]" />
+        <div className="absolute inset-0 opacity-[0.12] [background-image:linear-gradient(rgba(34,211,238,0.24)_1px,transparent_1px),linear-gradient(90deg,rgba(34,211,238,0.2)_1px,transparent_1px),linear-gradient(rgba(167,139,250,0.14)_1px,transparent_1px),linear-gradient(90deg,rgba(167,139,250,0.14)_1px,transparent_1px)] [background-size:74px_74px,74px_74px,18px_18px,18px_18px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_100%_80%_at_50%_0%,rgba(56,189,248,0.1),transparent_58%),radial-gradient(ellipse_90%_80%_at_50%_100%,rgba(244,63,94,0.11),transparent_60%)]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#040816]/74 via-[#05040c]/88 to-[#020208]/96" />
+      </div>
+
       <NavApp />
-      <section className="relative w-full overflow-hidden px-[clamp(1rem,3vw,2.5rem)] pb-4 pt-[74px] sm:pb-6 sm:pt-[86px]">
-        <div className="pointer-events-none absolute inset-0">
-          <video autoPlay muted loop playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover opacity-64 saturate-125 contrast-110">
-            <source src="/assets/video.mp4" type="video/mp4" />
-          </video>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_16%_16%,rgba(255,70,70,0.24),transparent_30%),radial-gradient(circle_at_84%_18%,rgba(56,236,255,0.24),transparent_35%),radial-gradient(circle_at_70%_84%,rgba(255,198,64,0.16),transparent_40%),radial-gradient(circle_at_28%_78%,rgba(193,120,255,0.2),transparent_42%)]" />
-          <div className="absolute inset-0 opacity-[0.11] [background-image:linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:64px_64px]" />
-          <div className="absolute inset-0 bg-gradient-to-br from-[#05040a]/42 via-black/56 to-[#020509]/74" />
-          <div className="absolute inset-0 opacity-[0.07] [background-image:repeating-linear-gradient(0deg,transparent_0px,transparent_2px,rgba(255,255,255,0.12)_2px,rgba(255,255,255,0.12)_3px)]" />
-        </div>
 
-        <div className="relative z-10 mx-auto flex min-h-[calc(100dvh-92px)] w-full max-w-[96rem] items-stretch">
-          <div className="grid w-full items-stretch gap-4 lg:grid-cols-[1.05fr_0.95fr] lg:gap-6">
-            <div className="methods-fade-up methods-panel-pulse overflow-hidden rounded-2xl border border-zinc-700/45 bg-black/30 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_0_72px_rgba(56,236,255,0.12)] sm:p-6">
-              <div className="mb-5 flex flex-wrap gap-2">
-                <span className="inline-flex items-center rounded-md border border-cyan-300/60 bg-cyan-300/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-100">
-                  Live Ops
-                </span>
-                <span className="inline-flex items-center rounded-md border border-violet-300/60 bg-violet-300/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-100">
-                  Methods Protocol
-                </span>
-              </div>
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-200/80">
-                The Syndicate // Operational Doctrine
-              </p>
-              <h1 className="methods-hero-title mt-4 text-[clamp(2.5rem,4.8vw,4.7rem)] font-black leading-[0.9] text-white">
-                <span className="bg-gradient-to-r from-red-200 via-violet-200 to-cyan-100 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(56,236,255,0.22)]">
-                  Our Methods
-                </span>
-                <span className="block text-zinc-100">of Mastery</span>
-              </h1>
-
-              <div className="mt-6 rounded-xl border border-cyan-300/35 bg-black/40 p-4">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-100/90">Mission Progress</p>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-300/90">Live Pipeline</p>
-                </div>
-                <div className="relative h-[6px] overflow-hidden rounded-full bg-zinc-800/80">
-                  <div className="absolute inset-y-0 left-0 w-[68%] rounded-full bg-gradient-to-r from-[#fdd02f] via-[#56e5ff] to-[#9b8cff]" />
-                  <div className="absolute inset-y-0 left-0 w-[36%] rounded-full bg-[#fdd02f]/45 blur-sm animate-[electric-flow_2.4s_linear_infinite]" />
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {MISSION_PHASES.map((phase, index) => (
-                    <p key={phase} className={`text-xs font-semibold uppercase tracking-[0.16em] ${index < 2 ? 'text-cyan-100' : 'text-zinc-400'}`}>
-                      {phase}
-                    </p>
-                  ))}
-                </div>
-              </div>
-              <p className="mt-5 max-w-4xl text-[clamp(1rem,1.45vw,1.45rem)] leading-relaxed text-zinc-100/92">
-                Greatness is engineered through systems, not mood. This protocol turns strategy into repeatable execution and execution into measurable results.
-              </p>
-              <p className="mt-3 max-w-4xl text-[clamp(1rem,1.45vw,1.45rem)] leading-relaxed text-zinc-200/88">
-                Master money, influence, and decision-making with ethical discipline so your growth compounds without destroying your identity.
-              </p>
-
-              <div className="mt-8 flex flex-wrap gap-3">
-                <a href="#register-interest" className="cta-nav-button text-xs font-semibold">
-                  Register Your Interest
-                </a>
-                <a
-                  href="#mastery-section"
-                  className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-cyan-300/70 bg-cyan-300/10 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-100 shadow-[0_0_22px_rgba(56,236,255,0.18)] transition hover:bg-cyan-300/20"
-                >
-                  Enter Mastery
-                </a>
-              </div>
-
-              <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {OUTCOME_METRICS.map((item, index) => {
-                  const theme = CYBER_THEMES[index % CYBER_THEMES.length]
-                  return (
-                    <div
-                      key={item.label}
-                      className={`methods-fade-up relative overflow-hidden rounded-xl border bg-black/35 p-4 sm:p-5 ${theme.frame} ${theme.glow}`}
-                      style={{ animationDelay: `${index * 90}ms` }}
-                    >
-                      <div className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:repeating-linear-gradient(90deg,transparent_0px,transparent_7px,rgba(255,255,255,0.12)_7px,rgba(255,255,255,0.12)_8px)]" />
-                      <p className="relative z-10 text-sm uppercase tracking-[0.14em] text-zinc-300/80">{item.label}</p>
-                      <p className={`relative z-10 mt-1 text-2xl font-semibold ${theme.text}`}>{item.value}</p>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            <div className="methods-float">
-              <div className="methods-panel-pulse overflow-y-auto rounded-2xl border border-cyan-300/40 bg-black/45 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_0_66px_rgba(56,236,255,0.18)] sm:p-6">
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-200/80">Command Console</p>
-                <h2 className="mt-3 text-[clamp(2rem,3.6vw,3.3rem)] font-semibold text-cyan-100">Win The Loop.</h2>
-                <p className="mt-3 text-[clamp(1rem,1.3vw,1.25rem)] leading-relaxed text-zinc-200/88">
-                  Learn the system, deploy immediately, and stack consistent wins. The interface is cinematic, but the method is practical and real.
+      <section className="relative z-10 px-[clamp(1rem,3vw,2.2rem)] pb-10 pt-[88px] sm:pb-12 sm:pt-[106px]">
+        <div className="mx-auto max-w-[96rem]">
+          <div className="relative min-h-[72vh] overflow-hidden rounded-[32px] border border-cyan-300/65 bg-black/45 p-7 shadow-[0_0_0_1px_rgba(34,211,238,0.4),0_0_96px_rgba(34,211,238,0.26),0_0_180px_rgba(167,139,250,0.2)] sm:p-10 lg:p-14 [clip-path:polygon(24px_0,calc(100%-24px)_0,100%_24px,100%_calc(100%-24px),calc(100%-24px)_100%,24px_100%,0_calc(100%-24px),0_24px)]">
+            <span className="pointer-events-none absolute inset-[8px] rounded-[22px] border border-violet-300/45" />
+            <span className="pointer-events-none absolute inset-[16px] rounded-[16px] border border-cyan-200/20" />
+            <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(95%_130%_at_50%_-12%,rgba(34,211,238,0.18),transparent_56%)]" />
+            <span className="pointer-events-none absolute left-[6%] top-5 h-px w-[24%] bg-gradient-to-r from-transparent via-cyan-300/90 to-transparent" />
+            <span className="pointer-events-none absolute right-[6%] top-5 h-px w-[24%] bg-gradient-to-r from-transparent via-violet-300/90 to-transparent" />
+            <span className="pointer-events-none absolute left-5 top-5 h-12 w-12 border-l-2 border-t-2 border-cyan-300/85" />
+            <span className="pointer-events-none absolute bottom-5 right-5 h-12 w-12 border-b-2 border-r-2 border-violet-300/85" />
+            <div className="relative z-10 grid gap-9 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-zinc-200/80">Our Methods // Dystopian Doctrine</p>
+                <h1 className="mt-4 text-[clamp(2.2rem,5.4vw,5.2rem)] font-black uppercase leading-[0.9] tracking-[0.1em] text-cyan-100 drop-shadow-[0_0_18px_rgba(34,211,238,0.52)]">
+                  Control The
+                  <br />
+                  Operating System
+                </h1>
+                <p className="mt-6 max-w-3xl text-lg leading-relaxed text-zinc-100/88 sm:text-xl">
+                  In a broken world, average behavior gets average outcomes. Our methods are engineered for operators who want structure, leverage, and execution inside high-pressure systems.
                 </p>
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  {COMMAND_STATS.map((stat, index) => {
-                    const theme = CYBER_THEMES[(index + 1) % CYBER_THEMES.length]
-                    return (
-                      <div key={stat.label} className={`rounded-xl border bg-black/45 p-3 ${theme.frame} ${theme.glow}`}>
-                        <p className="text-[11px] uppercase tracking-[0.14em] text-zinc-300/85">{stat.label}</p>
-                        <p className={`mt-1 text-lg font-semibold ${theme.text}`}>{stat.value}</p>
-                      </div>
-                    )
-                  })}
+                <div className="mt-8 flex flex-wrap gap-3">
+                  <Link href="/login" className="cta-nav-button text-sm font-semibold">
+                    Enter The Network
+                  </Link>
+                  <Link href="/programs" className="cta-nav-button text-sm font-semibold">
+                    View Programs
+                  </Link>
                 </div>
-                <div className="mt-5 grid gap-3">
-                  {EXECUTION_STEPS.map((step, index) => (
-                    <div
-                      key={step.step}
-                      className={`relative overflow-hidden rounded-xl border bg-black/35 p-5 transition duration-300 hover:-translate-y-0.5 ${CYBER_THEMES[index % CYBER_THEMES.length].frame} ${CYBER_THEMES[index % CYBER_THEMES.length].glow}`}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-zinc-200/70">Step {step.step}</p>
-                        <span className={`h-2 w-2 rounded-sm border ${CYBER_THEMES[index % CYBER_THEMES.length].chip}`} />
-                      </div>
-                      <p className={`mt-2 text-lg font-semibold ${CYBER_THEMES[index % CYBER_THEMES.length].text}`}>{step.title}</p>
-                      <p className="mt-2 text-base leading-relaxed text-zinc-100/90">{step.description}</p>
-                    </div>
-                  ))}
+              </div>
+              <div className="grid gap-4">
+                <div className="relative mx-auto w-full max-w-[620px] overflow-hidden rounded-2xl border border-cyan-300/55 bg-black/45 p-2 shadow-[0_0_0_1px_rgba(34,211,238,0.35),0_0_56px_rgba(167,139,250,0.28)]">
+                  <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(34,211,238,0.2),transparent_45%,rgba(167,139,250,0.2))]" />
+                  <video
+                    className="relative z-10 h-[360px] w-full rounded-xl object-cover sm:h-[440px] lg:h-[500px]"
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                  >
+                    <source src="/assets/video.mp4" type="video/mp4" />
+                  </video>
                 </div>
               </div>
             </div>
@@ -307,188 +203,191 @@ export default function OurMethodsPage() {
         </div>
       </section>
 
-      <section className="relative w-full px-4 py-14 sm:px-6 sm:py-18">
-        <div className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:66px_66px]" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(56,236,255,0.12),transparent_55%),radial-gradient(circle_at_50%_90%,rgba(193,120,255,0.10),transparent_60%)]" />
-        <div className="relative z-10 mx-auto max-w-[96rem]">
+      <div className="relative z-10 px-[clamp(1rem,3vw,2.2rem)] pb-8 sm:pb-10">
+        <div className="mx-auto max-w-[96rem]">
+          <div className="relative overflow-hidden rounded-full border border-amber-300/45 bg-black/35 py-1.5 shadow-[0_0_28px_rgba(251,191,36,0.24)]">
+            <svg viewBox="0 0 1200 26" className="h-5 w-full" preserveAspectRatio="none" aria-hidden>
+              <defs>
+                <pattern id="ornate-sep" width="54" height="26" patternUnits="userSpaceOnUse">
+                  <path d="M2 13h50" stroke="rgba(251,191,36,0.95)" strokeWidth="1.4" />
+                  <path d="M14 6l12 7-12 7-12-7z" fill="none" stroke="rgba(245,158,11,0.95)" strokeWidth="1.2" />
+                  <circle cx="26" cy="13" r="2.1" fill="rgba(250,204,21,0.96)" />
+                  <path d="M8 13c5-6 11-6 16 0-5 6-11 6-16 0z" fill="none" stroke="rgba(245,158,11,0.7)" strokeWidth="1" />
+                  <path d="M44 13c-5-6-11-6-16 0 5 6 11 6 16 0z" fill="none" stroke="rgba(245,158,11,0.7)" strokeWidth="1" />
+                </pattern>
+              </defs>
+              <rect x="0" y="0" width="1200" height="26" fill="url(#ornate-sep)" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <section className="relative z-10 px-[clamp(1rem,3vw,2.2rem)] pb-10 sm:pb-12">
+        <div className="mx-auto max-w-[96rem]">
           <div className="mb-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-200/70">Core method pillars</p>
-            <h2 className="mt-2 text-5xl font-bold text-zinc-100 sm:text-6xl">
-              The operating principles behind every result
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-200/85">Method Timeline</p>
+            <h2 className="mt-2 text-[clamp(2rem,4.2vw,3.4rem)] font-black uppercase tracking-[0.08em] text-amber-100">
+              Operational Sequence
             </h2>
           </div>
-          <div className="grid auto-rows-fr gap-4 md:grid-cols-2 xl:grid-cols-3 lg:gap-5">
-            {METHOD_PILLARS.map((pillar, index) => (
-              <HudPanel
-                key={pillar.title}
-                toneIndex={index + 1}
-                eyebrow="Method pillar"
-                title={pillar.title}
-                body={pillar.description}
-                cornerLabel={`P-${String(index + 1).padStart(2, '0')}`}
-              />
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-12">
+            {METHOD_TIMELINE.map((item, idx) => (
+              <article
+                key={item.step}
+                className={`group relative overflow-hidden rounded-2xl border-2 p-5 transition-transform duration-300 hover:-translate-y-0.5 ${
+                  idx === 1
+                    ? 'xl:col-span-4'
+                    : idx === 2
+                      ? 'xl:col-span-3'
+                      : 'xl:col-span-2'
+                } ${
+                  idx % 2 === 0
+                    ? '[clip-path:polygon(14px_0,calc(100%-14px)_0,100%_14px,100%_calc(100%-14px),calc(100%-14px)_100%,14px_100%,0_calc(100%-14px),0_14px)]'
+                    : '[clip-path:polygon(0_0,calc(100%-16px)_0,100%_16px,100%_100%,16px_100%,0_calc(100%-16px))]'
+                } ${item.border} ${item.glow}`}
+              >
+                <span className={`pointer-events-none absolute -inset-3 rounded-[1.2rem] opacity-85 blur-2xl ${item.aura}`} />
+                <span className={`pointer-events-none absolute inset-0 ${item.bg}`} />
+                <span className="pointer-events-none absolute inset-0 opacity-[0.17] [background-image:repeating-linear-gradient(180deg,rgba(0,0,0,0.28)_0px,rgba(0,0,0,0.28)_1px,transparent_1px,transparent_3px)]" />
+                <span className="pointer-events-none absolute inset-0 opacity-[0.2] [background-image:linear-gradient(90deg,rgba(0,0,0,0.2)_1px,transparent_1px)] [background-size:16px_16px]" />
+                <span className="pointer-events-none absolute inset-[6px] rounded-[12px] border-2 border-black/45" />
+                <span className={`pointer-events-none absolute left-3 top-3 h-7 w-7 border-l-[3px] border-t-[3px] ${item.stepBorder} opacity-90`} />
+                <span className={`pointer-events-none absolute bottom-3 right-3 h-7 w-7 border-b-[3px] border-r-[3px] ${item.stepBorder} opacity-90`} />
+                <span className={`pointer-events-none absolute right-3 top-3 h-2 w-10 rounded-full ${item.stepBorder} border bg-black/45`} />
+                <span className={`pointer-events-none absolute bottom-3 left-3 h-2 w-10 rounded-full ${item.stepBorder} border bg-black/45`} />
+                <div className="relative z-10 rounded-lg bg-black/32 p-2.5 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.28)] backdrop-blur-[1px] sm:p-3">
+                  <p className={`inline-flex rounded-md border-2 bg-black/55 px-3 py-1 text-[11px] font-bold tracking-[0.24em] shadow-[0_0_16px_rgba(0,0,0,0.6)] ${item.stepBorder} text-zinc-100`}>
+                    STEP {item.step}
+                  </p>
+                  <h3 className={`mt-3 text-2xl font-black uppercase leading-tight tracking-[0.04em] text-zinc-50 drop-shadow-[0_2px_10px_rgba(0,0,0,0.72)] ${item.titleText}`}>{item.title}</h3>
+                  <p className="mt-3 text-base leading-relaxed text-zinc-100/95 drop-shadow-[0_1px_8px_rgba(0,0,0,0.68)]">{item.detail}</p>
+                </div>
+              </article>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="relative w-full px-4 py-14 sm:px-6 sm:py-18">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_28%,rgba(255,70,70,0.10),transparent_38%),radial-gradient(circle_at_78%_38%,rgba(56,236,255,0.10),transparent_42%),radial-gradient(circle_at_58%_88%,rgba(120,255,90,0.10),transparent_44%)]" />
-        <div className="relative z-10 mx-auto grid max-w-[96rem] gap-8 lg:grid-cols-[1.08fr_0.92fr]">
-          <div className="rounded-2xl border border-zinc-700/40 bg-black/35 p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_0_66px_rgba(193,120,255,0.12),0_0_120px_rgba(56,236,255,0.08)] sm:p-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-200/70 drop-shadow-[0_0_8px_rgba(217,70,239,0.35)]">The framework</p>
-            <h3 className="mt-3 text-4xl font-semibold text-zinc-100 drop-shadow-[0_0_18px_rgba(56,236,255,0.28)] sm:text-5xl">The Syndicate Greatness Framework</h3>
-            <div className="mt-6 space-y-5 text-lg leading-relaxed text-zinc-200/88 sm:text-xl">
-              <p>
-                The Syndicate brings clarity to the complicated dynamics of wealth and influence. You learn what matters, what doesn’t, and how to execute under
-                pressure without drifting.
-              </p>
-              <p>
-                Every lesson is built for immediate action. No passive theory — just a clear set of moves you can apply from day one.
-              </p>
-              <p>
-                The edge is ethics: power without restraint destroys the operator. We build disciplined control so results compound instead of collapse.
-              </p>
-            </div>
-            <p className="mt-8 text-lg font-semibold uppercase tracking-[0.16em] text-zinc-100 drop-shadow-[0_0_14px_rgba(255,198,64,0.35)]">
-              Objective: controlled power.
-            </p>
-            <div id="register-interest" className="mt-8">
-              <Link href="/login" className="cta-nav-button text-xs font-semibold">
-                Register Your Interest
-              </Link>
-            </div>
-          </div>
+      <section className="relative z-10 px-[clamp(1rem,3vw,2.2rem)] pb-14 sm:pb-20">
+        <div className="mx-auto max-w-[96rem]">
+          <div className="space-y-7">
+            {METHOD_BLOCKS.map((block) => {
+              const isPrimary = block.id === 'greatness'
+              const isMoneyPower = block.id === 'money-power'
+              const isBreakFree = block.id === 'break-free'
+              const cardGlow =
+                block.accent === 'cyan'
+                  ? 'shadow-[0_0_0_1px_rgba(34,211,238,0.4),0_0_65px_rgba(34,211,238,0.22)] border-cyan-300/60'
+                  : block.accent === 'violet'
+                    ? 'shadow-[0_0_0_1px_rgba(167,139,250,0.42),0_0_65px_rgba(167,139,250,0.22)] border-violet-300/60'
+                    : 'shadow-[0_0_0_1px_rgba(245,158,11,0.4),0_0_65px_rgba(245,158,11,0.2)] border-amber-300/60'
 
-          <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:gap-5">
-            {SYSTEM_FEATURES.map((feature, index) => (
-              <HudPanel
-                key={feature.title}
-                toneIndex={index + 2}
-                eyebrow="Inside the method"
-                title={feature.title}
-                body={feature.detail}
-                cornerLabel={`SYS-${String(index + 1).padStart(2, '0')}`}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
+              return (
+                isBreakFree ? (
+                <section key={block.id} className="mx-auto w-full max-w-[86rem] py-2 text-center">
+                  <h3 className={`mt-4 text-[clamp(2.4rem,4.6vw,4.2rem)] font-black leading-[1] ${accentStyles[block.accent].title}`}>
+                    {block.title}
+                  </h3>
+                  <p className="mx-auto mt-4 max-w-[62rem] text-xl leading-relaxed text-zinc-100/88 sm:text-2xl">
+                    {block.summary}
+                  </p>
+                  <p className="mx-auto mt-6 max-w-[62rem] text-lg leading-relaxed text-zinc-100/90 sm:text-xl">
+                    {block.paragraphs[0]}
+                  </p>
+                  <p className="mx-auto mt-4 max-w-[62rem] text-lg leading-relaxed text-zinc-100/90 sm:text-xl">
+                    {block.paragraphs[1]}
+                  </p>
+                  <p className="mx-auto mt-6 max-w-[62rem] text-base font-semibold uppercase tracking-[0.14em] text-cyan-100/90 sm:text-lg">
+                    Master yourself. Master the system.
+                  </p>
+                  <div className="mt-7">
+                    <Link href="/login" className="cta-nav-button text-sm font-semibold">
+                      Enter This Track
+                    </Link>
+                  </div>
+                </section>
+                ) : (
+                <div
+                  key={block.id}
+                  className={isPrimary ? 'grid items-start gap-4 lg:grid-cols-[1fr_240px]' : 'grid items-start'}
+                >
+                  {isMoneyPower ? (
+                    <div className="mb-8 mt-2 text-center">
+                      <h3 className={`mt-2 text-[clamp(2.4rem,4.6vw,4.2rem)] font-black leading-[1.05] ${accentStyles[block.accent].title}`}>
+                        {block.title}
+                      </h3>
+                    </div>
+                  ) : null}
+                  <article
+                    className={`relative overflow-hidden rounded-[24px] border bg-black/55 p-6 sm:p-8 ${cardGlow} [clip-path:polygon(18px_0,calc(100%-18px)_0,100%_18px,100%_calc(100%-18px),calc(100%-18px)_100%,18px_100%,0_calc(100%-18px),0_18px)] ${isMoneyPower ? 'min-h-[430px]' : ''}`}
+                  >
+                    <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(130deg,rgba(34,211,238,0.14),transparent_38%,rgba(167,139,250,0.14))]" />
+                    <span className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:repeating-linear-gradient(0deg,transparent_0px,transparent_2px,rgba(255,255,255,0.12)_2px,rgba(255,255,255,0.12)_3px)]" />
+                    <span className="pointer-events-none absolute inset-[8px] rounded-[18px] border border-white/20" />
+                    <span className="pointer-events-none absolute inset-[14px] rounded-[14px] border border-white/10" />
 
-      <section className="relative w-full px-4 pb-12 sm:px-6 sm:pb-16">
-        <div className="relative z-10 mx-auto max-w-[96rem] rounded-2xl border border-zinc-700/40 bg-black/35 p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_0_72px_rgba(56,236,255,0.10)] sm:p-8">
-          <div className="mb-7">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-200/70">Implementation pathway</p>
-            <h3 className="mt-2 text-4xl font-semibold text-zinc-100 sm:text-5xl">From first lesson to long-term leverage</h3>
-          </div>
+                    <div className="relative z-10">
+                      {!isMoneyPower ? (
+                        <>
+                          <h3 className={`text-[clamp(2.4rem,4.6vw,4.2rem)] font-black leading-[1] ${accentStyles[block.accent].title}`}>
+                            {block.title}
+                          </h3>
+                        </>
+                      ) : null}
+                      <p className={`mt-3 text-xl leading-relaxed text-zinc-100/88 sm:text-2xl ${isMoneyPower ? 'rounded-xl border border-cyan-300/25 bg-[linear-gradient(115deg,rgba(34,211,238,0.12),rgba(167,139,250,0.12),rgba(0,0,0,0.35))] p-3 shadow-[0_0_20px_rgba(34,211,238,0.15)]' : ''}`}>{block.summary}</p>
 
-          <div className="relative overflow-x-auto pb-2">
-            <div className="relative min-w-[1160px] px-2">
-              <div className="pointer-events-none absolute left-[4%] right-[4%] top-[34px] h-[2px] bg-gradient-to-r from-red-300/70 via-cyan-300/70 via-violet-300/70 via-lime-300/70 to-amber-300/70" />
-              <div className="pointer-events-none absolute left-[4%] right-[4%] top-[30px] h-[10px] bg-gradient-to-r from-transparent via-cyan-200/60 to-transparent blur-[2px] animate-[electric-flow_2.6s_linear_infinite]" />
-
-              <div className="grid grid-cols-5 gap-4">
-                {WORKFLOW_NODES.map((node, index) => {
-                  const theme = CYBER_THEMES[index % CYBER_THEMES.length]
-                  return (
-                    <a
-                      key={node.id}
-                      href={node.href}
-                      className="group relative text-center methods-node-rise"
-                      style={{ animationDelay: `${index * 110}ms` }}
-                    >
-                      <div
-                        className={`relative mx-auto flex h-[78px] w-[78px] items-center justify-center rounded-full border-2 bg-black/70 text-base font-black tracking-[0.14em] transition duration-300 group-hover:scale-110 ${theme.frame} ${theme.text} ${theme.glow}`}
-                      >
-                        <span
-                          className="pointer-events-none absolute inset-0 rounded-full opacity-70 node-ring-pulse"
-                          style={{ animationDelay: `${index * 220}ms` }}
-                        />
-                        {node.id}
+                      <div className={`mt-6 ${
+                        isPrimary
+                          ? 'space-y-3'
+                          : isBreakFree
+                            ? 'space-y-4'
+                            : 'grid gap-4 md:grid-cols-[1.15fr_1fr] md:items-stretch'
+                      }`}>
+                        <p className={`border border-cyan-300/42 bg-[linear-gradient(145deg,rgba(6,182,212,0.16),rgba(0,0,0,0.58))] p-5 text-lg leading-relaxed text-zinc-100/90 shadow-[0_0_0_1px_rgba(34,211,238,0.3),0_0_24px_rgba(34,211,238,0.16)] [clip-path:polygon(14px_0,100%_0,100%_calc(100%-14px),calc(100%-14px)_100%,0_100%,0_14px)] sm:text-xl ${isMoneyPower ? 'min-h-[170px]' : ''}`}>
+                          {block.paragraphs[0]}
+                        </p>
+                        <p className={`border border-violet-300/42 bg-[linear-gradient(145deg,rgba(168,85,247,0.18),rgba(0,0,0,0.58))] p-5 text-lg leading-relaxed text-zinc-100/90 shadow-[0_0_0_1px_rgba(167,139,250,0.28),0_0_24px_rgba(167,139,250,0.16)] ${
+                          isBreakFree
+                            ? '[clip-path:polygon(18px_0,100%_0,100%_100%,0_100%,0_18px)] border-amber-300/42 bg-[linear-gradient(140deg,rgba(245,158,11,0.18),rgba(0,0,0,0.58))] shadow-[0_0_0_1px_rgba(245,158,11,0.28),0_0_24px_rgba(245,158,11,0.16)]'
+                            : '[clip-path:polygon(0_0,calc(100%-14px)_0,100%_14px,100%_100%,14px_100%,0_calc(100%-14px))]'
+                        } sm:text-xl ${isMoneyPower ? 'min-h-[170px]' : ''}`}>
+                          {block.paragraphs[1]}
+                        </p>
+                        {isBreakFree ? (
+                          <div className="rounded-xl border border-cyan-300/35 bg-[linear-gradient(115deg,rgba(34,211,238,0.12),rgba(167,139,250,0.12),rgba(0,0,0,0.45))] p-4 text-center text-base font-semibold uppercase tracking-[0.14em] text-cyan-100 shadow-[0_0_20px_rgba(34,211,238,0.14)]">
+                            Master yourself. Master the system.
+                          </div>
+                        ) : null}
                       </div>
-                      <span className={`mx-auto mt-2 inline-flex rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${theme.chip} ${theme.text}`}>
-                        live
-                      </span>
-                      <div className="mt-3">
-                        <p className={`text-xl font-semibold transition duration-300 group-hover:drop-shadow-[0_0_10px_rgba(255,255,255,0.24)] ${theme.text}`}>{node.title}</p>
-                        <p className="mt-1 text-base leading-relaxed text-zinc-200/90">{node.detail}</p>
+
+                      <div className="mt-6">
+                        <Link href="/login" className="cta-nav-button text-sm font-semibold">
+                          Enter This Track
+                        </Link>
                       </div>
-                      <p className="mt-2 text-sm uppercase tracking-[0.2em] text-cyan-200/80 transition group-hover:text-cyan-100">
-                        Open Node
-                      </p>
-                    </a>
-                  )
-                })}
-              </div>
-            </div>
+                    </div>
+                  </article>
+
+                  {isPrimary ? (
+                    <div className="w-full max-w-[220px] justify-self-end self-center">
+                      <Image
+                        src="/assets/Gold-Key.png"
+                        alt="Gold key symbol"
+                        width={560}
+                        height={760}
+                        className="h-[300px] w-full object-contain object-center animate-bounce [animation-duration:4.5s] [animation-timing-function:ease-in-out] sm:h-[360px]"
+                      />
+                    </div>
+                  ) : null}
+                </div>
+                )
+              )
+            })}
           </div>
         </div>
       </section>
 
-      <section id="mastery-section" className="w-full px-4 pb-16 sm:px-6 sm:pb-20">
-        <div className="mx-auto grid max-w-[96rem] gap-8 rounded-2xl border border-zinc-700/40 bg-black/35 p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_0_72px_rgba(255,198,64,0.08)] sm:p-8 md:grid-cols-[1.1fr_0.9fr]">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-200/70">Money and power mastery</p>
-            <h3 className="mt-2 text-4xl font-semibold text-zinc-100 sm:text-5xl">
-              The objective is not hype. The objective is controlled power.
-            </h3>
-            <div className="mt-5 space-y-4 text-lg leading-relaxed text-zinc-200/88 sm:text-xl">
-              <p>
-                The Syndicate philosophy teaches that money and power go hand in hand. They are two sides of the same coin, and without mastery, they can
-                corrupt the individual who chases them.
-              </p>
-              <p>
-                Our mission goes beyond attaining money, power, and influence. Elite training programmes redefine how individuals perceive power by emphasising
-                moral strength, strategic restraint, and societal impact.
-              </p>
-              <p>
-                Members are taught to master money and power systems without succumbing to their enslaving or morally corrupting properties. This is the true
-                meaning of life mastery.
-              </p>
-            </div>
-          </div>
-          <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:gap-5">
-            {SAFEGUARDS.map((item, index) => (
-              <HudPanel
-                key={item}
-                toneIndex={index + 3}
-                eyebrow="Safeguard"
-                title="Non-negotiable"
-                body={item}
-                cornerLabel={`SAFE`}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="relative w-full overflow-hidden px-4 py-14 sm:px-6 sm:py-16">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(56,236,255,0.12),transparent_44%),radial-gradient(circle_at_78%_30%,rgba(193,120,255,0.10),transparent_46%),radial-gradient(circle_at_60%_82%,rgba(255,198,64,0.12),transparent_50%)]" />
-        <div className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:repeating-linear-gradient(0deg,transparent_0px,transparent_2px,rgba(255,255,255,0.12)_2px,rgba(255,255,255,0.12)_3px)]" />
-        <div className="relative z-10 mx-auto grid max-w-[96rem] gap-8 md:grid-cols-[1.1fr_0.9fr]">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-200/70">Your next move</p>
-            <h3 className="mt-3 text-4xl font-bold text-zinc-100 sm:text-6xl">
-              Train with purpose. Execute with discipline. Build true greatness.
-            </h3>
-            <p className="mt-4 max-w-3xl text-lg text-zinc-200/88 sm:text-xl">
-              The Syndicate is for serious individuals ready to turn knowledge into leverage. If you want a framework that develops wealth, influence, and
-              character together, this is your invitation.
-            </p>
-          </div>
-          <div className="rounded-2xl border border-zinc-700/40 bg-black/35 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_0_52px_rgba(120,255,90,0.08),0_0_100px_rgba(255,198,64,0.08)]">
-            <p className="text-lg font-semibold uppercase tracking-[0.18em] text-zinc-200/75 drop-shadow-[0_0_10px_rgba(120,255,90,0.3)]">What you unlock</p>
-            <ul className="mt-4 space-y-3 text-lg text-zinc-200/88">
-              <li className="drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]">Practical frameworks for money, influence, and strategic decision-making.</li>
-              <li className="drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]">Execution systems designed for immediate implementation.</li>
-              <li className="drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]">Ethical mastery principles to sustain success long term.</li>
-              <li className="drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]">A network culture built around standards, accountability, and purpose.</li>
-            </ul>
-          </div>
-        </div>
-      </section>
       <GlobalBottomSections />
-
     </div>
   )
 }

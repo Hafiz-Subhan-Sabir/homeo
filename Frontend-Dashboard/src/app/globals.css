@@ -4428,6 +4428,8 @@ body {
   .neon-badge,
   .neon-caret,
   .programs-heading-glow,
+  .programs-heading-shine,
+  .programs-heading-bg-shine,
   .cyber-chip-animate {
     animation: none !important;
   }
@@ -4455,6 +4457,47 @@ body {
 
 .cyber-chip-animate {
   animation: cyberChipFloat 3.4s ease-in-out infinite, cyberChipGlow 2.8s ease-in-out infinite;
+}
+
+@keyframes programsHeadingShineSweep {
+  0% {
+    transform: translate3d(-180%, 0, 0) skewX(-16deg);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.78;
+  }
+  56% {
+    opacity: 0.55;
+  }
+  100% {
+    transform: translate3d(470%, 0, 0) skewX(-16deg);
+    opacity: 0;
+  }
+}
+
+.programs-heading-shine {
+  animation: programsHeadingShineSweep 4.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+@keyframes programsHeadingBgShine {
+  0%,
+  100% {
+    opacity: 0.45;
+    filter: brightness(0.9);
+  }
+  50% {
+    opacity: 0.9;
+    filter: brightness(1.15);
+  }
+}
+
+.programs-heading-bg-shine {
+  background:
+    radial-gradient(46% 130% at 15% 50%, rgba(255, 210, 90, 0.18), transparent 72%),
+    radial-gradient(46% 130% at 85% 50%, rgba(255, 210, 90, 0.18), transparent 72%),
+    linear-gradient(90deg, rgba(255, 220, 120, 0.03), rgba(255, 225, 140, 0.22), rgba(255, 220, 120, 0.03));
+  animation: programsHeadingBgShine 3.8s ease-in-out infinite;
 }
 
 @keyframes whatYouGetCoinSpin {
