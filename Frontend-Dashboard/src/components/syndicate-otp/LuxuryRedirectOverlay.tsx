@@ -31,17 +31,9 @@ export default function LuxuryRedirectOverlay({
       <div className="luxury-redirect__veil" />
       <div className="luxury-redirect__door luxury-redirect__door--left" />
       <div className="luxury-redirect__door luxury-redirect__door--right" />
-      <div className="luxury-redirect__tunnel" />
-      <div className="luxury-redirect__glow luxury-redirect__glow--outer" />
-      <div className="luxury-redirect__glow luxury-redirect__glow--inner" />
-      <div className="luxury-redirect__ring luxury-redirect__ring--a" />
-      <div className="luxury-redirect__ring luxury-redirect__ring--b" />
+      <div className="luxury-redirect__center-glow" />
       <div className="luxury-redirect__core">
-        <p className="luxury-redirect__title">Opening the gate</p>
-        <div className="luxury-redirect__bar">
-          <span className="luxury-redirect__bar-fill" />
-        </div>
-        <p className="luxury-redirect__hint">Moving into the inner circle</p>
+        <p className="luxury-redirect__title luxury-redirect__title--welcome hamburger-attract">WELLCOME TO THE SYNDICATE</p>
       </div>
     </div>
   );

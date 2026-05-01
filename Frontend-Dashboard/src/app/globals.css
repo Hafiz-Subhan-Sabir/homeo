@@ -4261,7 +4261,7 @@ body {
 }
 
 .footer-typing .neon-badge-text {
-  font-size: clamp(1rem, 2.8vw, 1.6rem);
+  font-size: clamp(1.08rem, 2.2vw, 1.38rem);
   font-weight: 600;
 }
 

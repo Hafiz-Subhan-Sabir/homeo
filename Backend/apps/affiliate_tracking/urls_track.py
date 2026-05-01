@@ -9,6 +9,8 @@ urlpatterns = [
     path("health/", views.health),
     path("stats", views.stats),
     path("stats/", views.stats),
+    path("generate-referral-link", views.generate_referral_link),
+    path("generate-referral-link/", views.generate_referral_link),
     path("click", views.click),
     path("click/", views.click),
     path("lead", views.lead),

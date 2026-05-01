@@ -343,6 +343,15 @@ def create_checkout_session_view(request):
       return _json_error("Playlist price must be greater than 0.", status=400)
     metadata["playlist_id"] = str(selected_playlist.id)
 
+  # Carry affiliate attribution through Stripe metadata so checkout success can
+  # reliably restore tracking even if browser local storage is unavailable.
+  meta_affiliate_id = str(payload.get("affiliate_id", "")).strip()
+  meta_visitor_id = str(payload.get("visitor_id", "")).strip()
+  if meta_affiliate_id:
+    metadata["affiliate_id"] = meta_affiliate_id
+  if meta_visitor_id:
+    metadata["visitor_id"] = meta_visitor_id
+
   if not settings.STRIPE_SECRET_KEY:
     return _json_error(
       "Stripe is not configured. Add STRIPE_SECRET_KEY in backend .env.",
@@ -447,6 +456,9 @@ def checkout_success_view(request):
 
   if session.payment_status != "paid":
     return _json_error("Payment not completed.", status=400)
+  paid_currency = str(getattr(session, "currency", "gbp") or "gbp").lower()
+  paid_minor_total = int(getattr(session, "amount_total", 0) or 0)
+  paid_amount = round(paid_minor_total / 100, 2)
 
   def _session_metadata_dict(session_obj) -> dict:
     raw = getattr(session_obj, "metadata", None)
@@ -465,7 +477,16 @@ def checkout_success_view(request):
     if isinstance(data_attr, dict):
       return dict(data_attr)
     result = {}
-    for k in ("playlist_id", "checkout_kind", "user_id", "email", "signup_token", "returning_token"):
+    for k in (
+      "playlist_id",
+      "checkout_kind",
+      "user_id",
+      "email",
+      "signup_token",
+      "returning_token",
+      "affiliate_id",
+      "visitor_id",
+    ):
       try:
         v = raw[k]  # StripeObject supports key indexing.
       except Exception:
@@ -531,6 +552,12 @@ def checkout_success_view(request):
         "redirect_url": getattr(settings, "POST_LOGIN_REDIRECT_URL", "http://localhost:3000/"),
         "user": {"id": user.id, "username": user.username, "email": user.email},
         "referral_ids": referral_ids_payload(af_profile),
+        "amount_paid": paid_amount,
+        "currency": paid_currency,
+        "affiliate_attribution": {
+          "affiliate_id": str(session_meta.get("affiliate_id", "")).strip(),
+          "visitor_id": str(session_meta.get("visitor_id", "")).strip(),
+        },
       },
       status=200,
     )
@@ -576,6 +603,12 @@ def checkout_success_view(request):
         "redirect_url": getattr(settings, "POST_LOGIN_REDIRECT_URL", "http://localhost:3000/"),
         "user": {"id": user.id, "username": user.username, "email": user.email},
         "referral_ids": referral_ids_payload(af_profile),
+        "amount_paid": paid_amount,
+        "currency": paid_currency,
+        "affiliate_attribution": {
+          "affiliate_id": str(session_meta.get("affiliate_id", "")).strip(),
+          "visitor_id": str(session_meta.get("visitor_id", "")).strip(),
+        },
       },
       status=200,
     )

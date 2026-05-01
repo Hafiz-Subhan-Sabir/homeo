@@ -80,4 +80,7 @@ class SaleEvent(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ("referral", "visitor_id", "email", "amount")
+        indexes = [
+            models.Index(fields=["referral", "visitor_id"]),
+            models.Index(fields=["referral", "created_at"]),
+        ]

@@ -35,7 +35,7 @@ export default function SiteFooter() {
           <div className="p-1 justify-self-center md:justify-self-start">
             <Image
               src="/assets/logo.webp"
-              alt="Onem logo"
+              alt="syndicate logo"
               width={360}
               height={120}
               className="hamburger-attract h-[clamp(5.2rem,11vw,8.5rem)] w-auto object-contain"
@@ -43,10 +43,10 @@ export default function SiteFooter() {
             />
           </div>
 
-          <div className="mx-auto flex w-full max-w-[min(900px,100%)] justify-center px-[clamp(0.25rem,1vw,0.75rem)] py-[clamp(0.25rem,1vw,0.6rem)] text-center md:mx-0 md:justify-self-start md:justify-start md:pr-8 md:text-left lg:pr-14">
+          <div className=" flex w-full max-w-[min(950px,100%)] justify-center px-[clamp(0.25rem,1vw,0.75rem)] py-[clamp(0.25rem,1vw,0.6rem)] text-center md:mx-0 md:justify-self-center md:justify-center md:px-4 md:text-center lg: ml-2 lg:px-6">
             <NeonTypingBadge
               phrases={['HONOUR · MONEY · POWER · FREEDOM']}
-              typingSpeed={34}
+              typingSpeed={24}
               deletingSpeed={24}
               pauseMs={420}
               boxed={false}

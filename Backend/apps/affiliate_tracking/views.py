@@ -4,6 +4,7 @@ import random
 import secrets
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
+import re
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -21,7 +22,10 @@ from .models import ApiToken, AffiliateProfile, ClickEvent, EmailOTP, LeadEvent,
 CLICK_POINTS = 1
 LEAD_POINTS = 5
 SALE_POINTS_PER_DOLLAR = 1
-SALE_COMMISSION_RATE = Decimal("0.12")
+COMMISSION_TIER_THRESHOLD = Decimal("333")
+COMMISSION_RATE_LOW = Decimal("0.15")
+COMMISSION_RATE_HIGH = Decimal("0.30")
+ONE_TIME_REFERRAL_PATTERN = re.compile(r"^[a-z0-9_]+-syn-\d{6}$")
 
 
 def _now_iso() -> str:
@@ -60,14 +64,39 @@ def _card_slug(section: str) -> str:
 
 
 def _generate_unique_referral_id(base_slug: str, section: str) -> str:
-    card = _card_slug(section)
+    prefix = base_slug
+    if section != "complete":
+        prefix = f"{base_slug}_{_card_slug(section)}"
     for _ in range(30):
-        suffix = f"{random.randint(0, 999999):06d}"
-        candidate = f"{base_slug}_{card}_{suffix}"
+        suffix = f"syn-{random.randint(0, 999999):06d}"
+        candidate = f"{prefix}-{suffix}"
         if not SectionReferral.objects.filter(referral_id=candidate).exists():
             return candidate
     # Last-resort fallback with larger entropy.
-    return f"{base_slug}_{card}_{secrets.randbelow(10**8):08d}"
+    return f"{prefix}-syn-{secrets.randbelow(10**6):06d}"
+
+
+def _commission_rate_for_purchase(purchase_amount: Decimal) -> Decimal:
+    if purchase_amount >= COMMISSION_TIER_THRESHOLD:
+        return COMMISSION_RATE_HIGH
+    return COMMISSION_RATE_LOW
+
+
+def _commission_amount_for_purchase(purchase_amount: Decimal) -> Decimal:
+    return (purchase_amount * _commission_rate_for_purchase(purchase_amount)).quantize(Decimal("0.01"))
+
+
+def _ensure_one_time_complete_referral(profile: AffiliateProfile) -> SectionReferral:
+    referral = _ensure_section_referral(profile=profile, section="complete", base_slug=profile.referral_base)
+    if ONE_TIME_REFERRAL_PATTERN.match(referral.referral_id):
+        return referral
+    for _ in range(30):
+        candidate = _generate_unique_referral_id(base_slug=profile.referral_base, section="complete")
+        if not SectionReferral.objects.filter(referral_id=candidate).exists():
+            referral.referral_id = candidate
+            referral.save(update_fields=["referral_id"])
+            return referral
+    return referral
 
 
 def _display_name_from_email(email: str) -> str:
@@ -208,8 +237,7 @@ def _section_stats(referral: SectionReferral) -> dict:
     click_count = click_qs.count()
     lead_count = lead_qs.count()
     sale_count = sale_qs.count()
-    section_sales_total = sale_qs.aggregate(v=Sum("amount")).get("v") or Decimal("0.00")
-    section_earnings = (section_sales_total * SALE_COMMISSION_RATE).quantize(Decimal("0.01"))
+    section_earnings = sale_qs.aggregate(v=Sum("amount")).get("v") or Decimal("0.00")
     # Conversion blends lead-rate and sale-rate so it reflects clicks, leads, and sales together.
     conversion_rate = (
         int(round((((lead_count / click_count) + (sale_count / click_count)) / 2) * 100)) if click_count > 0 else 0
@@ -239,9 +267,7 @@ def _overall_stats(profile: AffiliateProfile) -> dict:
     lead_count = lead_qs.count()
     sale_count = sale_qs.count()
     # Earnings are profile-wide (all sections) so dashboard "overall" stays consistent.
-    commission_total = ((sale_qs.aggregate(v=Sum("amount")).get("v") or Decimal("0.00")) * SALE_COMMISSION_RATE).quantize(
-        Decimal("0.01")
-    )
+    commission_total = sale_qs.aggregate(v=Sum("amount")).get("v") or Decimal("0.00")
     profile.earnings_total = commission_total
     profile.save(update_fields=["earnings_total"])
     # Conversion blends lead-rate and sale-rate so it reflects clicks, leads, and sales together.
@@ -441,6 +467,31 @@ def stats(request):
 
 @csrf_exempt
 @require_POST
+def generate_referral_link(request):
+    payload = _get_json(request)
+    affiliate_id = str(payload.get("affiliate_id") or "").strip()
+    if not affiliate_id:
+        return _bad_request("affiliate_id is required")
+    referral = _get_referral_or_400(affiliate_id)
+    if referral is None:
+        return _bad_request("affiliate_id not found", 404)
+    complete_referral = _ensure_one_time_complete_referral(referral.profile)
+    domain = str(payload.get("domain") or "http://localhost:3000").strip().rstrip("/")
+    if not domain.startswith("http://") and not domain.startswith("https://"):
+        domain = f"http://{domain}"
+    link = f"{domain}/affiliate/{complete_referral.referral_id}"
+    return JsonResponse(
+        {
+            "success": True,
+            "affiliate_id": complete_referral.referral_id,
+            "link": link,
+            "created_once": True,
+        }
+    )
+
+
+@csrf_exempt
+@require_POST
 def click(request):
     payload = _get_json(request)
     affiliate_id = str(payload.get("affiliate_id") or "").strip()
@@ -495,6 +546,8 @@ def sale(request):
     visitor_id = str(payload.get("visitor_id") or "").strip()
     email = str(payload.get("email") or "").strip().lower()
     amount_raw = str(payload.get("amount") or "").strip()
+    purchase_amount_raw = str(payload.get("purchase_amount") or amount_raw).strip()
+    currency = str(payload.get("currency") or "usd").strip().lower()
     if not affiliate_id:
         return _bad_request("affiliate_id is required")
     if not visitor_id:
@@ -502,10 +555,10 @@ def sale(request):
     if not email or "@" not in email:
         return _bad_request("A valid email is required")
     try:
-        amount = Decimal(amount_raw)
+        purchase_amount = Decimal(purchase_amount_raw)
     except (InvalidOperation, TypeError):
-        return _bad_request("A valid amount is required")
-    if amount <= 0:
+        return _bad_request("A valid purchase_amount is required")
+    if purchase_amount <= 0:
         return _bad_request("amount must be > 0")
 
     referral = _get_referral_or_400(affiliate_id)
@@ -513,13 +566,28 @@ def sale(request):
         return _bad_request("affiliate_id not found", 404)
     ClickEvent.objects.get_or_create(referral=referral, visitor_id=visitor_id)
     LeadEvent.objects.get_or_create(referral=referral, visitor_id=visitor_id, defaults={"email": email})
-    _, created = SaleEvent.objects.get_or_create(
-        referral=referral, visitor_id=visitor_id, email=email, amount=amount
+    commission_rate = _commission_rate_for_purchase(purchase_amount)
+    commission_amount = _commission_amount_for_purchase(purchase_amount)
+    SaleEvent.objects.create(
+        referral=referral,
+        visitor_id=visitor_id,
+        email=email,
+        amount=commission_amount,
     )
-    if created:
-        referral.profile.points_total += int(amount) * SALE_POINTS_PER_DOLLAR
-        referral.profile.save(update_fields=["points_total"])
-    return JsonResponse({"success": True, "sale_recorded": created, "stats": _stats_payload(referral)})
+    created = True
+    referral.profile.points_total += int(purchase_amount) * SALE_POINTS_PER_DOLLAR
+    referral.profile.save(update_fields=["points_total"])
+    return JsonResponse(
+        {
+            "success": True,
+            "sale_recorded": created,
+            "purchase_amount": str(purchase_amount.quantize(Decimal("0.01"))),
+            "commission_rate": str(commission_rate),
+            "commission_amount": str(commission_amount),
+            "currency": currency,
+            "stats": _stats_payload(referral),
+        }
+    )
 
 
 @require_GET
@@ -598,12 +666,25 @@ def recent_referrals(request):
     limit = max(1, min(limit, 50))
 
     click_map = {c.visitor_id: c.created_at for c in referral.click_events.all()}
-    lead_map = {l.visitor_id: l.created_at for l in referral.lead_events.all()}
-    sale_map = {s.visitor_id: s.created_at for s in referral.sale_events.all()}
+    lead_map = {l.visitor_id: l for l in referral.lead_events.all()}
+    sale_map: dict[str, SaleEvent] = {}
+    for s in referral.sale_events.order_by("-created_at"):
+        if s.visitor_id not in sale_map:
+            sale_map[s.visitor_id] = s
     items = []
     for vid in set(click_map.keys()) | set(lead_map.keys()) | set(sale_map.keys()):
-        at = sale_map.get(vid) or lead_map.get(vid) or click_map.get(vid)
-        status = "purchased" if vid in sale_map else "joined"
-        items.append({"visitor_id": vid, "status": status, "at": at.isoformat() if at else None})
+        lead_obj = lead_map.get(vid)
+        sale_obj = sale_map.get(vid)
+        at = (sale_obj.created_at if sale_obj else None) or (lead_obj.created_at if lead_obj else None) or click_map.get(vid)
+        status = "purchased" if sale_obj else "joined"
+        email = (sale_obj.email if sale_obj else None) or (lead_obj.email if lead_obj else None)
+        items.append(
+            {
+                "visitor_id": vid,
+                "email": email,
+                "status": status,
+                "at": at.isoformat() if at else None,
+            }
+        )
     items.sort(key=lambda x: x.get("at") or "", reverse=True)
     return JsonResponse({"affiliate_id": affiliate_id, "items": items[:limit]})

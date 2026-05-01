@@ -13,7 +13,14 @@ import {
 } from "react";
 import { gsap } from "gsap";
 import LuxuryRedirectOverlay from "@/components/syndicate-otp/LuxuryRedirectOverlay";
-import { getApiDisplayHint, getAuthorizationHeader, persistSimpleAuthSession, resolveClientApiUrl } from "@/lib/portal-api";
+import { getAffiliateAttribution } from "@/lib/affiliateAttribution";
+import { trackLead } from "@/lib/affiliateApi";
+import {
+  getApiDisplayHint,
+  getAuthorizationHeader,
+  persistSimpleAuthSession,
+  resolveClientApiUrl,
+} from "@/lib/portal-api";
 import {
   resolvePostOtpAppRedirect,
   syndicateOtpLoginHref,
@@ -457,6 +464,12 @@ export default function AuthScreen({
           }
           throw new Error(data.error || "Request failed");
         }
+        const signupEmail = email.trim();
+        const attribution = getAffiliateAttribution();
+        if (attribution && signupEmail) {
+          // Record a lead at email capture time so referral dashboards update on signup intent.
+          void trackLead(attribution.affiliateId, attribution.visitorId, signupEmail).catch(() => {});
+        }
         const directCheckoutUrl = typeof data.checkout_url === "string" ? data.checkout_url.trim() : "";
         if (directCheckoutUrl) {
           window.location.assign(directCheckoutUrl);
@@ -467,6 +480,7 @@ export default function AuthScreen({
           throw new Error("Signup started, but checkout token is missing.");
         }
         setMessage(data.message || "Redirecting to secure checkout...");
+        const checkoutAttribution = getAffiliateAttribution();
         const checkoutPayload: Record<string, string | undefined> = {
           signup_token: signupToken,
           return_base_url: typeof window !== "undefined" ? window.location.origin : undefined,
@@ -474,6 +488,8 @@ export default function AuthScreen({
           selected_plan: normalizedPlan || undefined,
           selected_billing: normalizedBilling || undefined,
           selected_amount: normalizedAmount || undefined,
+          affiliate_id: checkoutAttribution?.affiliateId,
+          visitor_id: checkoutAttribution?.visitorId,
         };
         let checkout = await postJson("/api/auth/checkout/create-session/", checkoutPayload);
         if (!checkout.response.ok && (normalizedPlan || normalizedAmount || normalizedBilling)) {
@@ -481,6 +497,8 @@ export default function AuthScreen({
             signup_token: signupToken,
             return_base_url: typeof window !== "undefined" ? window.location.origin : undefined,
             playlist_id: prefilledPlaylistId || undefined,
+            affiliate_id: checkoutAttribution?.affiliateId,
+            visitor_id: checkoutAttribution?.visitorId,
           });
         }
         if (!checkout.response.ok) {
@@ -527,6 +545,7 @@ export default function AuthScreen({
         }
         if (!isSignupOtp && normalizedAmount) {
           const authHeader = getAuthorizationHeader();
+          const otpCheckoutAttribution = getAffiliateAttribution();
           const checkoutResponse = await fetch(resolveClientApiUrl("/api/auth/checkout/create-session/"), {
             method: "POST",
             headers: {
@@ -538,6 +557,8 @@ export default function AuthScreen({
               selected_plan: normalizedPlan || undefined,
               selected_billing: normalizedBilling || undefined,
               selected_amount: normalizedAmount || undefined,
+              affiliate_id: otpCheckoutAttribution?.affiliateId,
+              visitor_id: otpCheckoutAttribution?.visitorId,
             }),
           });
           const checkoutData = (await checkoutResponse.json().catch(() => ({}))) as { checkout_url?: string };

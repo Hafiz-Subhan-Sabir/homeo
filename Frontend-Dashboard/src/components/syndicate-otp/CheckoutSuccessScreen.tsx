@@ -39,6 +39,11 @@ type SuccessPayload = {
   amount_paid?: string | number;
   total_amount?: string | number;
   price_paid?: string | number;
+  currency?: string;
+  affiliate_attribution?: {
+    affiliate_id?: string;
+    visitor_id?: string;
+  };
 };
 
 function toNumber(value: unknown): number | null {
@@ -65,6 +70,7 @@ export default function CheckoutSuccessScreen({
   const [error, setError] = useState("");
   const [luxuryOpen, setLuxuryOpen] = useState(false);
   const [luxuryHref, setLuxuryHref] = useState(SYNDICATE_URL);
+  const [trackingDebug, setTrackingDebug] = useState<string | null>(null);
 
   useEffect(() => {
     const canvas = document.getElementById("particles") as HTMLCanvasElement | null;
@@ -231,37 +237,55 @@ export default function CheckoutSuccessScreen({
             : SYNDICATE_URL;
 
         const attribution = getAffiliateAttribution();
+        const payloadAffiliateId = (data.affiliate_attribution?.affiliate_id || "").trim();
+        const payloadVisitorId = (data.affiliate_attribution?.visitor_id || "").trim();
+        const effectiveAttribution =
+          attribution ??
+          (payloadAffiliateId && payloadVisitorId
+            ? {
+                affiliateId: payloadAffiliateId,
+                visitorId: payloadVisitorId,
+                offer: "affiliate-offer",
+                createdAt: Date.now(),
+              }
+            : null);
+        if (process.env.NODE_ENV !== "production" && effectiveAttribution) {
+          setTrackingDebug(
+            `debug tracking -> affiliate_id=${effectiveAttribution.affiliateId} | visitor_id=${effectiveAttribution.visitorId}`
+          );
+        }
         const checkoutAmount =
           toNumber(data.amount_paid) ??
           toNumber(data.total_amount) ??
           toNumber(data.price_paid) ??
           toNumber(data.amount);
         const buyerEmail = (data.user?.email || data.email || "").trim();
-        if (attribution && buyerEmail) {
+        if (effectiveAttribution && buyerEmail) {
           const purchaseAmountValue = checkoutAmount && checkoutAmount > 0 ? checkoutAmount : 0;
-          const commissionAmount = (purchaseAmountValue * 0.2).toFixed(2);
+          const commissionRate = purchaseAmountValue >= 333 ? 0.3 : 0.15;
           try {
-            await trackLead(
-              attribution.affiliateId,
-              attribution.visitorId,
-              buyerEmail
-            );
+            await trackLead(effectiveAttribution.affiliateId, effectiveAttribution.visitorId, buyerEmail);
+          } catch {
+            // Keep going: sale + earnings should still be recorded even if lead call fails.
+          }
+          try {
             await trackSale(
-              attribution.affiliateId,
-              attribution.visitorId,
+              effectiveAttribution.affiliateId,
+              effectiveAttribution.visitorId,
               buyerEmail,
-              commissionAmount,
+              purchaseAmountValue.toFixed(2),
               {
                 purchase_amount: purchaseAmountValue.toFixed(2),
-                commission_rate: 0.2,
-                offer: attribution.offer,
-                tier: attribution.tier,
-                program: attribution.program,
+                commission_rate: commissionRate,
+                offer: effectiveAttribution.offer,
+                tier: effectiveAttribution.tier,
+                program: effectiveAttribution.program,
+                currency: (typeof data.currency === "string" && data.currency.trim()) ? data.currency.trim().toLowerCase() : "usd",
               }
             );
             clearAffiliateAttribution();
           } catch {
-            // Payment is already successful; keep UX flow even if affiliate sync fails.
+            // Payment is already successful; keep UX flow even if affiliate sale sync fails.
           }
         }
 
@@ -317,6 +341,9 @@ export default function CheckoutSuccessScreen({
           {!loading && message ? <p className="form-message">{message}</p> : null}
           {!loading && luxuryOpen ? (
             <p className="form-message">Preparing your arrival at the main site…</p>
+          ) : null}
+          {!loading && trackingDebug ? (
+            <p className="mt-1 text-[11px] tracking-[0.05em] text-cyan-200/80">{trackingDebug}</p>
           ) : null}
           {!loading && error ? <p className="form-error">{error}</p> : null}
 

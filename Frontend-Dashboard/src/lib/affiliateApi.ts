@@ -50,6 +50,26 @@ function authHeaders(): HeadersInit {
 
 const root = () => affiliateApiRoot();
 
+async function postTrackJson<T>(endpoint: string, payload: Record<string, unknown>): Promise<T> {
+  const doPost = async (url: string) =>
+    fetch(url, {
+      method: "POST",
+      keepalive: true,
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(payload),
+    });
+
+  const baseUrl = `${root()}/track/${endpoint}`;
+  let res = await doPost(baseUrl);
+
+  // Some environments/proxies normalize tracking URLs differently; retry once with trailing slash.
+  if (res.status === 404 && !baseUrl.endsWith("/")) {
+    res = await doPost(`${baseUrl}/`);
+  }
+
+  return parseJson<T>(res);
+}
+
 export async function getAffiliateStats(affiliateId: string): Promise<AffiliateStats> {
   const res = await fetch(
     `${root()}/track/stats?affiliate_id=${encodeURIComponent(affiliateId)}`,
@@ -83,23 +103,18 @@ export async function getRecentReferrals(affiliateId: string, limit = 10): Promi
 }
 
 export async function trackClick(affiliateId: string, visitorId: string) {
-  const res = await fetch(`${root()}/track/click`, {
-    method: "POST",
-    keepalive: true,
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({ affiliate_id: affiliateId, visitor_id: visitorId })
+  return postTrackJson<{ success: boolean }>("click", {
+    affiliate_id: affiliateId,
+    visitor_id: visitorId,
   });
-  return parseJson<{ success: boolean }>(res);
 }
 
 export async function trackLead(affiliateId: string, visitorId: string, email: string) {
-  const res = await fetch(`${root()}/track/lead`, {
-    method: "POST",
-    keepalive: true,
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({ affiliate_id: affiliateId, visitor_id: visitorId, email })
+  return postTrackJson<{ success: boolean }>("lead", {
+    affiliate_id: affiliateId,
+    visitor_id: visitorId,
+    email,
   });
-  return parseJson<{ success: boolean }>(res);
 }
 
 export async function trackSale(
@@ -107,19 +122,22 @@ export async function trackSale(
   visitorId: string,
   email: string,
   amount: string,
-  extras?: { purchase_amount?: string; commission_rate?: number; offer?: string; tier?: string; program?: string }
+  extras?: { purchase_amount?: string; commission_rate?: number; offer?: string; tier?: string; program?: string; currency?: string }
 ) {
-  const res = await fetch(`${root()}/track/sale`, {
-    method: "POST",
-    keepalive: true,
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({
-      affiliate_id: affiliateId,
-      visitor_id: visitorId,
-      email,
-      amount,
-      ...extras,
-    })
+  return postTrackJson<{ success: boolean }>("sale", {
+    affiliate_id: affiliateId,
+    visitor_id: visitorId,
+    email,
+    amount,
+    ...extras,
   });
-  return parseJson<{ success: boolean }>(res);
+}
+
+export async function generateOneTimeReferralLink(affiliateId: string, domain?: string) {
+  const res = await fetch(`${root()}/track/generate-referral-link`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ affiliate_id: affiliateId, domain }),
+  });
+  return parseJson<{ success: boolean; affiliate_id: string; link: string; created_once: boolean }>(res);
 }

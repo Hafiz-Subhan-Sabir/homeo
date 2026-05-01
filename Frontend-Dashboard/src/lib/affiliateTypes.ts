@@ -77,6 +77,7 @@ export type AffiliateFunnelResponse = {
 
 export type RecentReferralItem = {
   visitor_id: string;
+  email?: string | null;
   status: "joined" | "purchased";
   at: string | null;
 };

@@ -696,9 +696,12 @@
   pointer-events: none;
   z-index: 1;
   background:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.9) 0%, rgba(18, 14, 4, 0.78) 60%, rgba(245, 224, 138, 0.08) 100%);
-  box-shadow: inset 0 0 36px rgba(245, 224, 138, 0.08);
-  animation: luxuryDoorOpen 0.78s ease-out forwards;
+    linear-gradient(90deg, rgba(0, 0, 0, 0.96) 0%, rgba(20, 15, 5, 0.9) 58%, rgba(245, 224, 138, 0.12) 100%);
+  box-shadow:
+    inset 0 0 44px rgba(245, 224, 138, 0.12),
+    inset 0 0 0 1px rgba(245, 224, 138, 0.12),
+    0 0 24px rgba(212, 175, 55, 0.2);
+  animation: luxuryDoorOpen 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .luxury-redirect__door--left {
@@ -712,75 +715,27 @@
   transform: scaleX(-1);
 }
 
-.luxury-redirect__tunnel {
+.luxury-redirect__center-glow {
   position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0.55;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(245, 224, 138, 0.2) 0%, transparent 35%),
-    repeating-linear-gradient(
-      90deg,
-      transparent 0px,
-      transparent 20px,
-      rgba(245, 224, 138, 0.06) 21px,
-      rgba(245, 224, 138, 0.06) 22px
-    );
-  animation: luxuryTunnelRush 0.95s linear infinite;
-}
-
-.luxury-redirect__glow {
-  position: absolute;
+  z-index: 2;
+  width: clamp(320px, 82vw, 1150px);
+  height: clamp(180px, 38vw, 430px);
   border-radius: 50%;
-  filter: blur(60px);
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.44) 0%, rgba(212, 175, 55, 0.16) 38%, transparent 70%);
+  filter: blur(22px);
   pointer-events: none;
-  opacity: 0.9;
-}
-
-.luxury-redirect__glow--outer {
-  width: clamp(280px, 72vw, 720px);
-  height: clamp(280px, 72vw, 720px);
-  background: radial-gradient(circle, rgba(212, 175, 55, 0.55) 0%, transparent 68%);
-  animation: luxuryGlowDrift 5s ease-in-out infinite alternate;
-}
-
-.luxury-redirect__glow--inner {
-  width: clamp(140px, 38vw, 320px);
-  height: clamp(140px, 38vw, 320px);
-  background: radial-gradient(circle, rgba(245, 224, 138, 0.5) 0%, transparent 70%);
-  animation: luxuryGlowDrift 3.2s ease-in-out infinite alternate-reverse;
-}
-
-.luxury-redirect__ring {
-  position: absolute;
-  border-radius: 50%;
-  border: 1px solid rgba(212, 175, 55, 0.35);
-  box-shadow:
-    0 0 30px rgba(212, 175, 55, 0.25),
-    inset 0 0 40px rgba(212, 175, 55, 0.08);
-  pointer-events: none;
-}
-
-.luxury-redirect__ring--a {
-  width: clamp(200px, 48vw, 420px);
-  height: clamp(200px, 48vw, 420px);
-  animation: luxurySpin 22s linear infinite;
-}
-
-.luxury-redirect__ring--b {
-  width: clamp(150px, 36vw, 300px);
-  height: clamp(150px, 36vw, 300px);
-  border-color: rgba(245, 224, 138, 0.28);
-  animation: luxurySpin 16s linear infinite reverse;
+  animation: luxuryGlowDrift 1.8s ease-out forwards;
 }
 
 .luxury-redirect__core {
   position: relative;
   z-index: 3;
+  display: flex;
+  width: 100%;
+  justify-content: center;
   text-align: center;
   padding: clamp(1rem, 3vw, 2rem);
-  max-width: min(90vw, 28rem);
+  max-width: none;
 }
 
 .luxury-redirect__eyebrow {
@@ -804,31 +759,20 @@
   margin-bottom: 1.35rem;
 }
 
-.luxury-redirect__bar {
-  height: 3px;
-  width: min(72vw, 18rem);
-  margin: 0 auto 1rem;
-  border-radius: 999px;
-  background: rgba(107, 83, 16, 0.55);
-  overflow: hidden;
-  box-shadow: 0 0 14px rgba(212, 175, 55, 0.25);
-}
-
-.luxury-redirect__bar-fill {
-  display: block;
-  height: 100%;
-  width: 40%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--gold-dark), var(--gold-light), var(--gold));
-  animation: luxuryBar 1.35s ease-in-out infinite;
-  box-shadow: 0 0 16px rgba(245, 224, 138, 0.65);
-}
-
-.luxury-redirect__hint {
-  font-size: clamp(0.62rem, 0.22vw + 0.58rem, 0.75rem);
-  letter-spacing: 0.18em;
+.luxury-redirect__title--welcome {
+  margin-bottom: 0;
+  font-size: clamp(2rem, 7.1vw, 5.75rem);
+  font-weight: 900;
+  letter-spacing: clamp(0.08em, 0.02em + 0.55vw, 0.18em);
+  line-height: 1.06;
   text-transform: uppercase;
-  color: rgba(232, 214, 138, 0.55);
+  color: #ffe58f;
+  text-shadow:
+    0 0 20px rgba(212, 175, 55, 0.8),
+    0 0 48px rgba(212, 175, 55, 0.6),
+    0 0 120px rgba(156, 124, 28, 0.48);
+  text-align: center;
+  animation: luxuryWelcomeReveal 0.95s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
 }
 
 @keyframes luxuryVeilIn {
@@ -844,12 +788,12 @@
 
 @keyframes luxuryDoorOpen {
   from {
-    transform: translateX(0);
+    transform: translateX(0) scaleX(1);
     opacity: 1;
   }
   to {
-    transform: translateX(-86%);
-    opacity: 0.16;
+    transform: translateX(-105%) scaleX(1);
+    opacity: 0.08;
   }
 }
 
@@ -890,6 +834,19 @@
   100% {
     transform: translateX(220%);
     opacity: 0.85;
+  }
+}
+
+@keyframes luxuryWelcomeReveal {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+    filter: blur(7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
   }
 }
 
