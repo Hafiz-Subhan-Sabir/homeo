@@ -20,7 +20,7 @@ class StreamPlaylistAdmin(admin.ModelAdmin):
     prepopulated_fields = {"slug": ("title",)}
     inlines = [StreamPlaylistItemInline]
     fieldsets = (
-        (None, {"fields": ("title", "slug", "category", "price", "rating", "cover_image")}),
+        (None, {"fields": ("title", "slug", "category", "description", "price", "rating", "cover_image")}),
         ("Publishing", {"fields": ("is_published", "is_coming_soon")}),
     )
 

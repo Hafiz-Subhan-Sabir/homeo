@@ -11,6 +11,7 @@ import {
 import { resolveDjangoMediaUrl } from "@/lib/courses-api";
 import { cn } from "@/components/dashboard/dashboardPrimitives";
 import { hasSimpleAuthSessionClient } from "@/lib/portal-api";
+import { ProgramPlaylistDescriptionModal } from "@/components/programs/ProgramPlaylistDescriptionModal";
 
 const PROGRAM_CARD_BACKGROUNDS: readonly string[] = [
   "from-amber-600/85 via-orange-900/50 to-black",
@@ -89,6 +90,7 @@ export function PlaylistCardsSection({
   const [playlists, setPlaylists] = useState<StreamPlaylistListItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [descriptionModalPlaylist, setDescriptionModalPlaylist] = useState<StreamPlaylistListItem | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -256,15 +258,24 @@ export function PlaylistCardsSection({
                   {`£${price.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  router.push(`/signup?playlist_id=${encodeURIComponent(String(pl.id))}`);
-                }}
-                className="mt-2 rounded-xl border border-[#caa724]/90 bg-[linear-gradient(135deg,rgba(202,167,36,0.28),rgba(98,73,11,0.98))] px-3 py-2 text-[11px] font-black uppercase tracking-[0.15em] text-[#ffe9a3] shadow-[0_0_20px_rgba(202,167,36,0.6),inset_0_0_0_1px_rgba(202,167,36,0.35)] transition hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(202,167,36,0.9),0_0_52px_rgba(202,167,36,0.5),inset_0_0_0_1px_rgba(202,167,36,0.55)]"
-              >
-                Unlock
-              </button>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDescriptionModalPlaylist(pl)}
+                  className="rounded-xl border border-white/40 bg-black/55 px-2 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-white/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:border-[#f5c814]/55 hover:text-[#ffe9a3] sm:text-[11px] sm:tracking-[0.14em]"
+                >
+                  Details
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    router.push(`/signup?playlist_id=${encodeURIComponent(String(pl.id))}`);
+                  }}
+                  className="rounded-xl border border-[#caa724]/90 bg-[linear-gradient(135deg,rgba(202,167,36,0.28),rgba(98,73,11,0.98))] px-2 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-[#ffe9a3] shadow-[0_0_20px_rgba(202,167,36,0.6),inset_0_0_0_1px_rgba(202,167,36,0.35)] transition hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(202,167,36,0.9),0_0_52px_rgba(202,167,36,0.5),inset_0_0_0_1px_rgba(202,167,36,0.55)] sm:text-[11px] sm:tracking-[0.15em]"
+                >
+                  Unlock
+                </button>
+              </div>
             </div>
           </div>
         </span>
@@ -274,6 +285,7 @@ export function PlaylistCardsSection({
 
   return (
     <section className={cn("relative space-y-5 overflow-hidden rounded-3xl px-1 py-2 sm:px-2 sm:py-3", className)}>
+      <ProgramPlaylistDescriptionModal playlist={descriptionModalPlaylist} onClose={() => setDescriptionModalPlaylist(null)} />
       <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden>
         <div className="absolute left-[-8%] top-[12%] h-[250px] w-[250px] rounded-full bg-fuchsia-500/20 blur-[90px] sm:h-[380px] sm:w-[380px] sm:blur-[125px]" />
         <div className="absolute right-[-10%] top-[20%] h-[260px] w-[260px] rounded-full bg-cyan-400/18 blur-[95px] sm:h-[400px] sm:w-[400px] sm:blur-[130px]" />

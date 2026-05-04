@@ -4,6 +4,10 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { ChevronLeft, Lock, Star } from "lucide-react";
 import ChromaGrid, { type ChromaItem } from "@/components/ChromaGrid";
 import { CourseVideoPlaylist } from "@/components/programs/CourseVideoPlaylist";
+import {
+  ProgramPlaylistDescriptionModal,
+  PROGRAM_DETAIL_TRIGGER_ATTR,
+} from "@/components/programs/ProgramPlaylistDescriptionModal";
 import { StreamPlaylistProgramPanel } from "@/components/programs/StreamPlaylistProgramPanel";
 import { cn } from "@/components/dashboard/dashboardPrimitives";
 import { fetchCoursesList, resolveDjangoMediaUrl, type CourseDto } from "@/lib/courses-api";
@@ -186,6 +190,7 @@ export function ProgramsCourseSection({
   const [playlistTitleQuery, setPlaylistTitleQuery] = useState("");
   const [checkoutBusyPlaylistId, setCheckoutBusyPlaylistId] = useState<number | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [playlistDescriptionModal, setPlaylistDescriptionModal] = useState<StreamPlaylistListItem | null>(null);
 
   const reloadApiCourses = useCallback(async () => {
     const res = await fetchCoursesList();
@@ -403,25 +408,37 @@ export function ProgramsCourseSection({
     const theme = PLAYLIST_CARD_THEMES[j % PLAYLIST_CARD_THEMES.length];
     const rating = parseRating(pl.rating);
     const price = parsePrice(pl.price);
+    const detailSelector = `[${PROGRAM_DETAIL_TRIGGER_ATTR}]`;
+    const playlistCardPrimary = () => {
+      if (comingSoon) return;
+      if (locked) {
+        void startPlaylistCheckout(pl.id);
+        return;
+      }
+      openStreamPlaylist(pl.id);
+    };
     return (
-      <button
+      <article
         key={`playlist-${pl.id}`}
-        type="button"
-        onClick={() => {
-          if (comingSoon) return;
-          if (locked) {
-            void startPlaylistCheckout(pl.id);
-            return;
-          }
-          openStreamPlaylist(pl.id);
+        tabIndex={comingSoon ? -1 : 0}
+        onClick={(e) => {
+          if ((e.target as HTMLElement).closest(detailSelector)) return;
+          playlistCardPrimary();
+        }}
+        onKeyDown={(e) => {
+          if ((e.target as HTMLElement).closest(detailSelector)) return;
+          if (e.key !== "Enter" && e.key !== " ") return;
+          e.preventDefault();
+          playlistCardPrimary();
         }}
         className={cn(
-          "group/card relative flex aspect-[3/5] w-full flex-col overflow-hidden text-left sm:aspect-[4/5]",
+          "group/card relative flex aspect-[3/5] w-full flex-col overflow-hidden text-left outline-none sm:aspect-[4/5]",
           "rounded-3xl border-2",
           theme.dominantBorder,
           theme.glow,
           "transition-[transform,box-shadow] duration-300 ease-out",
-          comingSoon ? "cursor-not-allowed opacity-95" : cn("hover:-translate-y-0.5", theme.hoverGlow)
+          comingSoon ? "cursor-not-allowed opacity-95" : cn("cursor-pointer hover:-translate-y-0.5", theme.hoverGlow),
+          !comingSoon && "focus-visible:ring-2 focus-visible:ring-[color:var(--gold-neon-border-mid)] focus-visible:ring-offset-2 focus-visible:ring-offset-black"
         )}
         aria-disabled={comingSoon}
       >
@@ -530,10 +547,26 @@ export function ProgramsCourseSection({
                   {`£${price.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
                 </span>
               </div>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  data-program-playlist-detail=""
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPlaylistDescriptionModal(pl);
+                  }}
+                  className="relative z-[6] rounded-xl border border-white/40 bg-black/55 px-2 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-white/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:border-[color:var(--gold-neon-border-mid)] hover:text-[color:var(--gold)] sm:text-[11px] sm:tracking-[0.14em]"
+                >
+                  Details
+                </button>
+                <span className="relative z-[6] flex min-h-[2.25rem] items-center justify-center rounded-xl border border-white/15 bg-black/25 px-2 text-center text-[9px] font-bold uppercase leading-tight tracking-[0.1em] text-white/50 sm:text-[10px]">
+                  {locked && !comingSoon ? "Tap card to unlock" : comingSoon ? "—" : "Tap card to open"}
+                </span>
+              </div>
             </div>
           </div>
         </span>
-      </button>
+      </article>
     );
   };
 
@@ -890,6 +923,10 @@ export function ProgramsCourseSection({
           </div>
         </>
       )}
+      <ProgramPlaylistDescriptionModal
+        playlist={playlistDescriptionModal}
+        onClose={() => setPlaylistDescriptionModal(null)}
+      />
     </>
   );
 }
