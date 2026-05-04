@@ -76,6 +76,8 @@ export type CourseDto = {
   cover_image_url: string | null;
   is_published: boolean;
   allow_all_authenticated: boolean;
+  /** From API: false when user may see the card but cannot open the LMS program (e.g. playlist-only purchase). */
+  can_access?: boolean;
 };
 
 export type VideoDto = {

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell } from "lucide-react";
+import { Bell, Lock } from "lucide-react";
 import {
   acknowledgeDueSyndicateReminder,
   getDueSyndicateReminders,
@@ -16,7 +16,14 @@ import {
 import { SYNDICATE_DASHBOARD_REFRESH_EVENT } from "@/lib/syndicateProgressSync";
 import type { DashboardNavKey } from "./types";
 
-export function SyndicateReminderDueBanner({ onNavigate }: { onNavigate: (nav: DashboardNavKey) => void }) {
+export function SyndicateReminderDueBanner({
+  onNavigate,
+  syndicateNavLocked
+}: {
+  onNavigate: (nav: DashboardNavKey) => void;
+  /** Money Mastery: user cannot open Syndicate Mode from the shell. */
+  syndicateNavLocked?: boolean;
+}) {
   const [mounted, setMounted] = useState(false);
   const [tick, setTick] = useState(0);
   const [due, setDue] = useState<DueSyndicateReminder[]>([]);
@@ -122,13 +129,25 @@ export function SyndicateReminderDueBanner({ onNavigate }: { onNavigate: (nav: D
               >
                 Stop
               </button>
-              <button
-                type="button"
-                onClick={() => onNavigate("monk")}
-                className="rounded-md border border-[rgba(255,215,0,0.48)] bg-[rgba(255,215,0,0.12)] px-4 py-2.5 text-[12px] font-black uppercase tracking-[0.12em] text-[color:var(--gold)]/95 hover:border-[rgba(255,215,0,0.7)]"
-              >
-                Open Syndicate
-              </button>
+              {syndicateNavLocked ? (
+                <button
+                  type="button"
+                  disabled
+                  className="inline-flex cursor-not-allowed items-center gap-2 rounded-md border border-white/15 bg-black/40 px-4 py-2.5 text-[12px] font-black uppercase tracking-[0.12em] text-white/45"
+                  title="Syndicate Mode is not included in your plan"
+                >
+                  <Lock className="h-4 w-4 shrink-0 text-amber-200/80" aria-hidden />
+                  No access
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onNavigate("monk")}
+                  className="rounded-md border border-[rgba(255,215,0,0.48)] bg-[rgba(255,215,0,0.12)] px-4 py-2.5 text-[12px] font-black uppercase tracking-[0.12em] text-[color:var(--gold)]/95 hover:border-[rgba(255,215,0,0.7)]"
+                >
+                  Open Syndicate
+                </button>
+              )}
             </div>
           </div>
         </div>

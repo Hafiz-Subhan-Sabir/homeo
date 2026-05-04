@@ -6,6 +6,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
+from apps.portal.serializers import UserMeSerializer
 
 User = get_user_model()
 
@@ -61,12 +62,5 @@ def logout(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def me(request):
-    u = request.user
-    return Response(
-        {
-            "id": u.id,
-            "email": u.email,
-            "username": getattr(u, "username", "") or "",
-            "is_staff": bool(getattr(u, "is_staff", False)),
-        }
-    )
+    """Same envelope as JWT `/api/auth/me/` so dashboard locks and tier work for DRF-token sessions."""
+    return Response(UserMeSerializer(request.user).data)

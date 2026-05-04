@@ -38,11 +38,8 @@ const pricingData: Record<PlanKey, PricingTier> = {
     features: [
       'You will access everything',
       'All programs lifetime',
-      'Syndicate Challenges Mode',
-      'Exclusive Membership Section',
       'Complete Access of Dashboard',
       'Quick Access to all social apps',
-      'Goals & Milestone section',
     ],
     accent: 'gold',
     icon: <Shield className="h-4 w-4" />,
@@ -92,21 +89,22 @@ const pricingData: Record<PlanKey, PricingTier> = {
   king: {
     price: { monthly: '£77.77', yearly: '£777.70' },
     oldPrice: { monthly: '£99.99', yearly: '£999.90' },
-    badge: 'THE KING · PREMIUM',
-    title: 'The King Premium',
+    badge: 'THE KING',
+    title: 'The King',
     description:
-      'Master your mind, money and power with highest-level resources, insider material, and elite support priority.',
+      'Your membership, your curriculum: hand-pick 4–5 courses, then stay inside weekly drops, the dashboard, articles, and Syndicate Mode challenges.',
     features: [
-      'Everything in The Knight',
-      'Elite inner-circle content',
-      'Monthly insider workshop access',
-      'Direct support lane',
-      'Private leadership channel',
-      'Highest-priority release access',
+      'Select 4–5 courses yourself from the catalog',
+      'Weekly content and member drops',
+      'Full dashboard access',
+      'Membership articles and briefings',
+      'Exclusive Membership Section',
+      'Goals & Milestone section',
+      'Syndicate Challenges Mode',
     ],
     accent: 'gold',
     icon: <Crown className="h-4 w-4" />,
-    cta: 'Join The King Premium',
+    cta: 'Join The King',
     billingMode: 'recurring',
   },
 }
@@ -204,14 +202,14 @@ function TierCard({
   const accentText = hudThemeByPlan[planKey].accentText
 
   return (
-    <div className="relative pt-2">
+    <div className="relative flex h-full min-h-0 w-full min-w-0 flex-1 flex-col pt-2">
       <div
         className="pointer-events-none absolute -bottom-12 left-1/2 h-24 w-[84%] -translate-x-1/2 blur-[22px]"
         style={{ background: hudThemeByPlan[planKey].underGlow }}
       />
       <div
         className={cn(
-          'lightning-glow-card relative rounded-3xl p-0 [clip-path:polygon(14px_0,calc(100%-14px)_0,100%_14px,100%_calc(100%-14px),calc(100%-14px)_100%,14px_100%,0_calc(100%-14px),0_14px)]',
+          'lightning-glow-card relative flex min-h-0 flex-1 flex-col rounded-3xl p-0 [clip-path:polygon(14px_0,calc(100%-14px)_0,100%_14px,100%_calc(100%-14px),calc(100%-14px)_100%,14px_100%,0_calc(100%-14px),0_14px)]',
         )}
         style={{
           ['--lightning-color' as any]: hudThemeByPlan[planKey].lightningColor,
@@ -221,7 +219,7 @@ function TierCard({
         <span className="pointer-events-none absolute inset-[-1px] bg-inherit opacity-95 blur-[16px]" />
       <div
         className={cn(
-          'relative h-full overflow-hidden rounded-3xl border transition-all duration-300 will-change-transform hover:scale-[1.02] [clip-path:polygon(14px_0,calc(100%-14px)_0,100%_14px,100%_calc(100%-14px),calc(100%-14px)_100%,14px_100%,0_calc(100%-14px),0_14px)]',
+          'relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-3xl border transition-all duration-300 will-change-transform hover:scale-[1.02] [clip-path:polygon(14px_0,calc(100%-14px)_0,100%_14px,100%_calc(100%-14px),calc(100%-14px)_100%,14px_100%,0_calc(100%-14px),0_14px)]',
           hudThemeByPlan[planKey].panel,
           'border-transparent',
           highlighted && 'ring-1 ring-white/10',
@@ -230,8 +228,8 @@ function TierCard({
         <div className={cn('pointer-events-none absolute inset-[6px] rounded-[20px] border', hudThemeByPlan[planKey].frameOuter, hudThemeByPlan[planKey].frameOuterGlow)} />
         <div className={cn('pointer-events-none absolute inset-[12px] rounded-[16px] border', hudThemeByPlan[planKey].frameInner, hudThemeByPlan[planKey].frameInnerGlow)} />
 
-        <div className="relative p-5 sm:p-6">
-        <div className="flex items-center justify-between gap-4">
+        <div className="relative flex min-h-0 flex-1 flex-col p-5 sm:p-6">
+        <div className="flex shrink-0 items-center justify-between gap-4">
           <div
             className={cn(
               'inline-flex items-center gap-2 rounded-full border border-white/25 bg-black/40 px-3.5 py-1.5 text-[0.8rem] font-bold tracking-[0.16em] shadow-[0_0_16px_rgba(34,211,238,0.25)] sm:text-[0.86rem]',
@@ -249,11 +247,11 @@ function TierCard({
             </div>
           )}
         </div>
-        <h3 className={cn('mt-3 text-2xl font-semibold tracking-wide sm:text-[2rem]', accentText)} style={{ textShadow: '0 0 18px rgba(255,255,255,0.12)' }}>
+        <h3 className={cn('mt-3 shrink-0 text-2xl font-semibold tracking-wide sm:text-[2rem]', accentText)} style={{ textShadow: '0 0 18px rgba(255,255,255,0.12)' }}>
           {tier.title}
         </h3>
 
-        <div className="mt-4 flex items-end justify-between gap-4">
+        <div className="mt-4 flex shrink-0 items-end justify-between gap-4">
           <motion.div
             key={`${planKey}-${billing}`}
             initial={{ opacity: 0, y: 6 }}
@@ -283,14 +281,14 @@ function TierCard({
               </div>
             </div>
 
-            <div className="mt-2 max-w-[42ch] text-sm text-white/70 font-body">
+            <div className="mt-2 max-w-none text-sm text-white/70 font-body sm:max-w-[52ch]">
               {tier.description}
             </div>
           </motion.div>
 
         </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-2">
+        <div className="mt-5 flex min-h-0 flex-1 flex-col gap-2">
           {tier.features.map((f) => (
             <div
               key={f}
@@ -309,7 +307,7 @@ function TierCard({
             type="button"
             onClick={() => onJoin?.(planKey, activeBilling, tier.price[activeBilling])}
             className={cn(
-              'hamburger-attract mt-5 w-full rounded-2xl border border-[#bd9b4f]/70 bg-[linear-gradient(180deg,rgba(189,155,79,0.18)_0%,rgba(0,0,0,0.22)_100%)] px-5 py-2.5 text-sm font-semibold tracking-wide text-[#f6e7bf] shadow-[0_0_0_1px_rgba(189,155,79,0.55),0_0_20px_rgba(189,155,79,0.38),inset_0_0_16px_rgba(189,155,79,0.12)] transition-all hover:scale-[1.02] hover:shadow-[0_0_0_1px_rgba(189,155,79,0.72),0_0_30px_rgba(189,155,79,0.52),inset_0_0_18px_rgba(189,155,79,0.18)] active:scale-[0.99]',
+              'hamburger-attract mt-6 w-full shrink-0 rounded-2xl border border-[#bd9b4f]/70 bg-[linear-gradient(180deg,rgba(189,155,79,0.18)_0%,rgba(0,0,0,0.22)_100%)] px-5 py-2.5 text-sm font-semibold tracking-wide text-[#f6e7bf] shadow-[0_0_0_1px_rgba(189,155,79,0.55),0_0_20px_rgba(189,155,79,0.38),inset_0_0_16px_rgba(189,155,79,0.12)] transition-all hover:scale-[1.02] hover:shadow-[0_0_0_1px_rgba(189,155,79,0.72),0_0_30px_rgba(189,155,79,0.52),inset_0_0_18px_rgba(189,155,79,0.18)] active:scale-[0.99]',
             )}
           >
             {tier.cta}
@@ -386,7 +384,6 @@ export function PricingPage({
   const tiers = useMemo(
     () => [
       { key: 'bundle' as const, tier: pricingData.bundle },
-      { key: 'pawn' as const, tier: pricingData.pawn },
       { key: 'king' as const, tier: pricingData.king },
     ],
     [],
@@ -410,7 +407,8 @@ export function PricingPage({
             Syndicate Offers
           </h2>
           <p className="mx-auto mt-4 max-w-3xl font-mono text-lg tracking-[0.1em] text-zinc-300 md:text-xl">
-            Choose your access tier: full bundle lifetime coverage or The Pawn and The King membership paths.
+            Choose your access tier: Money Mastery lifetime bundle, or The King membership with 4–5 self-selected courses,
+            weekly content, dashboard, articles, and Syndicate Mode challenges.
           </p>
           {checkoutError ? (
             <p className="mx-auto mt-3 max-w-3xl text-sm text-rose-300">{checkoutError}</p>
@@ -442,9 +440,13 @@ export function PricingPage({
           </div>
         </header>
 
-        <div className="grid w-full grid-cols-1 gap-5 px-[2vw] md:grid-cols-2 md:gap-6 xl:grid-cols-3 xl:gap-6">
+        <div className="mx-auto grid w-full max-w-[min(1320px,calc(100vw-1.25rem))] grid-cols-1 gap-6 px-[clamp(0.5rem,2vw,1.25rem)] sm:gap-7 md:grid-cols-2 md:items-stretch md:gap-8 md:[grid-template-columns:minmax(0,1fr)_minmax(0,1fr)]">
           {tiers.map(({ key, tier }) => (
-            <div key={key} onClick={() => onSelectPlan?.(key)} className="cursor-default">
+            <div
+              key={key}
+              onClick={() => onSelectPlan?.(key)}
+              className="flex min-h-0 min-w-0 w-full cursor-default md:h-full"
+            >
               <TierCard
                 planKey={key}
                 tier={tier}

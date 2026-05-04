@@ -51,9 +51,12 @@ urlpatterns = [
     path("api/auth/refresh/", portal_views.RefreshView.as_view(), name="auth-refresh"),
     path("api/auth/logout/", portal_views.LogoutView.as_view(), name="auth-logout"),
     path("api/auth/me/", portal_views.MeView.as_view(), name="auth-me"),
+    path("api/auth/billing-purchases/", portal_views.BillingPurchasesView.as_view(), name="auth-billing-purchases"),
     path("api/auth/login", portal_views.LoginView.as_view(), name="auth-login-noslash"),
     path("api/auth/refresh", portal_views.RefreshView.as_view(), name="auth-refresh-noslash"),
     path("api/auth/logout", portal_views.LogoutView.as_view(), name="auth-logout-noslash"),
+    path("api/auth/me", portal_views.MeView.as_view(), name="auth-me-noslash"),
+    path("api/auth/billing-purchases", portal_views.BillingPurchasesView.as_view(), name="auth-billing-purchases-noslash"),
     # Accounts OTP auth flow (kept separate from JWT /api/auth/login/ above).
     path("api/auth/otp-login/", accounts_views.login_view, name="auth-otp-login"),
     path("api/auth/verify-login-otp/", accounts_views.verify_login_otp_view, name="auth-verify-login-otp"),

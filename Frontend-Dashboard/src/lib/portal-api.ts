@@ -28,6 +28,10 @@ export type PortalUser = {
   is_staff: boolean;
   roles: { name: string; display_name: string }[];
   permissions: string[];
+  /** `none` | `money_mastery` | `king` | `full` (staff) — drives dashboard locks + course access. */
+  access_tier?: string;
+  /** When true, that shell section is read-only / blocked for Money Mastery buyers. */
+  dashboard_nav_locks?: { monk?: boolean; resources?: boolean; goals?: boolean; dashboard?: boolean };
 };
 
 /**
@@ -330,7 +334,7 @@ export async function fetchPortalIdentity(): Promise<PortalUser | null> {
   const res = await fetch(resolveClientApiUrl("/api/syndicate-auth/me/"), {
     headers: { Authorization: `Token ${drf}`, Accept: "application/json" }
   });
-  const data = (await res.json().catch(() => ({}))) as {
+  const data = (await res.json().catch(() => ({}))) as PortalUser & {
     id?: number;
     email?: string;
     username?: string;
@@ -343,11 +347,13 @@ export async function fetchPortalIdentity(): Promise<PortalUser | null> {
     id: data.id,
     username: String(data.username ?? email).trim() || email,
     email,
-    first_name: "",
-    last_name: "",
+    first_name: String(data.first_name ?? ""),
+    last_name: String(data.last_name ?? ""),
     is_staff: !!data.is_staff,
-    roles: [],
-    permissions: []
+    roles: Array.isArray(data.roles) ? data.roles : [],
+    permissions: Array.isArray(data.permissions) ? data.permissions : [],
+    access_tier: data.access_tier,
+    dashboard_nav_locks: data.dashboard_nav_locks
   };
 }
 

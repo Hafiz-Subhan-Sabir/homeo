@@ -21,6 +21,9 @@ export type GoalsPanelContextValue = {
   setShellSectionKey: (key: string | null) => void;
   themeMode: ThemeMode;
   setPanelThemeMode: (mode: ThemeMode) => void;
+  /** Money Mastery tier: Goals FAB is visible but locked (upgrade to King for full access). */
+  goalsFabLocked: boolean;
+  setGoalsFabLocked: (locked: boolean) => void;
 };
 
 const GoalsPanelContext = createContext<GoalsPanelContextValue | null>(null);
@@ -30,8 +33,10 @@ export function GoalsPanelProvider({ children }: { children: ReactNode }) {
   const [isGoalsPanelOpen, setGoalsPanelOpen] = useState(false);
   const [shellSectionKey, setShellSectionKey] = useState<string | null>(null);
   const [themeMode, setPanelThemeMode] = useState<ThemeMode>("default");
+  const [goalsFabLocked, setGoalsFabLocked] = useState(false);
 
   const openGoalsPanel = useCallback(() => {
+    if (goalsFabLocked) return;
     setGoalsPanelOpen(true);
     recordEvent({
       category: "system",
@@ -40,7 +45,7 @@ export function GoalsPanelProvider({ children }: { children: ReactNode }) {
       moreDetails:
         "You opened the floating Goals & Milestones panel: missions, automatic lead-up reminders, and notes."
     });
-  }, [recordEvent]);
+  }, [goalsFabLocked, recordEvent]);
   const closeGoalsPanel = useCallback(() => setGoalsPanelOpen(false), []);
   const toggleGoalsPanel = useCallback(() => setGoalsPanelOpen((v) => !v), []);
 
@@ -53,7 +58,9 @@ export function GoalsPanelProvider({ children }: { children: ReactNode }) {
       shellSectionKey,
       setShellSectionKey,
       themeMode,
-      setPanelThemeMode
+      setPanelThemeMode,
+      goalsFabLocked,
+      setGoalsFabLocked
     }),
     [
       isGoalsPanelOpen,
@@ -61,7 +68,8 @@ export function GoalsPanelProvider({ children }: { children: ReactNode }) {
       closeGoalsPanel,
       toggleGoalsPanel,
       shellSectionKey,
-      themeMode
+      themeMode,
+      goalsFabLocked
     ]
   );
 

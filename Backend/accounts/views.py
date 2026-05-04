@@ -3,6 +3,7 @@ import random
 import re
 import secrets
 from datetime import timedelta
+from decimal import Decimal
 from urllib.parse import urlsplit
 
 import stripe
@@ -20,13 +21,113 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from apps.affiliate_tracking.views import ensure_affiliate_profile_for_existing_user, referral_ids_payload
+from apps.courses.models import Course, CourseEnrollment
+from apps.portal.models import UserDashboardEntitlement, UserPlanPurchase
 from apps.video_streaming.models import StreamPlaylist, StreamPlaylistPurchase
+from rest_framework.request import Request
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from .models import LoginOTP, PendingSignup, ReturningCheckout, SignupOTP
 
 
 def _json_error(message: str, status: int = 400) -> JsonResponse:
   return JsonResponse({"error": message}, status=status)
+
+
+def _authenticate_jwt_user(request):
+  try:
+    auth = JWTAuthentication()
+    drf_request = Request(request)
+    result = auth.authenticate(drf_request)
+    if result:
+      return result[0]
+  except Exception:
+    return None
+  return None
+
+
+def _authenticate_checkout_user(request):
+  """Bearer JWT or `Authorization: Token <key>` — matches dashboard sessions so plan upgrades work from the shell."""
+  u = _authenticate_jwt_user(request)
+  if u is not None:
+    return u
+  header = (request.META.get("HTTP_AUTHORIZATION") or "").strip()
+  parts = header.split()
+  if len(parts) == 2 and parts[0].lower() == "token":
+    key = parts[1].strip()
+    if key:
+      try:
+        tok = Token.objects.select_related("user").get(key=key)
+        return tok.user
+      except Token.DoesNotExist:
+        return None
+  return None
+
+
+def _parse_pence_from_amount_payload(raw) -> int | None:
+  if raw is None:
+    return None
+  s = re.sub(r"[^0-9.]", "", str(raw).strip())
+  if not s:
+    return None
+  try:
+    v = float(s)
+    return int(max(50, round(v * 100)))
+  except ValueError:
+    return None
+
+
+def _apply_purchased_plan(user: User, plan: str) -> None:
+  plan = (plan or "").strip().lower()
+  if plan not in ("bundle", "king", "pawn", "knight"):
+    return
+  ent, _ = UserDashboardEntitlement.objects.get_or_create(user=user)
+  if plan == "bundle":
+    ent.access_tier = UserDashboardEntitlement.AccessTier.MONEY_MASTERY
+    ent.save(update_fields=["access_tier", "updated_at"])
+    for course in Course.objects.filter(is_published=True):
+      CourseEnrollment.objects.get_or_create(user=user, course=course)
+    return
+  if plan == "king":
+    ent.access_tier = UserDashboardEntitlement.AccessTier.KING
+    ent.save(update_fields=["access_tier", "updated_at"])
+    return
+  if plan in ("pawn", "knight"):
+    ent.access_tier = UserDashboardEntitlement.AccessTier.NONE
+    ent.save(update_fields=["access_tier", "updated_at"])
+
+
+def _record_user_plan_purchase(user: User, session, plan_sel: str, paid_amount: float, paid_currency: str) -> None:
+  """Persist plan checkout for dashboard billing history (Money Mastery, King, etc.)."""
+  plan_sel = (plan_sel or "").strip().lower()
+  if plan_sel not in ("bundle", "king", "pawn", "knight"):
+    return
+  sid = str(getattr(session, "id", "") or "").strip()
+  if not sid:
+    return
+  titles = {
+    "bundle": "Money Mastery (lifetime bundle)",
+    "king": "The King",
+    "pawn": "Pawn",
+    "knight": "Knight",
+  }
+  try:
+    amt = Decimal(str(paid_amount))
+  except Exception:
+    amt = Decimal("0.00")
+  cur = (paid_currency or "gbp").strip().lower()[:8] or "gbp"
+  UserPlanPurchase.objects.update_or_create(
+    stripe_checkout_session_id=sid,
+    defaults={
+      "user": user,
+      "plan_slug": plan_sel,
+      "product_title": titles.get(plan_sel, plan_sel),
+      "amount_paid": amt,
+      "currency": cur,
+      "status": UserPlanPurchase.Status.PAID,
+      "paid_at": timezone.now(),
+    },
+  )
 
 
 def _read_payload(request):
@@ -297,8 +398,121 @@ def create_checkout_session_view(request):
     return _json_error("Invalid JSON payload.")
 
   signup_token = str(payload.get("signup_token", "")).strip()
-  if not signup_token:
+  checkout_user = _authenticate_checkout_user(request) if not signup_token else None
+  if not signup_token and checkout_user is None:
     return _json_error("Signup token is required.")
+
+  if checkout_user is not None:
+    checkout_email = (checkout_user.email or "").strip()
+    if not checkout_email:
+      return _json_error("Your account has no email on file; add one before checkout.", status=400)
+    metadata = {
+      "checkout_kind": "logged_in",
+      "user_id": str(checkout_user.pk),
+      "email": checkout_email,
+    }
+    selected_playlist = None
+    selected_playlist_id_raw = str(payload.get("playlist_id", "")).strip()
+    if selected_playlist_id_raw:
+      if not selected_playlist_id_raw.isdigit():
+        return _json_error("Invalid playlist ID.")
+      selected_playlist = StreamPlaylist.objects.filter(
+        id=int(selected_playlist_id_raw),
+        is_published=True,
+        is_coming_soon=False,
+      ).first()
+      if selected_playlist is None:
+        return _json_error("Playlist not found.", status=404)
+      if selected_playlist.price <= 0:
+        return _json_error("Playlist price must be greater than 0.", status=400)
+      metadata["playlist_id"] = str(selected_playlist.id)
+    plan_raw = str(payload.get("selected_plan", "")).strip().lower()
+    if plan_raw:
+      metadata["selected_plan"] = plan_raw
+    meta_affiliate_id = str(payload.get("affiliate_id", "")).strip()
+    meta_visitor_id = str(payload.get("visitor_id", "")).strip()
+    if meta_affiliate_id:
+      metadata["affiliate_id"] = meta_affiliate_id
+    if meta_visitor_id:
+      metadata["visitor_id"] = meta_visitor_id
+    if not settings.STRIPE_SECRET_KEY:
+      return _json_error(
+        "Stripe is not configured. Add STRIPE_SECRET_KEY in backend .env.",
+        status=500,
+      )
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    frontend_base = settings.FRONTEND_BASE_URL.rstrip("/")
+    requested_base = str(payload.get("return_base_url", "")).strip()
+    if requested_base:
+      parsed = urlsplit(requested_base)
+      if parsed.scheme in ("http", "https") and bool(parsed.netloc):
+        frontend_base = f"{parsed.scheme}://{parsed.netloc}"
+    unit_amount = (
+      int(max(50, round(float(selected_playlist.price) * 100)))
+      if selected_playlist is not None
+      else (_parse_pence_from_amount_payload(payload.get("selected_amount")) or settings.CHECKOUT_AMOUNT_PENCE)
+    )
+    product_name = (
+      f"{selected_playlist.title} playlist access"
+      if selected_playlist is not None
+      else (
+        "Money Mastery — lifetime bundle"
+        if plan_raw == "bundle"
+        else ("The King membership" if plan_raw == "king" else "The Syndicate — checkout")
+      )
+    )
+
+    def _session_create_logged_in(pm_types: list[str]):
+      return stripe.checkout.Session.create(
+        mode="payment",
+        customer_email=checkout_email,
+        payment_method_types=pm_types,
+        line_items=[
+          {
+            "price_data": {
+              "currency": "gbp",
+              "product_data": {"name": product_name},
+              "unit_amount": unit_amount,
+            },
+            "quantity": 1,
+          }
+        ],
+        success_url=f"{frontend_base}/checkout/success?session_id={{CHECKOUT_SESSION_ID}}",
+        cancel_url=f"{frontend_base}/login",
+        custom_text={
+          "submit": {"message": "The Syndicate — secure checkout"},
+        },
+        metadata=metadata,
+      )
+
+    pm_list = list(settings.STRIPE_CHECKOUT_PAYMENT_METHOD_TYPES)
+    try:
+      session = _session_create_logged_in(pm_list)
+    except stripe.error.InvalidRequestError as exc:
+      err_txt = str(exc).lower()
+      match = re.search(r"payment method type provided:\s*([a-z0-9_]+)\s+is invalid", err_txt)
+      bad_type = match.group(1) if match else ""
+      pm_retry = [t for t in pm_list if t != bad_type] if bad_type else [t for t in pm_list if t not in ("pay_by_bank",)]
+      if not pm_retry:
+        pm_retry = ["card"]
+      try:
+        session = _session_create_logged_in(pm_retry)
+      except stripe.error.StripeError as exc2:
+        msg = getattr(exc2, "user_message", None) or str(exc2) or "Stripe could not start checkout."
+        return _json_error(msg, status=400)
+    except stripe.error.StripeError as exc:
+      msg = getattr(exc, "user_message", None) or str(exc) or "Stripe could not start checkout."
+      return _json_error(msg, status=400)
+    except Exception:
+      return _json_error("Unable to create checkout session.", status=500)
+
+    return JsonResponse(
+      {
+        "checkout_url": session.url,
+        "session_id": session.id,
+      },
+      status=200,
+    )
 
   pending_signup = PendingSignup.objects.filter(token=signup_token).first()
   returning = None
@@ -326,6 +540,10 @@ def create_checkout_session_view(request):
       "email": checkout_email,
       "checkout_kind": "returning",
     }
+
+  plan_payload = str(payload.get("selected_plan", "")).strip().lower()
+  if plan_payload:
+    metadata["selected_plan"] = plan_payload
 
   selected_playlist = None
   selected_playlist_id_raw = str(payload.get("playlist_id", "")).strip()
@@ -486,6 +704,9 @@ def checkout_success_view(request):
       "returning_token",
       "affiliate_id",
       "visitor_id",
+      "selected_plan",
+      "selected_billing",
+      "selected_amount",
     ):
       try:
         v = raw[k]  # StripeObject supports key indexing.
@@ -541,6 +762,10 @@ def checkout_success_view(request):
         purchase.currency = "gbp"
         purchase.paid_at = timezone.now()
         purchase.save(update_fields=["status", "stripe_checkout_session_id", "amount_paid", "currency", "paid_at", "updated_at"])
+    plan_sel = str(session_meta.get("selected_plan", "")).strip().lower()
+    if plan_sel:
+      _apply_purchased_plan(user, plan_sel)
+      _record_user_plan_purchase(user, session, plan_sel, paid_amount, paid_currency)
     auth_token, _ = Token.objects.get_or_create(user=user)
     af_profile = ensure_affiliate_profile_for_existing_user(user)
 
@@ -593,12 +818,70 @@ def checkout_success_view(request):
         purchase.currency = "gbp"
         purchase.paid_at = timezone.now()
         purchase.save(update_fields=["status", "stripe_checkout_session_id", "amount_paid", "currency", "paid_at", "updated_at"])
+    plan_sel = str(session_meta.get("selected_plan", "")).strip().lower()
+    if plan_sel:
+      _apply_purchased_plan(user, plan_sel)
+      _record_user_plan_purchase(user, session, plan_sel, paid_amount, paid_currency)
     auth_token, _ = Token.objects.get_or_create(user=user)
     af_profile = ensure_affiliate_profile_for_existing_user(user)
     return JsonResponse(
       {
         "message": "Payment successful. Thank you for your purchase.",
         "email": returning.email,
+        "token": auth_token.key,
+        "redirect_url": getattr(settings, "POST_LOGIN_REDIRECT_URL", "http://localhost:3000/"),
+        "user": {"id": user.id, "username": user.username, "email": user.email},
+        "referral_ids": referral_ids_payload(af_profile),
+        "amount_paid": paid_amount,
+        "currency": paid_currency,
+        "affiliate_attribution": {
+          "affiliate_id": str(session_meta.get("affiliate_id", "")).strip(),
+          "visitor_id": str(session_meta.get("visitor_id", "")).strip(),
+        },
+      },
+      status=200,
+    )
+
+  uid_raw = str(session_meta.get("user_id", "")).strip()
+  checkout_kind = str(session_meta.get("checkout_kind", "")).strip().lower()
+  if uid_raw.isdigit() and checkout_kind == "logged_in":
+    try:
+      user = User.objects.get(pk=int(uid_raw))
+    except User.DoesNotExist:
+      return _json_error("Account not found for this payment.", status=404)
+    playlist_id = str(session_meta.get("playlist_id", "")).strip()
+    if playlist_id.isdigit():
+      playlist = StreamPlaylist.objects.filter(id=int(playlist_id)).first()
+      if playlist is not None:
+        purchase, _ = StreamPlaylistPurchase.objects.get_or_create(
+          user=user,
+          playlist=playlist,
+          defaults={
+            "status": StreamPlaylistPurchase.Status.PAID,
+            "stripe_session_id": session.id,
+            "stripe_checkout_session_id": session.id,
+            "amount_paid": playlist.price,
+            "currency": "gbp",
+            "paid_at": timezone.now(),
+          },
+        )
+        purchase.status = StreamPlaylistPurchase.Status.PAID
+        purchase.stripe_session_id = session.id
+        purchase.stripe_checkout_session_id = session.id
+        purchase.amount_paid = playlist.price
+        purchase.currency = "gbp"
+        purchase.paid_at = timezone.now()
+        purchase.save(update_fields=["status", "stripe_checkout_session_id", "amount_paid", "currency", "paid_at", "updated_at"])
+    plan_sel = str(session_meta.get("selected_plan", "")).strip().lower()
+    if plan_sel:
+      _apply_purchased_plan(user, plan_sel)
+      _record_user_plan_purchase(user, session, plan_sel, paid_amount, paid_currency)
+    auth_token, _ = Token.objects.get_or_create(user=user)
+    af_profile = ensure_affiliate_profile_for_existing_user(user)
+    return JsonResponse(
+      {
+        "message": "Payment successful.",
+        "email": user.email,
         "token": auth_token.key,
         "redirect_url": getattr(settings, "POST_LOGIN_REDIRECT_URL", "http://localhost:3000/"),
         "user": {"id": user.id, "username": user.username, "email": user.email},

@@ -28,13 +28,14 @@ class CourseListCreateView(APIView):
         qs = Course.objects.filter(show_in_programs=True)
         if not getattr(request.user, "is_staff", False):
             qs = qs.filter(is_published=True)
-        return Response(CourseSerializer(qs.order_by("title"), many=True).data)
+        ser = CourseSerializer(qs.order_by("title"), many=True, context={"request": request})
+        return Response(ser.data)
 
     def post(self, request):
         ser = CourseWriteSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         course = ser.save()
-        return Response(CourseSerializer(course).data, status=status.HTTP_201_CREATED)
+        return Response(CourseSerializer(course, context={"request": request}).data, status=status.HTTP_201_CREATED)
 
 
 class CourseDetailView(APIView):
@@ -44,7 +45,7 @@ class CourseDetailView(APIView):
         course = get_object_or_404(Course, pk=pk)
         if not user_can_access_course(request.user, course):
             return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
-        return Response(CourseSerializer(course).data)
+        return Response(CourseSerializer(course, context={"request": request}).data)
 
 
 class CourseVideosListView(APIView):

@@ -3,7 +3,7 @@ from django.contrib.auth.models import update_last_login
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from apps.portal.models import Mission, Note, PortalPermission, PortalRole, Reminder, SocialLink
+from apps.portal.models import Mission, Note, PortalPermission, PortalRole, Reminder, SocialLink, UserDashboardEntitlement
 from apps.portal.rbac import user_permission_codenames
 
 User = get_user_model()
@@ -26,10 +26,23 @@ class PortalRoleSerializer(serializers.ModelSerializer):
 class UserMeSerializer(serializers.ModelSerializer):
     roles = serializers.SerializerMethodField()
     permissions = serializers.SerializerMethodField()
+    access_tier = serializers.SerializerMethodField()
+    dashboard_nav_locks = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ("id", "username", "email", "first_name", "last_name", "is_staff", "roles", "permissions")
+        fields = (
+            "id",
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "is_staff",
+            "roles",
+            "permissions",
+            "access_tier",
+            "dashboard_nav_locks",
+        )
 
     def get_roles(self, obj):
         links = obj.portal_role_links.select_related("role").all()
@@ -37,6 +50,38 @@ class UserMeSerializer(serializers.ModelSerializer):
 
     def get_permissions(self, obj):
         return sorted(user_permission_codenames(obj))
+
+    def _effective_access_tier(self, obj: User) -> str:
+        if getattr(obj, "is_staff", False) or getattr(obj, "is_superuser", False):
+            return UserDashboardEntitlement.AccessTier.FULL
+        try:
+            ent = obj.dashboard_entitlement
+        except UserDashboardEntitlement.DoesNotExist:
+            return UserDashboardEntitlement.AccessTier.NONE
+        return ent.access_tier
+
+    def get_access_tier(self, obj: User) -> str:
+        return self._effective_access_tier(obj)
+
+    def _stored_entitlement_tier(self, obj: User) -> str:
+        """DB tier for commercial locks — not upgraded to `full` for staff (Money Mastery must still lock King-only areas)."""
+        try:
+            return obj.dashboard_entitlement.access_tier
+        except UserDashboardEntitlement.DoesNotExist:
+            return UserDashboardEntitlement.AccessTier.NONE
+
+    def get_dashboard_nav_locks(self, obj: User) -> dict[str, bool]:
+        tier = self._stored_entitlement_tier(obj)
+        unlocked = {"monk": False, "resources": False, "goals": False, "dashboard": False}
+        if tier in (UserDashboardEntitlement.AccessTier.FULL, UserDashboardEntitlement.AccessTier.KING):
+            return unlocked
+        if tier == UserDashboardEntitlement.AccessTier.MONEY_MASTERY:
+            return {"monk": True, "resources": True, "goals": True, "dashboard": False}
+        from apps.courses.access import _user_is_playlist_only_buyer
+
+        if _user_is_playlist_only_buyer(obj):
+            return {"monk": True, "resources": True, "goals": True, "dashboard": True}
+        return unlocked
 
 
 class SyndicateTokenObtainPairSerializer(TokenObtainPairSerializer):

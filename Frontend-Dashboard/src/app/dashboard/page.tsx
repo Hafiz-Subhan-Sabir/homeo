@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import type { CSSProperties } from "react";
 import gsap from "gsap";
+import { Crown, Lock } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import ChromaGrid, { type ChromaItem } from "@/components/ChromaGrid";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -20,7 +21,7 @@ import { MembershipContentHub } from "@/components/membership/MembershipContentH
 import { AffiliatePortalSection } from "@/components/affiliate/AffiliatePortalSection";
 import { ProgramsCourseSection } from "@/components/programs/ProgramsCourseSection";
 import { PlaylistCheckoutSync } from "@/components/programs/PlaylistCheckoutSync";
-import { fetchStreamPlaylistBillingHistory, type StreamPlaylistPurchaseHistoryItem } from "@/lib/streaming-api";
+import { fetchBillingPurchaseHistory, type StreamPlaylistPurchaseHistoryItem } from "@/lib/streaming-api";
 import { AFFILIATE_REFERRAL_IDS_STORAGE_KEY } from "@/lib/affiliateReferralIds";
 import {
   DEFAULT_DASHBOARD_PROFILE_AVATAR,
@@ -33,9 +34,16 @@ import {
   writeDashboardProfileAvatarRaw,
   writeDashboardProfileDisplayName
 } from "@/lib/dashboardProfileStorage";
-import { fetchPortalIdentity, hasSimpleAuthSessionClient, STORAGE_SIMPLE_AUTH } from "@/lib/portal-api";
+import {
+  fetchPortalIdentity,
+  getAuthorizationHeader,
+  hasSimpleAuthSessionClient,
+  resolveClientApiUrl,
+  STORAGE_SIMPLE_AUTH,
+  type PortalUser
+} from "@/lib/portal-api";
 import { logoutSyndicateSession } from "@/lib/syndicateAuth";
-import { Toaster } from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 import QRCode from "qrcode";
 
 type NavItem = { label: string; key: string; active?: boolean };
@@ -200,43 +208,64 @@ function SidebarNavRailList({
   nav,
   selectedNavKey,
   setSelectedNavKey,
-  onItemActivate
+  onItemActivate,
+  isNavLocked
 }: {
   nav: NavItem[];
   selectedNavKey: string;
   setSelectedNavKey: (key: string) => void;
   onItemActivate?: () => void;
+  isNavLocked: (key: string) => boolean;
 }) {
   return (
     <div className="sidebar-nav-list">
-      {nav.map((item) => (
-        <button
-          key={item.label}
-          type="button"
-          onClick={() => {
-            setSelectedNavKey(item.key);
-            onItemActivate?.();
-          }}
-          data-dock-item="sidebar"
-          className={cn(
-            "sidebar-nav-item nav-item group relative flex w-full items-center text-left",
-            "cut-frame-sm hud-hover-glow glass-dark premium-gold-border gold-glow-hover transition",
-            "hover:bg-black/45",
-            selectedNavKey === item.key &&
-              "is-selected glow-edge-strong hud-selected-glow border-[color:var(--gold-neon-border)] bg-[rgba(250,204,21,0.08)]"
-          )}
-        >
-          <CheckboxSlot active={selectedNavKey === item.key} />
-          <span className="sidebar-nav-icon-frame grid shrink-0 place-items-center border border-[color:var(--gold-neon-border-soft)] bg-black/25 text-[color:var(--gold-neon)]/90 group-hover:text-[color:var(--gold-neon)]">
-            <NavIcon k={item.key} />
-          </span>
-          <span className="sidebar-nav-label nav-label min-w-0 flex-1 font-extrabold uppercase text-[color:var(--gold-neon)]/92 group-hover:text-[color:var(--gold-neon)]">
-            <SidebarNavLabel text={item.label} />
-            <span className="nav-glitch" aria-hidden="true" />
-          </span>
-          <span className="sidebar-nav-accent-line ml-auto hidden h-px shrink-0 bg-[linear-gradient(90deg,rgba(250,204,21,0),rgba(250,204,21,0.45))] opacity-0 transition group-hover:opacity-100 md:block" />
-        </button>
-      ))}
+      {nav.map((item) => {
+        const locked = isNavLocked(item.key);
+        return (
+          <button
+            key={item.label}
+            type="button"
+            onClick={() => {
+              setSelectedNavKey(item.key);
+              onItemActivate?.();
+            }}
+            data-dock-item="sidebar"
+            title={
+              locked
+                ? "The King — full access. Money Mastery: open to read what is included."
+                : undefined
+            }
+            className={cn(
+              "sidebar-nav-item nav-item group relative flex w-full items-center text-left",
+              "cut-frame-sm hud-hover-glow glass-dark premium-gold-border gold-glow-hover transition",
+              "hover:bg-black/45",
+              locked && "ring-1 ring-amber-500/30 ring-inset opacity-[0.88]",
+              selectedNavKey === item.key &&
+                "is-selected glow-edge-strong hud-selected-glow border-[color:var(--gold-neon-border)] bg-[rgba(250,204,21,0.08)]"
+            )}
+          >
+            <CheckboxSlot active={selectedNavKey === item.key} />
+            <span className="sidebar-nav-icon-frame relative grid shrink-0 place-items-center border border-[color:var(--gold-neon-border-soft)] bg-black/25 text-[color:var(--gold-neon)]/90 group-hover:text-[color:var(--gold-neon)]">
+              <NavIcon k={item.key} />
+              {locked ? (
+                <span className="pointer-events-none absolute -bottom-0.5 -right-0.5 grid h-3.5 w-3.5 place-items-center rounded border border-amber-500/55 bg-black/90 text-amber-200">
+                  <Lock className="h-2 w-2" strokeWidth={2.8} aria-hidden />
+                </span>
+              ) : null}
+            </span>
+            <span className="sidebar-nav-label nav-label flex min-w-0 flex-1 items-center gap-1.5 font-extrabold uppercase text-[color:var(--gold-neon)]/92 group-hover:text-[color:var(--gold-neon)]">
+              <span className="min-w-0 flex-1">
+                <SidebarNavLabel text={item.label} />
+                <span className="nav-glitch" aria-hidden="true" />
+              </span>
+              {locked ? (
+                <span className="sr-only">Tier locked — opens overview page for this section.</span>
+              ) : null}
+            </span>
+            <span className="sidebar-nav-accent-line ml-auto hidden h-px shrink-0 bg-[linear-gradient(90deg,rgba(250,204,21,0),rgba(250,204,21,0.45))] opacity-0 transition group-hover:opacity-100 md:block" />
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -1584,7 +1613,7 @@ function SettingsBillingSection() {
     void (async () => {
       setLoading(true);
       try {
-        const data = await fetchStreamPlaylistBillingHistory();
+        const data = await fetchBillingPurchaseHistory();
         if (cancelled) return;
         setRows(Array.isArray(data) ? data : []);
         setError(null);
@@ -1610,7 +1639,7 @@ function SettingsBillingSection() {
             Billing History
           </h2>
           <p className="mt-1 text-[14px] text-white/72 sm:text-[15px]">
-            View all purchased courses/playlists with payment amount, status, and date/time.
+            Courses, stream playlists, and plan bundles (e.g. Money Mastery) with amount, status, and paid date.
           </p>
         </div>
 
@@ -1625,7 +1654,7 @@ function SettingsBillingSection() {
             <table className="min-w-[760px] w-full border-collapse text-left text-[14px] sm:text-[15px]">
               <thead className="bg-[#111111] text-[color:var(--gold)]/92">
                 <tr>
-                  <th className="px-3 py-2 font-black uppercase tracking-[0.1em]">Course</th>
+                  <th className="px-3 py-2 font-black uppercase tracking-[0.1em]">Item</th>
                   <th className="px-3 py-2 font-black uppercase tracking-[0.1em]">Amount</th>
                   <th className="px-3 py-2 font-black uppercase tracking-[0.1em]">Currency</th>
                   <th className="px-3 py-2 font-black uppercase tracking-[0.1em]">Status</th>
@@ -1636,7 +1665,10 @@ function SettingsBillingSection() {
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.id} className="border-t border-white/10 bg-black/35 text-white/88">
-                    <td className="px-3 py-2 font-semibold">{row.playlist_title || `Playlist #${row.playlist_id}`}</td>
+                    <td className="px-3 py-2 font-semibold">
+                      {row.playlist_title ||
+                        (row.playlist_id ? `Playlist #${row.playlist_id}` : "Purchase")}
+                    </td>
                     <td className="px-3 py-2">{row.amount_paid}</td>
                     <td className="px-3 py-2 uppercase">{row.currency || "gbp"}</td>
                     <td className="px-3 py-2 uppercase">{row.status}</td>
@@ -1882,11 +1914,130 @@ function SettingsCertificatesSection() {
   );
 }
 
+function ShellTierLockPanel({
+  title,
+  description,
+  showKingUpsell
+}: {
+  title: string;
+  description: string;
+  /** When set, show The King plan card + checkout (Syndicate Mode / Membership upsell). */
+  showKingUpsell?: boolean;
+}) {
+  const router = useRouter();
+  const [kingBusy, setKingBusy] = useState(false);
+
+  const startKingCheckout = useCallback(async () => {
+    setKingBusy(true);
+    try {
+      const authHeader = getAuthorizationHeader();
+      if (!authHeader) {
+        router.push("/login?plan=king&billing=monthly&amount=77.77");
+        return;
+      }
+      const res = await fetch(resolveClientApiUrl("/api/auth/checkout/create-session/"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(authHeader ? { Authorization: authHeader } : {})
+        },
+        body: JSON.stringify({
+          return_base_url: typeof window !== "undefined" ? window.location.origin : undefined,
+          selected_plan: "king",
+          selected_billing: "monthly",
+          selected_amount: "77.77"
+        })
+      });
+      const data = (await res.json().catch(() => ({}))) as { checkout_url?: string; error?: string };
+      const url = typeof data.checkout_url === "string" ? data.checkout_url.trim() : "";
+      if (res.ok && url) {
+        window.location.assign(url);
+        return;
+      }
+      const err = typeof data.error === "string" ? data.error : "Could not start checkout.";
+      toast.error(err);
+      router.push("/#pricing");
+    } catch {
+      toast.error("Could not reach checkout. Try again from the home pricing section.");
+      router.push("/#pricing");
+    } finally {
+      setKingBusy(false);
+    }
+  }, [router]);
+
+  return (
+    <div className="mx-auto flex min-h-[min(48vh,420px)] w-full max-w-xl flex-col items-center justify-center gap-6 rounded-2xl border border-amber-500/35 bg-black/55 px-6 py-12 text-center shadow-[0_0_48px_rgba(251,191,36,0.08)] sm:px-8 sm:py-14">
+      <div className="rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-amber-100/90">
+        Money Mastery — feature locked
+      </div>
+      <div className="grid h-16 w-16 place-items-center rounded-2xl border border-amber-400/45 bg-amber-500/10 text-amber-100">
+        <Lock className="h-8 w-8" strokeWidth={2} aria-hidden />
+      </div>
+      <h2 className="text-[clamp(1rem,2vw+0.5rem,1.25rem)] font-black uppercase tracking-[0.14em] text-amber-100/95">{title}</h2>
+      <p className="max-w-md text-[13px] leading-relaxed text-white/62">{description}</p>
+
+      {showKingUpsell ? (
+        <div className="mt-2 w-full max-w-md rounded-2xl border border-[rgba(250,204,21,0.38)] bg-[linear-gradient(165deg,rgba(250,204,21,0.08),rgba(0,0,0,0.45))] p-5 text-left shadow-[inset_0_1px_0_rgba(255,215,0,0.12)]">
+          <div className="flex items-start gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-amber-400/50 bg-amber-500/15 text-amber-200">
+              <Crown className="h-5 w-5" strokeWidth={2.2} aria-hidden />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-200/90">Upgrade path</div>
+              <div className="mt-1 font-mono text-[17px] font-black uppercase tracking-[0.12em] text-[color:var(--gold)] [text-shadow:0_0_18px_rgba(255,215,0,0.35)]">
+                The King
+              </div>
+              <p className="mt-2 text-[12px] leading-snug text-white/58">
+                Full Syndicate Mode, membership library, goals deck, and weekly drops — billed monthly from{" "}
+                <span className="font-semibold text-amber-100/90">£77.77/mo</span> (or yearly on the pricing page).
+              </p>
+              <ul className="mt-3 space-y-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-white/45">
+                <li className="flex gap-2">
+                  <span className="text-amber-400/90">·</span>
+                  Syndicate challenges & 24h board
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-amber-400/90">·</span>
+                  Membership articles & hub
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-amber-400/90">·</span>
+                  Goals & milestones
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <button
+              type="button"
+              disabled={kingBusy}
+              onClick={() => void startKingCheckout()}
+              className={cn(
+                "w-full rounded-xl border border-amber-400/55 bg-[rgba(250,204,21,0.14)] px-4 py-3 text-[12px] font-black uppercase tracking-[0.16em] text-amber-50 shadow-[0_0_24px_rgba(250,204,21,0.18)] transition sm:w-auto sm:min-w-[200px]",
+                "hover:border-amber-300/75 hover:bg-[rgba(250,204,21,0.2)] disabled:cursor-wait disabled:opacity-70"
+              )}
+            >
+              {kingBusy ? "Opening checkout…" : "Unlock with The King"}
+            </button>
+            <a
+              href="/#pricing"
+              className="text-center text-[11px] font-black uppercase tracking-[0.14em] text-amber-200/80 underline-offset-4 hover:text-amber-100 hover:underline sm:text-right"
+            >
+              Compare plans
+            </a>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function Page() {
   const router = useRouter();
   const pathname = usePathname();
   const { recordVisit, recordEvent } = useActivityTimeline();
-  const { setShellSectionKey, setPanelThemeMode, closeGoalsPanel, isGoalsPanelOpen } = useGoalsPanel();
+  const { setShellSectionKey, setPanelThemeMode, closeGoalsPanel, isGoalsPanelOpen, setGoalsFabLocked } =
+    useGoalsPanel();
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const ringOuterRef = useRef<HTMLDivElement | null>(null);
@@ -1923,6 +2074,19 @@ export default function Page() {
 
   const [selectedNavKey, setNavKeyState] = useState<string>("dashboard");
   const [authChecked, setAuthChecked] = useState(false);
+  const [portalUser, setPortalUser] = useState<PortalUser | null>(null);
+
+  const isNavLocked = useCallback(
+    (key: string) => {
+      const L = portalUser?.dashboard_nav_locks;
+      if (!L) return false;
+      if (key === "monk" && L.monk) return true;
+      if (key === "resources" && L.resources) return true;
+      if (key === "dashboard" && L.dashboard) return true;
+      return false;
+    },
+    [portalUser]
+  );
 
   const applyNavKey = useCallback(
     (key: string) => {
@@ -2050,6 +2214,7 @@ export default function Page() {
         window.location.replace("/login");
         return;
       }
+      setPortalUser(identity);
       setAuthChecked(true);
     })();
     return () => {
@@ -2117,6 +2282,10 @@ export default function Page() {
   useEffect(() => {
     setPanelThemeMode(themeMode);
   }, [themeMode, setPanelThemeMode]);
+
+  useEffect(() => {
+    setGoalsFabLocked(!!portalUser?.dashboard_nav_locks?.goals);
+  }, [portalUser, setGoalsFabLocked]);
 
   /** Restore section from URL on load / refresh (e.g. /?section=programs). */
   useLayoutEffect(() => {
@@ -2839,15 +3008,7 @@ export default function Page() {
                 themeMode={themeMode}
                 userName={profileName}
                 courses={dashboardCoursesForSnapshots}
-                onNavigate={(nav: DashboardNavKey) => {
-                  if (nav === "programs") applyNavKey("programs");
-                  else if (nav === "monk") applyNavKey("monk");
-                  else if (nav === "affiliate") applyNavKey("affiliate");
-                  else if (nav === "resources") applyNavKey("resources");
-                  else if (nav === "support") applyNavKey("support");
-                  else if (nav === "settings") applyNavKey("settings");
-                  else applyNavKey("dashboard");
-                }}
+                onNavigate={(nav: DashboardNavKey) => applyNavKey(nav)}
                 onOpenChange={(open) => {
                   if (open) setProfileOpen(false);
                 }}
@@ -2924,6 +3085,7 @@ export default function Page() {
                               selectedNavKey={selectedNavKey}
                               setSelectedNavKey={applyNavKey}
                               onItemActivate={() => setSidebarOpen(false)}
+                              isNavLocked={isNavLocked}
                             />
                           </div>
                         </div>
@@ -3132,6 +3294,7 @@ export default function Page() {
                     selectedNavKey={selectedNavKey}
                     setSelectedNavKey={applyNavKey}
                     onItemActivate={() => setSidebarOpen(false)}
+                    isNavLocked={isNavLocked}
                   />
                 </div>
               </motion.aside>
@@ -3189,7 +3352,19 @@ export default function Page() {
                 </header>
               ) : null}
               {selectedNavKey === "monk" ? (
-                <SyndicateModeSection />
+                !portalUser ? (
+                  <div className="flex min-h-[min(40vh,360px)] w-full items-center justify-center text-[12px] font-semibold uppercase tracking-[0.14em] text-white/45">
+                    Loading access…
+                  </div>
+                ) : isNavLocked("monk") ? (
+                  <ShellTierLockPanel
+                    showKingUpsell
+                    title="Syndicate Mode — locked"
+                    description="You can open this page to see what is not included on Money Mastery. Full Syndicate missions, the 24h board, and sync unlock with The King, together with the membership hub and the complete Goals & milestones deck."
+                  />
+                ) : (
+                  <SyndicateModeSection />
+                )
               ) : selectedNavKey === "affiliate" ? (
                 <AffiliatePortalSection shellProfileName={profileName} />
               ) : selectedNavKey === "programs" ? (
@@ -3225,9 +3400,21 @@ export default function Page() {
                   }
                 />
               ) : selectedNavKey === "resources" ? (
-                <div className="flex min-h-0 min-w-0 w-full max-w-none flex-1 flex-col">
-                  <MembershipContentHub />
-                </div>
+                !portalUser ? (
+                  <div className="flex min-h-[min(40vh,360px)] w-full items-center justify-center text-[12px] font-semibold uppercase tracking-[0.14em] text-white/45">
+                    Loading access…
+                  </div>
+                ) : isNavLocked("resources") ? (
+                  <ShellTierLockPanel
+                    showKingUpsell
+                    title="Membership section — locked"
+                    description="This overview is shown on Money Mastery so you know what is reserved for The King: the full membership library, Syndicate Mode, and Goals & milestones beyond your course bundle."
+                  />
+                ) : (
+                  <div className="flex min-h-0 min-w-0 w-full max-w-none flex-1 flex-col">
+                    <MembershipContentHub />
+                  </div>
+                )
               ) : selectedNavKey === "quickaccess" ? (
                 <div className="min-h-0 min-w-0 w-full max-w-none flex-1 py-1 md:py-2">
                   <section aria-label="Quick access tools" className="relative w-full min-w-0 flex-1 scroll-mt-2">
@@ -3259,32 +3446,36 @@ export default function Page() {
                   </div>
                 </div>
               ) : selectedNavKey === "dashboard" ? (
-                <>
-                  <section
-                    aria-label="Instructor intel feed"
-                    className="mb-5 w-full shrink-0 scroll-mt-2"
-                  >
-                    <InstructorSlideshow />
-                  </section>
-                  <div className="min-h-0 min-w-0 w-full max-w-none flex-1 py-1 md:py-2">
-                    <DashboardControlCenter
-                      themeMode={themeMode}
-                      userName={profileName}
-                      userRole="Operator"
-                      profileAvatar={profileAvatar}
-                      courses={dashboardCoursesForSnapshots}
-                      onNavigate={(nav) => {
-                        if (nav === "programs") applyNavKey("programs");
-                        else if (nav === "monk") applyNavKey("monk");
-                        else if (nav === "affiliate") applyNavKey("affiliate");
-                        else if (nav === "resources") applyNavKey("resources");
-                        else if (nav === "support") applyNavKey("support");
-                        else if (nav === "settings") applyNavKey("settings");
-                        else applyNavKey("dashboard");
-                      }}
-                    />
+                !portalUser ? (
+                  <div className="flex min-h-[min(40vh,360px)] w-full items-center justify-center text-[12px] font-semibold uppercase tracking-[0.14em] text-white/45">
+                    Loading access…
                   </div>
-                </>
+                ) : isNavLocked("dashboard") ? (
+                  <ShellTierLockPanel
+                    title="Dashboard — locked"
+                    description="Your purchase unlocks the stream program in Programs. The command center, Syndicate Mode, membership hub, and full goals deck unlock with Money Mastery or The King."
+                  />
+                ) : (
+                  <>
+                    <section
+                      aria-label="Instructor intel feed"
+                      className="mb-5 w-full shrink-0 scroll-mt-2"
+                    >
+                      <InstructorSlideshow />
+                    </section>
+                    <div className="min-h-0 min-w-0 w-full max-w-none flex-1 py-1 md:py-2">
+                      <DashboardControlCenter
+                        themeMode={themeMode}
+                        userName={profileName}
+                        userRole="Operator"
+                        profileAvatar={profileAvatar}
+                        courses={dashboardCoursesForSnapshots}
+                        dashboardNavLocks={portalUser?.dashboard_nav_locks}
+                        onNavigate={(nav) => applyNavKey(nav)}
+                      />
+                    </div>
+                  </>
+                )
               ) : (
                 <div className="rounded-md border border-white/15 bg-black/35 p-4 text-[12px] text-white/72">Section available soon.</div>
               )}

@@ -143,3 +143,67 @@ class Note(models.Model):
     class Meta:
         ordering = ["-created_at"]
         indexes = [models.Index(fields=["user"])]
+
+
+class UserDashboardEntitlement(models.Model):
+    """Commercial tier for dashboard + course access (Money Mastery bundle vs King, etc.)."""
+
+    class AccessTier(models.TextChoices):
+        NONE = "none", "None"
+        MONEY_MASTERY = "money_mastery", "Money Mastery"
+        KING = "king", "The King"
+        FULL = "full", "Full access"
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="dashboard_entitlement",
+    )
+    access_tier = models.CharField(
+        max_length=32,
+        choices=AccessTier.choices,
+        default=AccessTier.NONE,
+        db_index=True,
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "User dashboard entitlement"
+        verbose_name_plural = "User dashboard entitlements"
+
+    def __str__(self) -> str:
+        return f"{self.user_id}:{self.access_tier}"
+
+
+class UserPlanPurchase(models.Model):
+    """Stripe checkout rows for syndicate plans (Money Mastery bundle, King, etc.) — shown in billing history."""
+
+    class Status(models.TextChoices):
+        PAID = "paid", "Paid"
+        PENDING = "pending", "Pending"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="plan_purchases",
+    )
+    stripe_checkout_session_id = models.CharField(max_length=255, unique=True, db_index=True)
+    plan_slug = models.CharField(max_length=32, db_index=True)
+    product_title = models.CharField(max_length=255)
+    amount_paid = models.DecimalField(max_digits=12, decimal_places=2)
+    currency = models.CharField(max_length=8, default="gbp")
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.PAID,
+        db_index=True,
+    )
+    paid_at = models.DateTimeField(db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-paid_at", "-id"]
+
+    def __str__(self) -> str:
+        return f"{self.user_id}:{self.plan_slug}:{self.stripe_checkout_session_id}"

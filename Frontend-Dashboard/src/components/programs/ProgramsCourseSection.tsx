@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ChevronLeft, Lock, Star } from "lucide-react";
+import toast from "react-hot-toast";
 import ChromaGrid, { type ChromaItem } from "@/components/ChromaGrid";
 import { CourseVideoPlaylist } from "@/components/programs/CourseVideoPlaylist";
 import {
@@ -266,6 +267,17 @@ export function ProgramsCourseSection({
       setDetailCourseId(null);
     } else if (detailCourseId !== null && !apiCourses.some((c) => c.id === detailCourseId)) {
       setDetailCourseId(null);
+    }
+  }, [apiCourses, detailCourseId]);
+
+  useEffect(() => {
+    if (detailCourseId === null) return;
+    const c = apiCourses.find((x) => x.id === detailCourseId);
+    if (!c) return;
+    if (c.can_access === false) {
+      setDetailCourseId(null);
+      setSecureView("grid");
+      toast.error("This course is not included in your current purchase.");
     }
   }, [apiCourses, detailCourseId]);
 
@@ -776,20 +788,29 @@ export function ProgramsCourseSection({
                 const grad = PROGRAM_CARD_BACKGROUNDS[(streamPlaylists.length + i) % PROGRAM_CARD_BACKGROUNDS.length];
                 const coverSrc = resolveDjangoMediaUrl(c.cover_image_url);
                 const theme = COURSE_CARD_THEMES[i % COURSE_CARD_THEMES.length];
+                const courseLocked = c.can_access === false;
                 return (
                   <button
                     key={`course-${c.id}`}
                     type="button"
-                    onClick={() => openProgram(c.id)}
+                    onClick={() => {
+                      if (courseLocked) {
+                        toast.error(
+                          "This LMS course is not included with a single-program purchase. Open your unlocked stream program above, or upgrade for full access."
+                        );
+                        return;
+                      }
+                      openProgram(c.id);
+                    }}
                     className={cn(
                       "group/card relative flex aspect-[4/5] w-full flex-col overflow-hidden text-left outline-none",
                       "rounded-3xl",
                       theme.glow,
                       "transition-[transform,box-shadow] duration-300 ease-out",
-                      "hover:-translate-y-0.5",
+                      !courseLocked && "hover:-translate-y-0.5",
                       theme.hoverGlow,
                       "focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black",
-                      "active:translate-y-0"
+                      courseLocked ? "cursor-not-allowed opacity-[0.78]" : "active:translate-y-0"
                     )}
                   >
                     {/* Rotating conic gradient — visible only in the ~2px ring around the inner panel */}
@@ -834,6 +855,17 @@ export function ProgramsCourseSection({
                       ) : (
                         <div className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.1),transparent_50%)]" />
                       )}
+                      {courseLocked ? (
+                        <>
+                          <span className="pointer-events-none absolute inset-0 z-[2] bg-black/48" />
+                          <span className="pointer-events-none absolute inset-0 z-[4] flex items-center justify-center px-4 text-center">
+                            <span className="inline-flex items-center gap-2 rounded-2xl border border-amber-300/85 bg-black/78 px-4 py-2.5 text-[18px] font-black uppercase tracking-[0.14em] text-[#f5c814] shadow-[0_0_24px_rgba(245,200,20,0.38)] sm:px-5 sm:text-[22px] sm:tracking-[0.16em]">
+                              <Lock className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden />
+                              Locked
+                            </span>
+                          </span>
+                        </>
+                      ) : null}
                       <div className="relative z-[3] flex h-full flex-col justify-end p-3 pt-10 sm:p-3.5 sm:pt-12">
                         <div
                           className={cn(
@@ -857,7 +889,7 @@ export function ProgramsCourseSection({
                               theme.chip
                             )}
                           >
-                            Course · playlist
+                            {courseLocked ? "Course · not included" : "Course · playlist"}
                           </div>
                           {c.description ? (
                             <p className="mt-1.5 line-clamp-4 font-sans text-left text-[13px] font-medium leading-5 tracking-normal text-white/95 antialiased [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">

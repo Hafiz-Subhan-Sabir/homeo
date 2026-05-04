@@ -171,6 +171,21 @@ export async function fetchStreamPlaylistBillingHistory(): Promise<StreamPlaylis
   return Array.isArray(res.data) ? res.data : [];
 }
 
+/** Playlists + plan bundles (Money Mastery, King) from `/api/auth/billing-purchases/`. Plan rows use `playlist_id: 0`. */
+export async function fetchBillingPurchaseHistory(): Promise<StreamPlaylistPurchaseHistoryItem[]> {
+  const res = await portalFetch<StreamPlaylistPurchaseHistoryItem[]>("/api/auth/billing-purchases/");
+  if (!res.ok) {
+    throw new Error(
+      errMessage(
+        res.status,
+        res.data,
+        res.status === 401 || res.status === 403 ? "Sign in to view billing history." : "Could not load billing history."
+      )
+    );
+  }
+  return Array.isArray(res.data) ? res.data : [];
+}
+
 export async function fetchStreamPlaylistDetail(id: number): Promise<StreamPlaylistDetail> {
   const res = await portalFetch<StreamPlaylistDetail>(`/api/streaming/playlists/${id}/`);
   if (!res.ok) {

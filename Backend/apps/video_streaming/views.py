@@ -20,6 +20,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.http import JsonResponse
 
+from apps.portal.models import UserDashboardEntitlement
 from apps.video_streaming.models import StreamPlaylist, StreamPlaylistItem, StreamPlaylistPurchase, StreamVideo
 from apps.video_streaming.transcode_policy import inline_stream_transcode_enabled
 from apps.video_streaming.serializers import (
@@ -33,6 +34,26 @@ from apps.video_streaming.serializers import (
 from apps.video_streaming.services.r2_hls import _s3_client
 
 STREAM_TOKEN_SALT = "video_streaming.hls.v1"
+
+
+def _user_stream_playlists_unlocked_by_entitlement(user) -> bool:
+    """
+    Money Mastery / King / staff-equivalent tiers include all published stream playlists
+    (UI `is_unlocked` + detail queryset), not only per-playlist Stripe purchases.
+    """
+    if not getattr(user, "is_authenticated", False):
+        return False
+    if getattr(user, "is_staff", False) or getattr(user, "is_superuser", False):
+        return True
+    try:
+        ent = user.dashboard_entitlement
+    except UserDashboardEntitlement.DoesNotExist:
+        return False
+    return ent.access_tier in (
+        UserDashboardEntitlement.AccessTier.MONEY_MASTERY,
+        UserDashboardEntitlement.AccessTier.KING,
+        UserDashboardEntitlement.AccessTier.FULL,
+    )
 
 
 def _normalize_hls_relpath(raw: str) -> str | None:
@@ -299,6 +320,10 @@ class StreamPlaylistListView(generics.ListAPIView):
                     status=StreamPlaylistPurchase.Status.PAID,
                 ).values_list("playlist_id", flat=True)
             )
+            if _user_stream_playlists_unlocked_by_entitlement(user):
+                unlocked_ids |= set(
+                    StreamPlaylist.objects.filter(is_published=True).values_list("id", flat=True)
+                )
             ctx["unlocked_playlist_ids"] = unlocked_ids
         else:
             ctx["unlocked_playlist_ids"] = set()
@@ -314,13 +339,14 @@ class StreamPlaylistDetailView(generics.RetrieveAPIView):
         qs = StreamPlaylist.objects.all()
         if not getattr(self.request.user, "is_staff", False):
             qs = qs.filter(is_published=True)
-            unlocked_ids = set(
-                StreamPlaylistPurchase.objects.filter(
-                    user=self.request.user,
-                    status=StreamPlaylistPurchase.Status.PAID,
-                ).values_list("playlist_id", flat=True)
-            )
-            qs = qs.filter(Q(price__lte=0) | Q(id__in=unlocked_ids))
+            if not _user_stream_playlists_unlocked_by_entitlement(self.request.user):
+                unlocked_ids = set(
+                    StreamPlaylistPurchase.objects.filter(
+                        user=self.request.user,
+                        status=StreamPlaylistPurchase.Status.PAID,
+                    ).values_list("playlist_id", flat=True)
+                )
+                qs = qs.filter(Q(price__lte=0) | Q(id__in=unlocked_ids))
         return (
             qs.annotate(video_count=Count("items", distinct=True))
             .prefetch_related(
@@ -374,6 +400,16 @@ class StreamPlaylistCheckoutSessionView(APIView):
             return Response(
                 {"detail": "This playlist price is zero. Set a positive price in admin before checkout."},
                 status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if _user_stream_playlists_unlocked_by_entitlement(request.user):
+            return Response(
+                {
+                    "is_unlocked": True,
+                    "playlist_id": playlist.id,
+                    "message": "Included with your plan — playlist access is already active.",
+                },
+                status=status.HTTP_200_OK,
             )
 
         if not settings.STRIPE_SECRET_KEY:

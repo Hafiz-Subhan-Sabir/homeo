@@ -15,7 +15,7 @@ import {
   useSyndicateMissionsPeek,
   type SyndicateMissionPeekRow
 } from "./useSyndicateMissionsPeek";
-import { Bell, Target } from "lucide-react";
+import { Bell, Lock, Target } from "lucide-react";
 export type { ThemeMode };
 
 function pickPrimaryMission(rows: SyndicateMissionPeekRow[]): SyndicateMissionPeekRow | null {
@@ -52,10 +52,12 @@ function syndicateDifficultyChipClass(d: string) {
 
 function SyndicateMissionsSnapshotCard({
   themeMode,
-  onNavigate
+  onNavigate,
+  syndicateNavLocked
 }: {
   themeMode: ThemeMode;
   onNavigate: (nav: DashboardNavKey) => void;
+  syndicateNavLocked?: boolean;
 }) {
   const { rows, loading, error, linkedAccount, apiReached, refresh } = useSyndicateMissionsPeek();
   const [reminderTick, setReminderTick] = useState(0);
@@ -80,6 +82,15 @@ function SyndicateMissionsSnapshotCard({
     >
       <div className="pointer-events-none absolute inset-0 rounded-2xl opacity-[0.95] [background:radial-gradient(720px_420px_at_0%_-10%,rgba(34,211,238,0.14),transparent_55%),radial-gradient(560px_380px_at_100%_0%,rgba(250,204,21,0.09),transparent_52%)]" />
       <div className="relative rounded-[15px] border border-white/[0.07] bg-gradient-to-b from-[#0b0d12]/95 to-[#050505]/98 px-4 py-5 sm:px-6 sm:py-6">
+        {syndicateNavLocked ? (
+          <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-amber-500/38 bg-amber-500/10 px-3 py-2.5 text-[11px] font-bold leading-snug text-amber-50/95 sm:items-center sm:text-[12px]">
+            <Lock className="mt-0.5 h-4 w-4 shrink-0 text-amber-200 sm:mt-0" aria-hidden />
+            <span>
+              Syndicate Mode is locked for your plan (Money Mastery includes courses only). Upgrade to The King to
+              unlock missions and the 24h board here.
+            </span>
+          </div>
+        ) : null}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
@@ -89,6 +100,12 @@ function SyndicateMissionsSnapshotCard({
               >
                 Syndicate Mode
               </h3>
+              {syndicateNavLocked ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/45 bg-black/40 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-amber-100/95">
+                  <Lock className="h-3 w-3" aria-hidden />
+                  Locked
+                </span>
+              ) : null}
               {rows.length > 0 ? (
                 <span className="rounded-full border border-cyan-400/35 bg-cyan-500/[0.12] px-2.5 py-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-cyan-100/90">
                   Board active
@@ -377,7 +394,8 @@ function HeroStatusPanel({
   userRole,
   profileAvatar,
   snapshots,
-  onNavigate
+  onNavigate,
+  syndicateNavLocked
 }: {
   themeMode: ThemeMode;
   userName: string;
@@ -385,6 +403,7 @@ function HeroStatusPanel({
   profileAvatar: string;
   snapshots: DashboardSnapshots;
   onNavigate: (nav: DashboardNavKey) => void;
+  syndicateNavLocked?: boolean;
 }) {
   const s = snapshots;
   const t = themeAccent(themeMode);
@@ -482,13 +501,19 @@ function HeroStatusPanel({
             <button
               type="button"
               onClick={() => onNavigate("monk")}
-              className="rounded-md border-2 border-[rgba(255,198,62,0.58)] bg-[linear-gradient(145deg,rgba(255,198,62,0.16),rgba(0,0,0,0.62))] px-3 py-2.5 text-left transition hover:bg-[linear-gradient(145deg,rgba(255,198,62,0.25),rgba(0,0,0,0.7))]"
+              className={cn(
+                "rounded-md border-2 border-[rgba(255,198,62,0.58)] bg-[linear-gradient(145deg,rgba(255,198,62,0.16),rgba(0,0,0,0.62))] px-3 py-2.5 text-left transition hover:bg-[linear-gradient(145deg,rgba(255,198,62,0.25),rgba(0,0,0,0.7))]",
+                syndicateNavLocked && "opacity-80 ring-1 ring-amber-500/35"
+              )}
               style={{
                 borderColor: "rgba(255,198,62,0.58)",
                 boxShadow: "0 0 0 1px rgba(255,198,62,0.34), 0 0 30px rgba(255,198,62,0.35)"
               }}
             >
-              <div className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-amber-100">Completed missions</div>
+              <div className="flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-amber-100">
+                Completed missions
+                {syndicateNavLocked ? <Lock className="h-3 w-3 shrink-0 text-amber-200/90" aria-hidden /> : null}
+              </div>
               <div className="mt-1 space-y-0.5">
                 <div className="font-mono text-[18px] font-black tabular-nums text-white [text-shadow:0_0_14px_rgba(255,198,62,0.35)]">{completedMissionCount}</div>
                 <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-amber-100/70">from challenges</div>
@@ -497,13 +522,19 @@ function HeroStatusPanel({
             <button
               type="button"
               onClick={() => onNavigate("monk")}
-              className="rounded-md border-2 border-[rgba(255,198,62,0.58)] bg-[linear-gradient(145deg,rgba(255,198,62,0.16),rgba(0,0,0,0.62))] px-3 py-2.5 text-left transition hover:bg-[linear-gradient(145deg,rgba(255,198,62,0.25),rgba(0,0,0,0.7))]"
+              className={cn(
+                "rounded-md border-2 border-[rgba(255,198,62,0.58)] bg-[linear-gradient(145deg,rgba(255,198,62,0.16),rgba(0,0,0,0.62))] px-3 py-2.5 text-left transition hover:bg-[linear-gradient(145deg,rgba(255,198,62,0.25),rgba(0,0,0,0.7))]",
+                syndicateNavLocked && "opacity-80 ring-1 ring-amber-500/35"
+              )}
               style={{
                 borderColor: "rgba(255,198,62,0.58)",
                 boxShadow: "0 0 0 1px rgba(255,198,62,0.34), 0 0 30px rgba(255,198,62,0.35)"
               }}
             >
-              <div className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-amber-100">Pending missions</div>
+              <div className="flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-amber-100">
+                Pending missions
+                {syndicateNavLocked ? <Lock className="h-3 w-3 shrink-0 text-amber-200/90" aria-hidden /> : null}
+              </div>
               <div className="mt-1 space-y-0.5">
                 <div className="font-mono text-[18px] font-black tabular-nums text-white [text-shadow:0_0_14px_rgba(255,198,62,0.35)]">{pendingMissionCount}</div>
                 <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-amber-100/70">in challenges</div>
@@ -512,13 +543,19 @@ function HeroStatusPanel({
             <button
               type="button"
               onClick={() => onNavigate("monk")}
-              className="rounded-md border-2 border-[rgba(255,198,62,0.58)] bg-[linear-gradient(145deg,rgba(255,198,62,0.16),rgba(0,0,0,0.62))] px-3 py-2.5 text-left transition hover:bg-[linear-gradient(145deg,rgba(255,198,62,0.25),rgba(0,0,0,0.7))]"
+              className={cn(
+                "rounded-md border-2 border-[rgba(255,198,62,0.58)] bg-[linear-gradient(145deg,rgba(255,198,62,0.16),rgba(0,0,0,0.62))] px-3 py-2.5 text-left transition hover:bg-[linear-gradient(145deg,rgba(255,198,62,0.25),rgba(0,0,0,0.7))]",
+                syndicateNavLocked && "opacity-80 ring-1 ring-amber-500/35"
+              )}
               style={{
                 borderColor: "rgba(255,198,62,0.58)",
                 boxShadow: "0 0 0 1px rgba(255,198,62,0.34), 0 0 30px rgba(255,198,62,0.35)"
               }}
             >
-              <div className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-amber-100">Total points</div>
+              <div className="flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-amber-100">
+                Total points
+                {syndicateNavLocked ? <Lock className="h-3 w-3 shrink-0 text-amber-200/90" aria-hidden /> : null}
+              </div>
               <div className="mt-1 font-mono text-[18px] font-black tabular-nums text-white [text-shadow:0_0_14px_rgba(255,198,62,0.35)]">
                 {totalMissionPoints}
               </div>
@@ -555,10 +592,14 @@ function HeroStatusPanel({
             onClick={() => onNavigate("monk")}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.98 }}
-            className="rounded-md border bg-black/30 px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.18em] hover:bg-black/45"
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-md border bg-black/30 px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.18em] hover:bg-black/45",
+              syndicateNavLocked && "opacity-85 ring-1 ring-amber-500/35"
+            )}
             style={{ borderColor: accentByKey("monk").border, color: accentByKey("monk").text, boxShadow: `0 0 20px ${accentByKey("monk").glow}` }}
           >
             Join Challenge
+            {syndicateNavLocked ? <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden /> : null}
           </motion.button>
         </div>
       </div>
@@ -964,27 +1005,33 @@ function ActivityTimelineCard({ themeMode }: { themeMode: ThemeMode }) {
   );
 }
 
-export default function DashboardControlCenter({
-  themeMode,
-  userName,
-  userRole,
-  profileAvatar,
-  courses,
-  onNavigate
-}: {
+export type DashboardControlCenterProps = {
   themeMode: ThemeMode;
   userName: string;
   userRole: string;
   profileAvatar: string;
   courses: DashboardCourseLike[];
   onNavigate: (nav: DashboardNavKey) => void;
-}) {
+  /** From `/api/auth/me/` — Money Mastery locks Syndicate + membership + goals FAB. */
+  dashboardNavLocks?: { monk?: boolean; resources?: boolean; goals?: boolean; dashboard?: boolean } | null;
+};
+
+export default function DashboardControlCenter({
+  themeMode,
+  userName,
+  userRole,
+  profileAvatar,
+  courses,
+  onNavigate,
+  dashboardNavLocks
+}: DashboardControlCenterProps) {
   const { snapshots } = useDashboardSnapshots({ userName, courses });
   const integrityHigh = snapshots.coreIntegrity.integrityPct > 90;
+  const syndicateLocked = !!dashboardNavLocks?.monk;
 
   return (
     <>
-      <SyndicateReminderDueBanner onNavigate={onNavigate} />
+      <SyndicateReminderDueBanner onNavigate={onNavigate} syndicateNavLocked={syndicateLocked} />
       <div
         className={cn(
           "relative w-full max-w-none space-y-5 rounded-lg transition-[box-shadow] duration-700 md:space-y-6 lg:space-y-7",
@@ -999,11 +1046,16 @@ export default function DashboardControlCenter({
             profileAvatar={profileAvatar}
             snapshots={snapshots}
             onNavigate={onNavigate}
+            syndicateNavLocked={syndicateLocked}
           />
 
           <MissionCommandDeckCard themeMode={themeMode} />
 
-          <SyndicateMissionsSnapshotCard themeMode={themeMode} onNavigate={onNavigate} />
+          <SyndicateMissionsSnapshotCard
+            themeMode={themeMode}
+            onNavigate={onNavigate}
+            syndicateNavLocked={syndicateLocked}
+          />
 
           <GoalPathSystem themeMode={themeMode} courses={courses} onNavigate={onNavigate} />
 
