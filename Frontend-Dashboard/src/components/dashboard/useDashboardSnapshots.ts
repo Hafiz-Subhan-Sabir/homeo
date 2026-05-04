@@ -279,7 +279,7 @@ export function useDashboardSnapshots({
         return {
           nextProgram,
           nextChallenge: { title: "Dominance Protocol", reason: "High ROI for confidence and influence.", nav: "monk" },
-          affiliateTip: { title: "Add a 1-line CTA", reason: "Improve conversions by clarifying the next step.", nav: "affiliate" },
+          affiliateTip: { title: "Add a 1-line CTA", reason: "Improve conversions by clarifying the next step.", nav: "dashboard" },
           systemTip: { title: "Calibrate routine", reason: "Balance daily load so integrity stays in the green band.", nav: "resources" },
           reminder: { title: "Streak defense", reason: "Do one 10-minute mission today to protect streak.", nav: "monk" }
         };

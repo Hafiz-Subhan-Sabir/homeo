@@ -106,9 +106,18 @@ EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 # Gmail app passwords are often pasted with spaces (e.g. "abcd efgh ...").
 # Normalize to avoid SMTP auth failures.
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "").replace(" ", "")
-EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "true").lower() == "true"
+_email_use_ssl_raw = (os.getenv("EMAIL_USE_SSL") or "").strip().lower()
+EMAIL_USE_SSL = _email_use_ssl_raw in ("1", "true", "yes")
+_email_use_tls_raw = os.getenv("EMAIL_USE_TLS")
+if _email_use_tls_raw is not None:
+  EMAIL_USE_TLS = str(_email_use_tls_raw).strip().lower() in ("1", "true", "yes")
+else:
+  EMAIL_USE_TLS = not EMAIL_USE_SSL
+if EMAIL_USE_SSL and EMAIL_USE_TLS:
+  EMAIL_USE_TLS = False
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "no-reply@example.com")
 OTP_EXPIRES_MINUTES = int(os.getenv("OTP_EXPIRES_MINUTES", "10"))
+OTP_MAIL_REPLY_TO = (os.getenv("OTP_MAIL_REPLY_TO") or "").strip()
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
 FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:3003")

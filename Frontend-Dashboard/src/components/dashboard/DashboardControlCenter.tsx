@@ -628,7 +628,9 @@ function AffiliateSnapshotCard({
       right={
         <motion.button
           type="button"
-          onClick={() => onNavigate("affiliate")}
+          onClick={() => {
+            window.location.assign("/affiliate-login");
+          }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.98 }}
           className="text-[10px] font-black uppercase tracking-[0.14em] text-[color:var(--gold)]/90"
@@ -741,7 +743,9 @@ function AffiliateSnapshotCard({
         <div className="mt-3 flex flex-wrap gap-2">
           <motion.button
             type="button"
-            onClick={() => onNavigate("affiliate")}
+            onClick={() => {
+            window.location.assign("/affiliate-login");
+          }}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.98 }}
             className="rounded-md border border-[rgba(255,215,0,0.35)] bg-black/20 px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[color:var(--gold)]/90 hover:border-[rgba(255,215,0,0.7)]"

@@ -4,7 +4,7 @@ import { startTransition, useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { type NavSectionId, RadialNav } from '@/components/RadialNav'
 
-const SECTION_ROUTES: Record<Exclude<NavSectionId, 'joinNow'>, string> = {
+const SECTION_ROUTES: Record<Exclude<NavSectionId, 'joinNow' | 'affiliateLogin'>, string> = {
   home: '/',
   whatYouGet: '/what-you-get',
   ourMethods: '/our-methods',
@@ -13,6 +13,7 @@ const SECTION_ROUTES: Record<Exclude<NavSectionId, 'joinNow'>, string> = {
 
 function getActiveNavId(pathname: string, hash: string): NavSectionId {
   if (hash === '#joinNowSection') return 'joinNow'
+  if (pathname === '/affiliate-login' || pathname.startsWith('/affiliate-login/')) return 'affiliateLogin'
   if (pathname === '/what-you-get') return 'whatYouGet'
   if (pathname === '/our-methods') return 'ourMethods'
   if (pathname === '/programs') return 'programs'
@@ -54,9 +55,18 @@ export function NavApp() {
       router.prefetch(route)
     }
     router.prefetch('/login')
+    router.prefetch('/affiliate-login')
   }, [router])
 
   const handleSelect = (id: NavSectionId) => {
+    if (id === 'affiliateLogin') {
+      setActiveId(id)
+      handleClose()
+      startTransition(() => {
+        router.push('/affiliate-login')
+      })
+      return
+    }
     const targetRoute = id === 'joinNow' ? '/login' : SECTION_ROUTES[id]
     if (pathname === targetRoute) {
       setActiveId(id)

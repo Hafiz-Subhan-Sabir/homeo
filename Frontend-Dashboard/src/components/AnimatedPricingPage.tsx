@@ -6,6 +6,7 @@ import { Check, Crown, Shield, Star, Swords } from 'lucide-react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { getAuthorizationHeader, hasSimpleAuthSessionClient, resolveClientApiUrl } from '@/lib/portal-api'
+import { AffiliatePublicSection } from '@/components/affiliate/AffiliatePublicSection'
 
 type PlanKey = 'bundle' | 'pawn' | 'knight' | 'king'
 type BillingKey = 'monthly' | 'yearly'
@@ -457,6 +458,8 @@ export function PricingPage({
             </div>
           ))}
         </div>
+
+        <AffiliatePublicSection className="mt-16 md:mt-20" />
       </div>
     </section>
   )

@@ -37,7 +37,7 @@ export function middleware(request: NextRequest) {
   const authCookie = request.cookies.get("simple_auth_session")?.value;
   const hasAuthSession = authCookie === "1";
   const section = (request.nextUrl.searchParams.get("section") || "").trim().toLowerCase();
-  const dashboardSections = new Set(["dashboard", "programs", "monk", "resources", "affiliate", "support", "quickaccess", "settings"]);
+  const dashboardSections = new Set(["dashboard", "programs", "monk", "resources", "support", "quickaccess", "settings"]);
   const publicMarketingPath =
     pathname === "/" ||
     pathname === "/what-you-get" ||
@@ -55,6 +55,10 @@ export function middleware(request: NextRequest) {
     publicMarketingPath ||
     pathname === "/affiliate" ||
     pathname.startsWith("/affiliate/") ||
+    pathname === "/affiliate-login" ||
+    pathname.startsWith("/affiliate-login/") ||
+    pathname === "/affiliate-portal" ||
+    pathname.startsWith("/affiliate-portal/") ||
     pathname === "/r" ||
     pathname.startsWith("/r/") ||
     pathname === "/login" ||

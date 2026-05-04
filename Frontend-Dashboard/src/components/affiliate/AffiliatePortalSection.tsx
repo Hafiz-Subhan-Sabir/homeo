@@ -12,9 +12,6 @@ const DEFAULT_REFERRAL_IDS = {
   king: "subhan-x91",
 } as const;
 
-const TOKEN_KEY = "affiliate_token";
-const USER_KEY = "affiliate_user";
-
 type AffiliatePortalSectionProps = {
   /** Same label as the main navbar profile (email local-part after OTP, or user-edited name). */
   shellProfileName?: string;
@@ -22,15 +19,6 @@ type AffiliatePortalSectionProps = {
 
 export function AffiliatePortalSection({ shellProfileName = "Affiliate" }: AffiliatePortalSectionProps) {
   const [referralIds, setReferralIds] = useState<StoredAffiliateReferralIds | null>(null);
-
-  useEffect(() => {
-    try {
-      window.localStorage.removeItem(TOKEN_KEY);
-      window.localStorage.removeItem(USER_KEY);
-    } catch {
-      /* ignore */
-    }
-  }, []);
 
   useEffect(() => {
     setReferralIds(readStoredAffiliateReferralIds());

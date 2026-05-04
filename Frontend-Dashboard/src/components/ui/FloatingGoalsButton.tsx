@@ -7,7 +7,7 @@ import { useGoalsPanel } from "@/contexts/GoalsPanelContext";
 import { cn } from "@/components/dashboard/dashboardPrimitives";
 
 /** Sections where the FAB is shown (maps to SPA nav keys on `/`). */
-const FAB_SECTION_KEYS = new Set(["dashboard", "programs", "affiliate", "resources", "monk"]);
+const FAB_SECTION_KEYS = new Set(["dashboard", "programs", "resources", "monk"]);
 
 /** Goals & Milestones FAB — vivid #FFD700 (matches reference chip) on every shell section. */
 const FAB_SHELL_GOALS =

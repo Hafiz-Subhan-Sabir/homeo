@@ -465,8 +465,21 @@ EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 # Normalize Gmail app-passwords pasted with spaces.
 EMAIL_HOST_PASSWORD = (os.environ.get("EMAIL_HOST_PASSWORD", "") or "").replace(" ", "")
-EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "true").lower() in ("1", "true", "yes")
+_email_use_ssl_raw = (os.environ.get("EMAIL_USE_SSL") or "").strip().lower()
+EMAIL_USE_SSL = _email_use_ssl_raw in ("1", "true", "yes")
+_email_use_tls_raw = os.environ.get("EMAIL_USE_TLS")
+if _email_use_tls_raw is not None:
+  EMAIL_USE_TLS = str(_email_use_tls_raw).strip().lower() in ("1", "true", "yes")
+else:
+  # Port 465 uses implicit TLS (SSL), not STARTTLS — default TLS off when SSL is on.
+  EMAIL_USE_TLS = not EMAIL_USE_SSL
+if EMAIL_USE_SSL and EMAIL_USE_TLS:
+  EMAIL_USE_TLS = False
 OTP_EXPIRES_MINUTES = int(os.environ.get("OTP_EXPIRES_MINUTES", "10"))
+# Optional comma-separated Reply-To address(es). Use a discard-only mailbox (Hostinger filter:
+# delete all incoming) so client "Reply" does not reach a monitored inbox. If unset, Reply-To is
+# omitted and replies go to the From address (same as SMTP user for no-reply@).
+OTP_MAIL_REPLY_TO = (os.environ.get("OTP_MAIL_REPLY_TO") or "").strip()
 POST_LOGIN_REDIRECT_URL = os.environ.get("POST_LOGIN_REDIRECT_URL", "http://localhost:3000/")
 
 # Stripe checkout (signup -> checkout -> dashboard).

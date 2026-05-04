@@ -161,7 +161,8 @@ export default function AffiliatePortal({ displayName, referralIds, onLogout, em
   useEffect(() => {
     if (!referralIds?.complete) return;
     const completeId = encodeURIComponent(referralIds.complete.trim());
-    setActiveReferralLink(`http://localhost:3000/affiliate/${completeId}`);
+    const origin = typeof window !== "undefined" ? window.location.origin.replace(/\/+$/, "") : "";
+    setActiveReferralLink(`${origin}/affiliate/${completeId}`);
   }, [referralIds?.complete]);
 
   async function copyLink(link: string) {

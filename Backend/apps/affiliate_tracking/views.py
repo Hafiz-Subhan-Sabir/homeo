@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import random
 import secrets
 from datetime import timedelta
@@ -8,7 +9,6 @@ import re
 
 from django.conf import settings
 from django.contrib.auth.models import User
-from django.core.mail import send_mail
 from django.core.validators import validate_email
 from django.db.models import Max, Sum
 from django.http import JsonResponse
@@ -16,6 +16,8 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
+
+from accounts.syndicate_otp_mailer import build_syndicate_otp_email_html, send_syndicate_otp_html_email
 
 from .models import ApiToken, AffiliateProfile, ClickEvent, EmailOTP, LeadEvent, SaleEvent, SectionReferral
 
@@ -384,8 +386,21 @@ def auth_request_otp(request):
     EmailOTP.objects.filter(email=email, is_used=False).update(is_used=True)
     EmailOTP.objects.create(email=email, code=code, expires_at=expires_at, is_used=False)
 
-    subject = "Your Syndicate OTP"
-    body = f"Your OTP is {code}. It expires in {getattr(settings, 'OTP_EXPIRES_MINUTES', 10)} minutes."
+    expires_minutes = getattr(settings, "OTP_EXPIRES_MINUTES", 10)
+    display = html.escape(email.split("@")[0].strip() if "@" in email else email)
+    subject = "Your Syndicate affiliate verification code"
+    html_body = build_syndicate_otp_email_html(
+        header_badge="Partner Access Node",
+        greeting_line=f'Partner <span style="color:#fef3c7;">{display}</span>,',
+        intro_paragraph=(
+            "Affiliate dashboard handshake initiated. Use this access code to complete partner login "
+            "(separate from the member dashboard OTP)."
+        ),
+        otp_box_label="One-time Code",
+        otp_code=code,
+        expires_minutes=expires_minutes,
+        ignore_line="If you did not request affiliate access, you can safely ignore this email.",
+    )
     using_console_backend = "console.EmailBackend" in getattr(settings, "EMAIL_BACKEND", "")
     if using_console_backend:
         if getattr(settings, "DEBUG", False):
@@ -403,7 +418,7 @@ def auth_request_otp(request):
         )
 
     try:
-        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [email], fail_silently=False)
+        send_syndicate_otp_html_email(email, subject, html_body)
     except Exception:
         return _bad_request("Could not send OTP email right now. Verify SMTP credentials/settings.", 503)
 

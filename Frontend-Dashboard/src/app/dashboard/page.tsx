@@ -18,7 +18,6 @@ import { useGoalsPanel } from "@/contexts/GoalsPanelContext";
 import { GoalsPanel } from "@/components/ui/GoalsPanel";
 import { SyndicateAiChallengePanel } from "@/components/SyndicateAiChallengePanel";
 import { MembershipContentHub } from "@/components/membership/MembershipContentHub";
-import { AffiliatePortalSection } from "@/components/affiliate/AffiliatePortalSection";
 import { ProgramsCourseSection } from "@/components/programs/ProgramsCourseSection";
 import { PlaylistCheckoutSync } from "@/components/programs/PlaylistCheckoutSync";
 import { fetchBillingPurchaseHistory, type StreamPlaylistPurchaseHistoryItem } from "@/lib/streaming-api";
@@ -76,7 +75,6 @@ const FEATURE_MENU_ENTRIES: FeatureMenuEntry[] = [
   { section: "Website features", label: "Programs & courses", navKey: "programs" },
   { section: "Website features", label: "Syndicate Mode", navKey: "monk" },
   { section: "Website features", label: "Membership section", navKey: "resources" },
-  { section: "Website features", label: "Affiliate portal", navKey: "affiliate" },
   { section: "More options", label: "Support", navKey: "support" },
   { section: "More options", label: "Quick Access", navKey: "quickaccess" },
   { section: "More options", label: "Settings", navKey: "settings" }
@@ -2064,7 +2062,6 @@ export default function Page() {
       { key: "programs", label: "Programs" },
       { key: "monk", label: "Syndicate Mode" },
       { key: "resources", label: "Membership section" },
-      { key: "affiliate", label: "Affiliate Portal" },
       { key: "support", label: "Support" },
       { key: "quickaccess", label: "Quick Access" },
       { key: "settings", label: "Settings" }
@@ -2287,10 +2284,20 @@ export default function Page() {
     setGoalsFabLocked(!!portalUser?.dashboard_nav_locks?.goals);
   }, [portalUser, setGoalsFabLocked]);
 
+  /** Deep links to the affiliate dashboard now live on the public site. */
+  useLayoutEffect(() => {
+    if (typeof window === "undefined") return;
+    const section = new URLSearchParams(window.location.search).get("section");
+    if (section === "affiliate") {
+      router.replace("/affiliate-portal");
+    }
+  }, [router]);
+
   /** Restore section from URL on load / refresh (e.g. /?section=programs). */
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
     const section = new URLSearchParams(window.location.search).get("section");
+    if (section === "affiliate") return;
     const valid = new Set(nav.map((n) => n.key));
     if (section && valid.has(section)) {
       setNavKeyState(section);
@@ -2302,13 +2309,17 @@ export default function Page() {
     if (typeof window === "undefined") return;
     const syncFromUrl = () => {
       const section = new URLSearchParams(window.location.search).get("section");
+      if (section === "affiliate") {
+        router.replace("/affiliate-portal");
+        return;
+      }
       const valid = new Set(nav.map((n) => n.key));
       if (section && valid.has(section)) setNavKeyState(section);
       else if (!section) setNavKeyState("dashboard");
     };
     window.addEventListener("popstate", syncFromUrl);
     return () => window.removeEventListener("popstate", syncFromUrl);
-  }, [nav]);
+  }, [nav, router]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -2852,7 +2863,7 @@ export default function Page() {
         themeMode === "danger" && "theme-danger",
         themeMode === "cyberpunk" && "theme-cyberpunk",
         !sidebarOpen && "focus-mode",
-        (selectedNavKey === "monk" || selectedNavKey === "affiliate") && "syndicate-mood-context"
+        selectedNavKey === "monk" && "syndicate-mood-context"
       )}
     >
       <PlaylistCheckoutSync />
@@ -3008,7 +3019,10 @@ export default function Page() {
                 themeMode={themeMode}
                 userName={profileName}
                 courses={dashboardCoursesForSnapshots}
-                onNavigate={(nav: DashboardNavKey) => applyNavKey(nav)}
+                onNavigate={(nav: DashboardNavKey) => {
+                  if (nav === "affiliate") window.location.assign("/affiliate-login");
+                  else applyNavKey(nav);
+                }}
                 onOpenChange={(open) => {
                   if (open) setProfileOpen(false);
                 }}
@@ -3316,9 +3330,8 @@ export default function Page() {
                 "max-lg:pointer-events-none max-lg:opacity-[0.42] max-lg:transition-opacity max-lg:duration-200 max-lg:ease-out",
               "lg:h-full lg:min-h-0",
               sidebarOpen ? "col-span-7 md:col-span-10 lg:col-span-10" : "col-span-12",
-              (selectedNavKey === "monk" || selectedNavKey === "affiliate") &&
-                "syndicate-main-shell",
-              selectedNavKey === "monk" || selectedNavKey === "affiliate"
+              selectedNavKey === "monk" && "syndicate-main-shell",
+              selectedNavKey === "monk"
                 ? "px-0 pt-1 pb-0 sm:pt-1.5 sm:pb-0"
                 : "fluid-section-p"
             )}
@@ -3329,19 +3342,14 @@ export default function Page() {
               className={cn(
                 "relative flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden pr-1 no-scrollbar",
                 !sidebarOccupiesGrid && "lg:pl-14",
-                selectedNavKey === "monk" || selectedNavKey === "affiliate"
+                selectedNavKey === "monk"
                   ? "px-[clamp(0.4rem,1.1vw+0.2rem,0.85rem)]"
                   : "pr-1",
-                !sidebarOpen &&
-                  selectedNavKey !== "monk" &&
-                  selectedNavKey !== "affiliate" &&
-                  "md:pl-14",
-                selectedNavKey !== "monk" &&
-                  selectedNavKey !== "affiliate" &&
-                  "px-[var(--fluid-section-p)]"
+                !sidebarOpen && selectedNavKey !== "monk" && "md:pl-14",
+                selectedNavKey !== "monk" && "px-[var(--fluid-section-p)]"
               )}
             >
-              {selectedNavKey !== "monk" && selectedNavKey !== "programs" && selectedNavKey !== "affiliate" ? (
+              {selectedNavKey !== "monk" && selectedNavKey !== "programs" ? (
                 <header className="mb-[clamp(0.65rem,1.5vw+0.2rem,1.1rem)] shrink-0 border-b border-[color:var(--gold-neon-border-mid)] pb-[clamp(0.45rem,1.2vw+0.15rem,0.85rem)] pr-1">
                   <div className="heading-glow fluid-hero-title font-black italic tracking-[0.02em] text-[color:var(--gold-neon)] drop-shadow-[0_0_28px_rgba(250,204,21,0.35)]">
                     THE SYNDICATE
@@ -3365,8 +3373,6 @@ export default function Page() {
                 ) : (
                   <SyndicateModeSection />
                 )
-              ) : selectedNavKey === "affiliate" ? (
-                <AffiliatePortalSection shellProfileName={profileName} />
               ) : selectedNavKey === "programs" ? (
                 <ProgramsCourseSection
                   instructorHero={<InstructorSlideshow />}
@@ -3471,7 +3477,10 @@ export default function Page() {
                         profileAvatar={profileAvatar}
                         courses={dashboardCoursesForSnapshots}
                         dashboardNavLocks={portalUser?.dashboard_nav_locks}
-                        onNavigate={(nav) => applyNavKey(nav)}
+                        onNavigate={(nav) => {
+                          if (nav === "affiliate") window.location.assign("/affiliate-login");
+                          else applyNavKey(nav);
+                        }}
                       />
                     </div>
                   </>

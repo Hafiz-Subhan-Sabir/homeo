@@ -6,7 +6,7 @@ import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion'
 import { ScrambleText } from './ScrambleText'
 import NavLogo from './NavLogo'
 
-export type NavSectionId = 'home' | 'whatYouGet' | 'ourMethods' | 'joinNow' | 'programs'
+export type NavSectionId = 'home' | 'whatYouGet' | 'ourMethods' | 'joinNow' | 'programs' | 'affiliateLogin'
 
 export type RadialNavItem = {
   id: NavSectionId
@@ -29,6 +29,7 @@ const defaultItems: RadialNavItem[] = [
   { id: 'ourMethods', label: 'Our Methods' },
   { id: 'joinNow', label: 'Join Now' },
   { id: 'programs', label: 'Programs' },
+  { id: 'affiliateLogin', label: 'Affiliate Login' },
 ]
 
 const THEMES: Record<NavSectionId, { color: string; bg: string; border: string; glow: string }> = {
@@ -37,12 +38,25 @@ const THEMES: Record<NavSectionId, { color: string; bg: string; border: string; 
   ourMethods: { color: '#d946ef', bg: 'rgba(217,70,239,0.14)', border: 'rgba(217,70,239,0.5)', glow: 'rgba(217,70,239,0.4)' },
   joinNow: { color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.5)', glow: 'rgba(248, 191, 47, 0.4)' },
   programs: { color: '#f472b6', bg: 'rgba(244,114,182,0.12)', border: 'rgba(208, 70, 243, 0.5)', glow: 'rgba(218, 114, 244, 0.4)' },
+  affiliateLogin: {
+    color: '#34d399',
+    bg: 'rgba(52,211,153,0.12)',
+    border: 'rgba(52,211,153,0.5)',
+    glow: 'rgba(52, 211, 153, 0.42)',
+  },
 }
 
 /** Slot radius by viewport: smaller on mobile so buttons stay on screen */
-function getSlotRadius(): number {
-  if (typeof window === 'undefined') return 195
+function getSlotRadius(itemCount: number): number {
+  if (typeof window === 'undefined') return itemCount >= 6 ? 175 : 195
   const w = window.innerWidth
+  if (itemCount >= 6) {
+    if (w < 380) return 92
+    if (w < 480) return 108
+    if (w < 640) return 124
+    if (w < 768) return 148
+    return 175
+  }
   if (w < 380) return 85
   if (w < 480) return 110
   if (w < 640) return 145
@@ -50,23 +64,9 @@ function getSlotRadius(): number {
   return 195
 }
 
-function getSlots(radius: number) {
-  if (typeof window !== 'undefined') {
-    const w = window.innerWidth
-    if (w < 640) {
-      // Custom mobile layout with extra spacing between left/right button pairs.
-      return [
-        { x: 0, y: -118 },   // Home
-        { x: -110, y: -18 }, // Programs
-        { x: 110, y: -18 },  // What You Get
-        { x: -110, y: 90 },  // Join Now
-        { x: 110, y: 90 },   // Our Methods
-      ]
-    }
-  }
-
-  return Array.from({ length: 5 }, (_, i) => {
-    const angle = (i / 5) * Math.PI * 2 - Math.PI / 2
+function getSlots(radius: number, count: number) {
+  return Array.from({ length: count }, (_, i) => {
+    const angle = (i / count) * Math.PI * 2 - Math.PI / 2
     return { x: radius * Math.cos(angle), y: radius * Math.sin(angle) }
   })
 }
@@ -133,7 +133,8 @@ export function RadialNav({
     }
 
     if (prefersReducedMotion) {
-      const slots = getSlots(getSlotRadius())
+      const n = items.length
+      const slots = getSlots(getSlotRadius(n), n)
       gsap.set('[data-rnav="backdrop"]', { autoAlpha: 1 })
       rootRef.current.querySelectorAll<HTMLElement>('[data-rnav="item"]').forEach((el, i) => {
         const slot = slots[i % slots.length]
@@ -173,7 +174,8 @@ export function RadialNav({
       startY = logoCy - centerCy
     }
 
-    const slots = getSlots(getSlotRadius())
+    const n = items.length
+    const slots = getSlots(getSlotRadius(n), n)
 
     nodes.forEach((el) => {
       gsap.set(el, {
@@ -230,7 +232,7 @@ export function RadialNav({
     })
 
     return
-  }, [open, prefersReducedMotion, placed])
+  }, [open, prefersReducedMotion, placed, items.length])
 
   // When cursor leaves section: cards assemble to center, then close
   useLayoutEffect(() => {
