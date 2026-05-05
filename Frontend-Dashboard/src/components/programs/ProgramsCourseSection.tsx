@@ -12,7 +12,12 @@ import {
 import { StreamPlaylistProgramPanel } from "@/components/programs/StreamPlaylistProgramPanel";
 import { cn } from "@/components/dashboard/dashboardPrimitives";
 import { fetchCoursesList, resolveDjangoMediaUrl, type CourseDto } from "@/lib/courses-api";
-import { fetchPortalIdentity } from "@/lib/portal-api";
+import {
+  fetchPortalIdentity,
+  getAuthorizationHeader,
+  hasSimpleAuthSessionClient,
+  resolveClientApiUrl,
+} from "@/lib/portal-api";
 import { createPlaylistCheckoutSession, fetchStreamPlaylists, type StreamPlaylistListItem } from "@/lib/streaming-api";
 
 function coursesListErrorMessage(status: number, data: unknown): string {
@@ -191,6 +196,7 @@ export function ProgramsCourseSection({
   const [playlistTitleQuery, setPlaylistTitleQuery] = useState("");
   const [checkoutBusyPlaylistId, setCheckoutBusyPlaylistId] = useState<number | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [bundleCheckoutBusy, setBundleCheckoutBusy] = useState(false);
   const [playlistDescriptionModal, setPlaylistDescriptionModal] = useState<StreamPlaylistListItem | null>(null);
 
   const reloadApiCourses = useCallback(async () => {
@@ -338,6 +344,63 @@ export function ProgramsCourseSection({
       setCheckoutBusyPlaylistId(null);
     }
   }, [checkoutBusyPlaylistId, reloadStreamPlaylists]);
+
+  const startBundleCheckout = useCallback(async () => {
+    if (bundleCheckoutBusy) return;
+    setCheckoutError(null);
+    setBundleCheckoutBusy(true);
+    const billing = "monthly";
+    const amount = "333";
+    try {
+      if (!hasSimpleAuthSessionClient()) {
+        const params = new URLSearchParams({
+          plan: "bundle",
+          billing,
+          amount,
+          next: "/dashboard?section=programs",
+        });
+        window.location.assign(`/login?${params.toString()}`);
+        return;
+      }
+
+      const authHeader = getAuthorizationHeader();
+      const response = await fetch(resolveClientApiUrl("/api/auth/checkout/create-session/"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(authHeader ? { Authorization: authHeader } : {}),
+        },
+        body: JSON.stringify({
+          return_base_url: typeof window !== "undefined" ? window.location.origin : undefined,
+          selected_plan: "bundle",
+          selected_billing: billing,
+          selected_amount: amount,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        checkout_url?: string;
+        is_unlocked?: boolean;
+        already_purchased?: boolean;
+        message?: string;
+      };
+      const checkoutUrl = typeof payload.checkout_url === "string" ? payload.checkout_url.trim() : "";
+      if (response.ok && checkoutUrl) {
+        window.location.assign(checkoutUrl);
+        return;
+      }
+      if (response.ok && (payload.is_unlocked || payload.already_purchased)) {
+        await Promise.all([reloadApiCourses(), reloadStreamPlaylists()]);
+        toast.success(payload.message || "Money Mastery already active. All programs are unlocked.");
+        return;
+      }
+      throw new Error(payload.message || "Could not start Money Mastery checkout.");
+    } catch (error) {
+      setCheckoutError(error instanceof Error ? error.message : "Could not start Money Mastery checkout.");
+    } finally {
+      setBundleCheckoutBusy(false);
+    }
+  }, [bundleCheckoutBusy, reloadApiCourses, reloadStreamPlaylists]);
 
   const backToProgramGrid = () => {
     setSecureView("grid");
@@ -675,19 +738,61 @@ export function ProgramsCourseSection({
                       All
                     </button>
                   </div>
-                  <div className="relative max-w-[440px] md:max-w-[620px] lg:max-w-[860px]">
-                    <div
-                      className="pointer-events-none absolute -inset-1 rounded-2xl bg-amber-400/12 blur-sm"
-                      aria-hidden
-                    />
-                    <div className="relative rounded-xl bg-amber-300/70 p-[1px] shadow-[0_0_10px_rgba(251,191,36,0.2)]">
-                      <input
-                        type="text"
-                        value={playlistTitleQuery}
-                        onChange={(e) => setPlaylistTitleQuery(e.target.value)}
-                        placeholder="Search playlist by title..."
-                        className="w-full rounded-[11px] border-0 bg-black/75 px-3 py-2 text-[13px] text-white outline-none transition placeholder:text-white/45 focus:ring-2 focus:ring-amber-300/25 lg:px-4 lg:py-3 lg:text-[14px]"
+                  <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(520px,700px)] xl:items-stretch">
+                    <div className="relative max-w-[420px] md:max-w-[560px] lg:max-w-[700px] xl:max-w-[760px]">
+                      <div
+                        className="pointer-events-none absolute -inset-1 rounded-2xl bg-cyan-400/15 blur-sm"
+                        aria-hidden
                       />
+                      <div className="relative rounded-xl bg-gradient-to-r from-cyan-300/80 via-violet-300/75 to-amber-300/75 p-[1px] shadow-[0_0_14px_rgba(56,189,248,0.3)]">
+                        <input
+                          type="text"
+                          value={playlistTitleQuery}
+                          onChange={(e) => setPlaylistTitleQuery(e.target.value)}
+                          placeholder="Search playlist by title..."
+                          className="w-full rounded-[11px] border-0 bg-black/80 px-3 py-2 text-[13px] text-cyan-50 outline-none transition placeholder:text-cyan-100/45 focus:ring-2 focus:ring-cyan-300/35 lg:px-4 lg:py-3 lg:text-[14px]"
+                        />
+                      </div>
+                    </div>
+                    <div className="relative min-h-[220px] overflow-hidden rounded-3xl border border-fuchsia-300/85 bg-[linear-gradient(135deg,rgba(6,30,52,0.96),rgba(44,9,60,0.93),rgba(12,42,26,0.9))] px-6 py-6 shadow-[0_0_38px_rgba(217,70,239,0.36),0_0_22px_rgba(34,211,238,0.28)]">
+                      <span
+                        aria-hidden
+                        className="pointer-events-none absolute inset-[6px] rounded-[1.2rem] border border-cyan-200/35 shadow-[inset_0_0_0_1px_rgba(217,70,239,0.2),inset_0_0_30px_rgba(34,211,238,0.12)]"
+                      />
+                      <span
+                        aria-hidden
+                        className="pointer-events-none absolute left-4 top-4 h-5 w-10 rounded-sm border-l-2 border-t-2 border-amber-300/80"
+                      />
+                      <span
+                        aria-hidden
+                        className="pointer-events-none absolute bottom-4 right-4 h-5 w-10 rounded-sm border-b-2 border-r-2 border-cyan-300/80"
+                      />
+                      <div className="relative text-[15px] font-black uppercase tracking-[0.22em] text-fuchsia-100 [text-shadow:0_0_16px_rgba(217,70,239,0.95)] sm:text-[16px]">
+                        Money Mastery Bundle
+                      </div>
+                      <p className="relative mt-3 max-w-[96%] text-[17px] leading-[1.5] text-cyan-50/95 sm:text-[19px]">
+                        Unlock all programs at once (all playlist categories and courses). One checkout, instant full program access.
+                      </p>
+                      <div className="relative mt-6 flex items-center justify-between gap-4">
+                        <span className="border border-amber-300/85 bg-amber-950/55 px-5 py-2 text-[16px] font-black text-amber-100 shadow-[0_0_20px_rgba(251,191,36,0.48)] [clip-path:polygon(10px_0,100%_0,100%_calc(100%-10px),calc(100%-10px)_100%,0_100%,0_10px)]">
+                          £333
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void startBundleCheckout();
+                          }}
+                          disabled={bundleCheckoutBusy}
+                          className={cn(
+                            "border px-6 py-3 text-[15px] font-black uppercase tracking-[0.17em] transition sm:text-[16px] [clip-path:polygon(12px_0,100%_0,100%_calc(100%-12px),calc(100%-12px)_100%,0_100%,0_12px)]",
+                            "border-cyan-200/90 bg-[linear-gradient(135deg,rgba(3,57,74,0.95),rgba(9,95,88,0.92),rgba(26,50,9,0.9))] text-cyan-50",
+                            "shadow-[0_0_24px_rgba(34,211,238,0.55),0_0_12px_rgba(16,185,129,0.4)] hover:brightness-110 hover:shadow-[0_0_32px_rgba(34,211,238,0.8),0_0_18px_rgba(16,185,129,0.62)]",
+                            "disabled:cursor-not-allowed disabled:opacity-60"
+                          )}
+                        >
+                          {bundleCheckoutBusy ? "Redirecting..." : "Unlock All Programs"}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

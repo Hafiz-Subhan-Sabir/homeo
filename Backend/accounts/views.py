@@ -240,14 +240,16 @@ def _ensure_quiz_ticket_user_and_enrollment(email: str, selected_ticket_title: s
     return user
   existing_locked_titles = _existing_locked_ticket_titles_for_user(user)
   selected = _normalize_ticket_title(selected_ticket_title)
-  if existing_locked_titles:
-    # First successful free-ticket lock for this email is permanent.
+  quiz_ticket_titles = _quiz_ticket_titles_for_result(quiz_result)
+  if selected and quiz_ticket_titles:
+    # If user clicks any eligible "Get Free Ticket" CTA in quiz result,
+    # unlock the complete psychology ticket set together.
+    ticket_titles = quiz_ticket_titles
+  elif existing_locked_titles:
+    # Keep prior quiz-ticket unlocks for this user.
     ticket_titles = existing_locked_titles
-  elif selected:
-    # Unlock only the clicked ticket from quiz report.
-    ticket_titles = [selected]
   else:
-    ticket_titles = _quiz_ticket_titles_for_result(quiz_result)
+    ticket_titles = quiz_ticket_titles
   courses = _courses_for_ticket_titles(ticket_titles)
   playlists = _playlists_for_ticket_titles(ticket_titles)
   if str(user.username).startswith("quiz_ticket_"):

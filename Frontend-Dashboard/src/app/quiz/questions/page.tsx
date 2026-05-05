@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -508,20 +508,6 @@ export default function QuizPage() {
                       </option>
                     ))}
                   </select>
-                  <span
-                    style={{
-                      minWidth: 58,
-                      textAlign: "center",
-                      fontWeight: 700,
-                      color: "#7dd3ff",
-                      border: "1px solid rgba(125,211,255,0.45)",
-                      borderRadius: 10,
-                      padding: "10px 8px",
-                      background: "rgba(16,34,62,0.7)",
-                    }}
-                  >
-                    {leadForm.countryCode}
-                  </span>
                   <input
                     placeholder="Phone Number"
                     value={leadForm.phone}
