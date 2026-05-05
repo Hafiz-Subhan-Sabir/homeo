@@ -66,6 +66,7 @@ export default function SiteFooter() {
               <Link href="/what-you-get" prefetch className={footerLinkClass} style={{ color: 'rgba(254, 243, 199, 0.95)', textShadow: '0 0 8px rgba(251, 191, 36, 0.25)' }}>What You Get</Link>
               <Link href="/our-methods" prefetch className={footerLinkClass} style={{ color: 'rgba(254, 243, 199, 0.95)', textShadow: '0 0 8px rgba(251, 191, 36, 0.25)' }}>Our Methods</Link>
               <Link href="/programs" prefetch className={footerLinkClass} style={{ color: 'rgba(254, 243, 199, 0.95)', textShadow: '0 0 8px rgba(251, 191, 36, 0.25)' }}>Programs</Link>
+              <Link href="/quiz" prefetch className={footerLinkClass} style={{ color: 'rgba(254, 243, 199, 0.95)', textShadow: '0 0 8px rgba(251, 191, 36, 0.25)' }}>Syn Diagnosis</Link>
               <Link href="/affiliate-login" prefetch className={footerLinkClass} style={{ color: 'rgba(254, 243, 199, 0.95)', textShadow: '0 0 8px rgba(251, 191, 36, 0.25)' }}>Affiliate login</Link>
               <Link href="/login" prefetch className={footerLinkClass} style={{ color: 'rgba(254, 243, 199, 0.95)', textShadow: '0 0 8px rgba(251, 191, 36, 0.25)' }}>Join Now</Link>
             </div>

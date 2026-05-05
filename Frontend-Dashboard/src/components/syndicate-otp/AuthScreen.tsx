@@ -589,7 +589,13 @@ export default function AuthScreen({
         return;
       }
 
-      const { response, data } = await postJson("/api/auth/otp-login/", requestBody);
+      let { response, data } = await postJson("/api/auth/otp-login/", requestBody);
+      // Compatibility fallback for deployments that expose OTP login at `/api/auth/login/`.
+      if (response.status === 404) {
+        const retry = await postJson("/api/auth/login/", requestBody);
+        response = retry.response;
+        data = retry.data;
+      }
 
       if (!response.ok) {
         if (response.status === 404 && data.code === "SIGNUP_REQUIRED") {

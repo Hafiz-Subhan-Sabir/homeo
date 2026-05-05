@@ -61,11 +61,11 @@ export function AffiliatePublicSection({ className }: { className?: string }) {
       />
 
       <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-8 md:min-h-[calc(60vh-6rem)] md:flex-row md:items-center md:justify-between md:gap-10 lg:gap-14">
-        <div className="min-w-0 flex-1 md:max-w-[min(100%,36rem)] lg:max-w-xl">
-          <div className="flex flex-wrap items-center gap-3 md:gap-4">
+        <div className="min-w-0 flex-1 px-2 text-center md:max-w-[min(100%,36rem)] md:px-0 md:text-left lg:max-w-xl">
+          <div className="flex flex-wrap items-center justify-center gap-3 md:justify-start md:gap-4">
             <h2
               id="affiliate-program-heading"
-              className="font-display bg-gradient-to-r from-cyan-100 via-amber-100 to-fuchsia-200 bg-clip-text text-5xl font-black uppercase tracking-[0.14em] text-transparent drop-shadow-[0_0_28px_rgba(34,211,238,0.35)] md:text-6xl lg:text-7xl"
+              className="font-display bg-gradient-to-r from-cyan-100 via-amber-100 to-fuchsia-200 bg-clip-text text-4xl font-black uppercase tracking-[0.1em] text-transparent drop-shadow-[0_0_28px_rgba(34,211,238,0.35)] sm:text-5xl md:text-6xl md:tracking-[0.14em] lg:text-7xl"
             >
               Affiliate
             </h2>
@@ -81,11 +81,11 @@ export function AffiliatePublicSection({ className }: { className?: string }) {
               <span className="sr-only">How affiliate login works</span>
             </button>
           </div>
-          <p className="mt-5 max-w-3xl text-lg font-medium leading-relaxed tracking-wide text-slate-200/95 md:text-xl md:leading-relaxed">
+          <p className="mx-auto mt-5 max-w-3xl px-1 text-justify text-[19px] font-medium leading-relaxed tracking-normal text-slate-200/95 sm:px-2 sm:text-[20px] md:mx-0 md:px-0 md:text-left md:text-xl md:leading-relaxed md:tracking-wide">
             Become a Syndicate affiliate: share your tracked links, earn when your audience joins and buys, and watch
             clicks, leads, and commissions in your partner dashboard. Built for operators who want leverage — not fluff.
           </p>
-          <p className="mt-4 max-w-3xl text-base leading-relaxed text-slate-300/90 md:text-lg md:leading-relaxed">
+          <p className="mx-auto mt-4 max-w-3xl px-1 text-justify text-[17px] leading-relaxed text-slate-300/90 sm:px-2 sm:text-[18px] md:mx-0 md:px-0 md:text-left md:text-lg md:leading-relaxed">
             After you are approved as a partner, use the same email we have on file. You will get a one-time code (same
             luxury OTP experience as member login), then your stats and referral tools unlock instantly.
           </p>
@@ -123,26 +123,26 @@ export function AffiliatePublicSection({ className }: { className?: string }) {
             id="affiliate-how-panel"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="rounded-xl border border-cyan-400/35 bg-[#060912]/95 p-5 text-base leading-relaxed text-slate-200 shadow-[0_0_32px_rgba(34,211,238,0.18),0_0_48px_rgba(217,70,239,0.08)] backdrop-blur-sm md:p-6 md:text-lg"
+            className="mx-1 rounded-xl border border-cyan-400/35 bg-[#060912]/95 p-5 text-[16px] leading-relaxed text-slate-200 shadow-[0_0_32px_rgba(34,211,238,0.18),0_0_48px_rgba(217,70,239,0.08)] backdrop-blur-sm sm:mx-2 sm:text-[17px] md:mx-0 md:p-6 md:text-lg"
           >
             <p className="font-semibold uppercase tracking-[0.14em] text-cyan-200/95">How to use it</p>
-            <ol className="mt-3 list-decimal space-y-2 pl-5 marker:text-fuchsia-300/90">
+            <ol className="mt-3 list-decimal space-y-2 pl-5 text-justify marker:text-fuchsia-300/90 md:text-left">
               <li>Click &quot;Affiliate login&quot; (here or in the site menu).</li>
               <li>Enter the email tied to your affiliate profile.</li>
               <li>Enter the 6-digit code we email you — then your dashboard opens in the browser.</li>
               <li>Copy your referral link from the dashboard and share it; returning traffic and purchases attach to you.</li>
             </ol>
-            <p className="mt-3 text-slate-400">
+            <p className="mt-3 text-justify text-slate-400 md:text-left">
               This login is separate from the member area. Member access still uses Join Now / login with the main OTP
               flow.
             </p>
           </motion.div>
         ) : null}
 
-        <div className="mt-6 flex flex-wrap items-center gap-4 md:mt-8">
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-4 md:mt-8 md:justify-start">
           <Link
             href="/affiliate-login"
-            className="inline-flex min-h-[52px] items-center justify-center rounded-lg border border-cyan-400/55 bg-gradient-to-b from-cyan-500/20 via-black/50 to-fuchsia-900/25 px-9 py-3.5 text-base font-black uppercase tracking-[0.18em] text-cyan-50 shadow-[0_0_24px_rgba(34,211,238,0.35),0_0_48px_rgba(217,70,239,0.12),0_12px_32px_rgba(0,0,0,0.75)] transition hover:border-fuchsia-300/50 hover:shadow-[0_0_32px_rgba(217,70,239,0.35),0_0_40px_rgba(34,211,238,0.25)]"
+            className="inline-flex min-h-[52px] items-center justify-center rounded-lg border border-cyan-400/55 bg-gradient-to-b from-cyan-500/20 via-black/50 to-fuchsia-900/25 px-8 py-3.5 text-sm font-black uppercase tracking-[0.15em] text-cyan-50 shadow-[0_0_24px_rgba(34,211,238,0.35),0_0_48px_rgba(217,70,239,0.12),0_12px_32px_rgba(0,0,0,0.75)] transition hover:border-fuchsia-300/50 hover:shadow-[0_0_32px_rgba(217,70,239,0.35),0_0_40px_rgba(34,211,238,0.25)] sm:text-base sm:tracking-[0.18em]"
           >
             Affiliate login
           </Link>

@@ -27,7 +27,7 @@ const defaultItems: RadialNavItem[] = [
   { id: 'home', label: 'Home' },
   { id: 'whatYouGet', label: 'What You Get' },
   { id: 'ourMethods', label: 'Our Methods' },
-  { id: 'syndicateAnalysis', label: 'Syndicate Analysis' },
+  { id: 'syndicateAnalysis', label: 'Syn Diagnosis' },
   { id: 'joinNow', label: 'Join Now' },
   { id: 'programs', label: 'Programs' },
   { id: 'affiliateLogin', label: 'Affiliate Login' },
@@ -58,9 +58,11 @@ function getSlotRadius(itemCount: number): number {
   if (typeof window === 'undefined') return itemCount >= 6 ? 175 : 195
   const w = window.innerWidth
   if (itemCount >= 7) {
-    if (w < 380) return 132
-    if (w < 480) return 152
-    if (w < 640) return 174
+    // Fold / narrow-mobile: tighten horizontal spread without changing layout.
+    if (w < 360) return 114
+    if (w < 420) return 124
+    if (w < 480) return 136
+    if (w < 640) return 160
     if (w < 768) return 198
     return 236
   }
@@ -79,10 +81,52 @@ function getSlotRadius(itemCount: number): number {
 }
 
 function getSlots(radius: number, count: number) {
+  let xScale = 1
+  let yScale = 1
+  if (typeof window !== 'undefined' && count >= 7) {
+    const w = window.innerWidth
+    if (w < 420) {
+      // Fold / narrow-mobile: add more vertical breathing room between rows.
+      // Keep horizontal separation so bottom cards don't touch.
+      xScale = 1
+      yScale = 1.24
+    } else if (w < 640) {
+      xScale = 0.98
+      yScale = 1.1
+    }
+  }
   return Array.from({ length: count }, (_, i) => {
     const angle = (i / count) * Math.PI * 2 - Math.PI / 2
-    return { x: radius * Math.cos(angle), y: radius * Math.sin(angle) }
+    let x = radius * xScale * Math.cos(angle)
+    let y = radius * yScale * Math.sin(angle)
+    if (typeof window !== 'undefined' && count >= 7 && window.innerWidth < 420) {
+      // Mobile/Fold: keep a visible gap between the bottom pair
+      // (`joinNow` index 4 and `syndicateAnalysis` index 3).
+      if (i === 3) x += 8
+      if (i === 4) x -= 8
+    }
+    return {
+      x,
+      y,
+    }
   })
+}
+
+function getMobileItemNudge(id: NavSectionId, itemCount: number): {
+  marginLeft?: string;
+  marginRight?: string;
+  marginTop?: string;
+  marginBottom?: string;
+} {
+  if (typeof window === 'undefined' || itemCount < 7) return {}
+  const w = window.innerWidth
+  if (w >= 420) return {}
+  // Galaxy Z Fold cover-width tuning: separate bottom pair only on narrow mobile.
+  if (id === 'home') return { marginBottom: '20px' }
+  if (id === 'affiliateLogin' || id === 'whatYouGet') return { marginTop: '20px' }
+  if (id === 'joinNow') return { marginRight: '20px' }
+  if (id === 'syndicateAnalysis') return { marginLeft: '20px' }
+  return {}
 }
 
 export function RadialNav({
@@ -370,16 +414,19 @@ export function RadialNav({
                         className={[
                           'nav-card-lightning pointer-events-auto cursor-pointer relative z-10',
                           useCompactButtons
-                            ? 'min-w-[122px] max-w-[min(200px,86vw)]'
+                            ? 'min-w-[104px] max-w-[min(188px,84vw)]'
                             : 'min-w-[136px] max-w-[min(220px,88vw)]',
+                          // Mobile/Fold: keep a small visual gap between neighboring pills.
+                          useCompactButtons ? 'mx-[2.5px] sm:mx-0' : '',
                           'rounded-lg border-2 px-3.5 py-2.5 overflow-visible',
                           'text-[12px] font-bold uppercase tracking-[0.1em] whitespace-nowrap',
                           useCompactButtons
-                            ? 'sm:min-w-[146px] sm:px-3.5 sm:py-2.5 sm:text-[12px]'
+                            ? 'sm:min-w-[138px] sm:px-3.5 sm:py-2.5 sm:text-[12px]'
                             : 'sm:min-w-[160px] sm:px-4 sm:py-2.5 sm:text-[13px]',
                           'transition-[filter,box-shadow] duration-500 ease-in-out',
                         ].join(' ')}
                         style={{
+                          ...getMobileItemNudge(it.id, items.length),
                           color: theme.color,
                           backgroundColor: theme.bg,
                           borderColor: activeId === it.id ? 'rgba(255,255,255,0.9)' : theme.border,

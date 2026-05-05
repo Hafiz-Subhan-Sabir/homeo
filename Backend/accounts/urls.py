@@ -15,5 +15,8 @@ urlpatterns = [
   path("checkout/create-session/", create_checkout_session_view, name="checkout-create-session"),
   path("checkout/success/", checkout_success_view, name="checkout-success"),
   path("login/", login_view, name="login"),
+  # Keep compatibility with frontend calls that use `/api/auth/otp-login/`.
+  path("otp-login/", login_view, name="otp-login"),
+  path("otp-login", login_view, name="otp-login-noslash"),
   path("verify-login-otp/", verify_login_otp_view, name="verify-login-otp"),
 ]

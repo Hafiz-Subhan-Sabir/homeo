@@ -369,13 +369,13 @@ export default function OurMethodsPage() {
                   </article>
 
                   {isPrimary ? (
-                    <div className="w-full max-w-[220px] justify-self-end self-center">
+                    <div className="mx-auto mt-3 w-full max-w-[150px] justify-self-center self-center sm:max-w-[185px] md:mx-0 md:mt-0 md:max-w-[220px] md:justify-self-end">
                       <Image
                         src="/assets/Gold-Key.png"
                         alt="Gold key symbol"
                         width={560}
                         height={760}
-                        className="h-[300px] w-full object-contain object-center animate-bounce [animation-duration:4.5s] [animation-timing-function:ease-in-out] sm:h-[360px]"
+                        className="h-[210px] w-full object-contain object-center animate-bounce [animation-duration:4.5s] [animation-timing-function:ease-in-out] sm:h-[260px] md:h-[360px]"
                       />
                     </div>
                   ) : null}

@@ -4265,6 +4265,20 @@ body {
   font-weight: 600;
 }
 
+@media (max-width: 420px) {
+  .footer-typing .neon-badge-text {
+    white-space: normal;
+    overflow-wrap: normal;
+    letter-spacing: 0.12em;
+    line-height: 1.28;
+    font-size: clamp(0.86rem, 3.6vw, 1rem);
+    text-align: center;
+    display: inline-block;
+    width: min(265px, 92vw);
+    text-wrap: balance;
+  }
+}
+
 .neon-caret {
   display: inline-block;
   margin-left: 0.2em;
