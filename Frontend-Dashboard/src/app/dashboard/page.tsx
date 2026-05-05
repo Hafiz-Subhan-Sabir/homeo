@@ -11,6 +11,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import ChromaGrid, { type ChromaItem } from "@/components/ChromaGrid";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import DashboardControlCenter from "@/components/dashboard/DashboardControlCenter";
+import KingProgramUnlockOverlay from "@/components/dashboard/KingProgramUnlockOverlay";
 import { NavbarNotificationBell } from "@/components/dashboard/NotificationBell";
 import type { DashboardNavKey } from "@/components/dashboard/types";
 import { useActivityTimeline } from "@/contexts/ActivityTimelineContext";
@@ -34,11 +35,14 @@ import {
   writeDashboardProfileDisplayName
 } from "@/lib/dashboardProfileStorage";
 import {
+  fetchKingProgramSelection,
   fetchPortalIdentity,
   getAuthorizationHeader,
   hasSimpleAuthSessionClient,
   resolveClientApiUrl,
+  submitKingProgramSelection,
   STORAGE_SIMPLE_AUTH,
+  type KingProgramSelectionState,
   type PortalUser
 } from "@/lib/portal-api";
 import { logoutSyndicateSession } from "@/lib/syndicateAuth";
@@ -2072,6 +2076,9 @@ export default function Page() {
   const [selectedNavKey, setNavKeyState] = useState<string>("dashboard");
   const [authChecked, setAuthChecked] = useState(false);
   const [portalUser, setPortalUser] = useState<PortalUser | null>(null);
+  const [kingSelectionState, setKingSelectionState] = useState<KingProgramSelectionState | null>(null);
+  const [kingSelectionLoading, setKingSelectionLoading] = useState(false);
+  const [kingSelectionError, setKingSelectionError] = useState("");
 
   const isNavLocked = useCallback(
     (key: string) => {
@@ -2218,6 +2225,50 @@ export default function Page() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!portalUser?.king_program_selection_required) {
+      setKingSelectionState(null);
+      setKingSelectionError("");
+      return;
+    }
+    setKingSelectionLoading(true);
+    setKingSelectionError("");
+    void (async () => {
+      try {
+        const state = await fetchKingProgramSelection();
+        if (!cancelled) setKingSelectionState(state);
+      } catch (e) {
+        if (!cancelled) {
+          setKingSelectionError(e instanceof Error ? e.message : "Could not load The King program selector.");
+        }
+      } finally {
+        if (!cancelled) setKingSelectionLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [portalUser?.king_program_selection_required]);
+
+  const handleKingSelectionSubmit = useCallback(
+    async (payload: { course_ids: number[]; playlist_ids: number[] }) => {
+      setKingSelectionLoading(true);
+      setKingSelectionError("");
+      try {
+        const nextState = await submitKingProgramSelection(payload);
+        setKingSelectionState(nextState);
+        const identity = await fetchPortalIdentity();
+        if (identity) setPortalUser(identity);
+      } catch (e) {
+        setKingSelectionError(e instanceof Error ? e.message : "Could not save The King selection.");
+      } finally {
+        setKingSelectionLoading(false);
+      }
+    },
+    []
+  );
 
   /** Fixed-position overlays portaled to document.body — float above main/instructor without affecting navbar size. */
   useLayoutEffect(() => {
@@ -2867,6 +2918,14 @@ export default function Page() {
       )}
     >
       <PlaylistCheckoutSync />
+      {portalUser?.king_program_selection_required ? (
+        <KingProgramUnlockOverlay
+          state={kingSelectionState}
+          loading={kingSelectionLoading}
+          error={kingSelectionError}
+          onSubmit={handleKingSelectionSubmit}
+        />
+      ) : null}
       <div className="hud-ambient-glow" aria-hidden="true" />
       <div
         className={cn(

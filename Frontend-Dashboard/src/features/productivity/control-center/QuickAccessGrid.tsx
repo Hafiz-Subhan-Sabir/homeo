@@ -212,8 +212,7 @@ export const QUICK_ACCESS_CATEGORIES: QuickAccessCategory[] = [
         id: "youtube",
         label: "YouTube",
         href: "https://www.youtube.com",
-        iframeSrc: "https://www.youtube-nocookie.com/embed/ScMzIvxBSi4",
-        embedInApp: true
+        embedInApp: false
       }
     ]
   },
@@ -247,12 +246,6 @@ export const QUICK_ACCESS_CATEGORIES: QuickAccessCategory[] = [
       { id: "github", label: "GitHub", href: "https://github.com", embedInApp: false },
       { id: "vercel", label: "Vercel", href: "https://vercel.com", embedInApp: false },
       { id: "railway", label: "Railway", href: "https://railway.app", embedInApp: false },
-      {
-        id: "mdn",
-        label: "MDN",
-        href: "https://developer.mozilla.org",
-        embedInApp: true
-      },
       { id: "stackoverflow", label: "Stack Overflow", href: "https://stackoverflow.com", embedInApp: false },
       { id: "codesandbox", label: "CodeSandbox", href: "https://codesandbox.io", embedInApp: false }
     ]

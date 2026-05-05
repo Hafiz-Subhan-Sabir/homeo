@@ -330,18 +330,24 @@ def _apply_purchased_plan(user: User, plan: str) -> None:
   if plan not in ("bundle", "king", "pawn", "knight"):
     return
   ent, _ = UserDashboardEntitlement.objects.get_or_create(user=user)
+  current = ent.access_tier
+  target = current
   if plan == "bundle":
-    ent.access_tier = UserDashboardEntitlement.AccessTier.MONEY_MASTERY
-    ent.save(update_fields=["access_tier", "updated_at"])
+    # Never downgrade an existing stronger tier (e.g., King).
+    if current in (UserDashboardEntitlement.AccessTier.NONE, UserDashboardEntitlement.AccessTier.MONEY_MASTERY):
+      target = UserDashboardEntitlement.AccessTier.MONEY_MASTERY
     for course in Course.objects.filter(is_published=True):
       CourseEnrollment.objects.get_or_create(user=user, course=course)
-    return
-  if plan == "king":
-    ent.access_tier = UserDashboardEntitlement.AccessTier.KING
-    ent.save(update_fields=["access_tier", "updated_at"])
-    return
-  if plan in ("pawn", "knight"):
-    ent.access_tier = UserDashboardEntitlement.AccessTier.NONE
+  elif plan == "king":
+    # King is stronger than Money Mastery and should stay active once bought.
+    if current != UserDashboardEntitlement.AccessTier.FULL:
+      target = UserDashboardEntitlement.AccessTier.KING
+  elif plan in ("pawn", "knight"):
+    # Lower tiers must not remove already purchased higher-tier access.
+    target = current
+
+  if target != current:
+    ent.access_tier = target
     ent.save(update_fields=["access_tier", "updated_at"])
 
 
@@ -470,7 +476,14 @@ def signup_view(request):
     return _json_error("Enter a valid email address.")
 
   if User.objects.filter(email=email).exists():
-    return _json_error("Email already registered. Please log in.", status=400)
+    return JsonResponse(
+      {
+        "error": "Email already registered. Please log in.",
+        "code": "USER_EXISTS",
+        "email": email,
+      },
+      status=400,
+    )
 
   pending, created = PendingSignup.objects.get_or_create(
     email=email,
@@ -605,9 +618,36 @@ def create_checkout_session_view(request):
         return _json_error("Playlist not found.", status=404)
       if selected_playlist.price <= 0:
         return _json_error("Playlist price must be greater than 0.", status=400)
+      if StreamPlaylistPurchase.objects.filter(
+        user=checkout_user,
+        playlist=selected_playlist,
+        status=StreamPlaylistPurchase.Status.PAID,
+      ).exists():
+        return JsonResponse(
+          {
+            "is_unlocked": True,
+            "playlist_id": selected_playlist.id,
+            "message": "Playlist already unlocked.",
+            "already_purchased": True,
+          },
+          status=200,
+        )
       metadata["playlist_id"] = str(selected_playlist.id)
     plan_raw = str(payload.get("selected_plan", "")).strip().lower()
     if plan_raw:
+      if UserPlanPurchase.objects.filter(
+        user=checkout_user,
+        plan_slug=plan_raw,
+        status=UserPlanPurchase.Status.PAID,
+      ).exists():
+        return JsonResponse(
+          {
+            "is_unlocked": True,
+            "message": "Plan already active for this account.",
+            "already_purchased": True,
+          },
+          status=200,
+        )
       metadata["selected_plan"] = plan_raw
     meta_affiliate_id = str(payload.get("affiliate_id", "")).strip()
     meta_visitor_id = str(payload.get("visitor_id", "")).strip()

@@ -370,10 +370,19 @@ export function PricingPage({
           selected_amount: amount,
         }),
       })
-      const payload = (await response.json().catch(() => ({}))) as { checkout_url?: string }
+      const payload = (await response.json().catch(() => ({}))) as {
+        checkout_url?: string;
+        is_unlocked?: boolean;
+        already_purchased?: boolean;
+        message?: string;
+      }
       const checkoutUrl = typeof payload.checkout_url === 'string' ? payload.checkout_url.trim() : ''
       if (response.ok && checkoutUrl) {
         window.location.assign(checkoutUrl)
+        return
+      }
+      if (response.ok && (payload.is_unlocked || payload.already_purchased)) {
+        window.location.assign("/dashboard")
         return
       }
       goToSignupPurchase(plan, selectedBilling, amount)

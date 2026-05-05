@@ -3,6 +3,7 @@ from django.contrib.auth.models import update_last_login
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+from apps.portal.king_access import king_selection_completed, king_selection_required, king_selection_total_selected
 from apps.portal.models import Mission, Note, PortalPermission, PortalRole, Reminder, SocialLink, UserDashboardEntitlement
 from apps.portal.rbac import user_permission_codenames
 
@@ -28,6 +29,9 @@ class UserMeSerializer(serializers.ModelSerializer):
     permissions = serializers.SerializerMethodField()
     access_tier = serializers.SerializerMethodField()
     dashboard_nav_locks = serializers.SerializerMethodField()
+    king_program_selection_required = serializers.SerializerMethodField()
+    king_program_selection_completed = serializers.SerializerMethodField()
+    king_program_selection_count = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -42,6 +46,9 @@ class UserMeSerializer(serializers.ModelSerializer):
             "permissions",
             "access_tier",
             "dashboard_nav_locks",
+            "king_program_selection_required",
+            "king_program_selection_completed",
+            "king_program_selection_count",
         )
 
     def get_roles(self, obj):
@@ -73,7 +80,12 @@ class UserMeSerializer(serializers.ModelSerializer):
     def get_dashboard_nav_locks(self, obj: User) -> dict[str, bool]:
         tier = self._stored_entitlement_tier(obj)
         unlocked = {"monk": False, "resources": False, "goals": False, "dashboard": False}
-        if tier in (UserDashboardEntitlement.AccessTier.FULL, UserDashboardEntitlement.AccessTier.KING):
+        if tier == UserDashboardEntitlement.AccessTier.KING:
+            if king_selection_required(obj):
+                # Keep dashboard open so the mandatory King selection overlay can be completed there.
+                return {"monk": True, "resources": True, "goals": True, "dashboard": False}
+            return unlocked
+        if tier == UserDashboardEntitlement.AccessTier.FULL:
             return unlocked
         if tier == UserDashboardEntitlement.AccessTier.MONEY_MASTERY:
             return {"monk": True, "resources": True, "goals": True, "dashboard": False}
@@ -82,6 +94,15 @@ class UserMeSerializer(serializers.ModelSerializer):
         if _user_is_playlist_only_buyer(obj):
             return {"monk": True, "resources": True, "goals": True, "dashboard": True}
         return unlocked
+
+    def get_king_program_selection_required(self, obj: User) -> bool:
+        return king_selection_required(obj)
+
+    def get_king_program_selection_completed(self, obj: User) -> bool:
+        return king_selection_completed(obj)
+
+    def get_king_program_selection_count(self, obj: User) -> int:
+        return king_selection_total_selected(obj)
 
 
 class SyndicateTokenObtainPairSerializer(TokenObtainPairSerializer):

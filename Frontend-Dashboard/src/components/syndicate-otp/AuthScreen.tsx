@@ -463,6 +463,7 @@ export default function AuthScreen({
             normalizedErrorCode === "USER_EXISTS" ||
             normalizedErrorCode === "EMAIL_EXISTS" ||
             normalizedErrorCode === "ALREADY_EXISTS" ||
+            normalizedErrorText.includes("already registered") ||
             (normalizedErrorText.includes("already") && normalizedErrorText.includes("exist"));
           if (emailAlreadyExists) {
             const existingEmail = (data.email || email.trim()).trim();

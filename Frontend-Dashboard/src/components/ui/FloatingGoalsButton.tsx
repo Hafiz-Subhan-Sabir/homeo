@@ -6,9 +6,6 @@ import { Lock, Target, X } from "lucide-react";
 import { useGoalsPanel } from "@/contexts/GoalsPanelContext";
 import { cn } from "@/components/dashboard/dashboardPrimitives";
 
-/** Sections where the FAB is shown (maps to SPA nav keys on `/`). */
-const FAB_SECTION_KEYS = new Set(["dashboard", "programs", "resources", "monk"]);
-
 /** Goals & Milestones FAB — vivid #FFD700 (matches reference chip) on every shell section. */
 const FAB_SHELL_GOALS =
   "cut-frame-sm hud-hover-glow glass-dark transition border border-[rgba(255,215,0,0.48)] bg-black/55 hover:border-[rgba(255,215,0,0.72)] hover:bg-black/62";
@@ -17,7 +14,7 @@ export function FloatingGoalsButton() {
   const { openGoalsPanel, isGoalsPanelOpen, shellSectionKey, goalsFabLocked } = useGoalsPanel();
   const [lockedOverlayOpen, setLockedOverlayOpen] = useState(false);
   const lockedTitleId = useId();
-  const allowed = shellSectionKey != null && FAB_SECTION_KEYS.has(shellSectionKey);
+  const allowed = shellSectionKey != null && shellSectionKey !== "support" && shellSectionKey !== "settings";
 
   useEffect(() => {
     if (!lockedOverlayOpen) return;

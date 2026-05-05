@@ -32,6 +32,25 @@ export type PortalUser = {
   access_tier?: string;
   /** When true, that shell section is read-only / blocked for Money Mastery buyers. */
   dashboard_nav_locks?: { monk?: boolean; resources?: boolean; goals?: boolean; dashboard?: boolean };
+  /** The King onboarding gate: must pick exactly 5 programs before full unlock. */
+  king_program_selection_required?: boolean;
+  king_program_selection_completed?: boolean;
+  king_program_selection_count?: number;
+};
+
+export type KingProgramChoiceOption = {
+  id: number;
+  title: string;
+  thumbnail_url?: string | null;
+};
+
+export type KingProgramSelectionState = {
+  required_count: number;
+  selected_count: number;
+  selection_completed: boolean;
+  selected_items: Array<{ program_type: "course" | "playlist"; id: number }>;
+  courses: KingProgramChoiceOption[];
+  playlists: KingProgramChoiceOption[];
 };
 
 /**
@@ -353,7 +372,13 @@ export async function fetchPortalIdentity(): Promise<PortalUser | null> {
     roles: Array.isArray(data.roles) ? data.roles : [],
     permissions: Array.isArray(data.permissions) ? data.permissions : [],
     access_tier: data.access_tier,
-    dashboard_nav_locks: data.dashboard_nav_locks
+    dashboard_nav_locks: data.dashboard_nav_locks,
+    king_program_selection_required: !!data.king_program_selection_required,
+    king_program_selection_completed: !!data.king_program_selection_completed,
+    king_program_selection_count:
+      typeof data.king_program_selection_count === "number" && Number.isFinite(data.king_program_selection_count)
+        ? data.king_program_selection_count
+        : 0,
   };
 }
 
@@ -451,4 +476,34 @@ export async function portalFetch<T>(
   } finally {
     cleanup();
   }
+}
+
+export async function fetchKingProgramSelection(): Promise<KingProgramSelectionState> {
+  const res = await portalFetch<KingProgramSelectionState>("/api/portal/king-program-selection/");
+  if (!res.ok) {
+    const detail =
+      res.data && typeof res.data === "object" && "detail" in (res.data as Record<string, unknown>)
+        ? String((res.data as { detail?: string }).detail ?? "Could not load King selection.")
+        : "Could not load King selection.";
+    throw new Error(detail);
+  }
+  return res.data;
+}
+
+export async function submitKingProgramSelection(payload: {
+  course_ids: number[];
+  playlist_ids: number[];
+}): Promise<KingProgramSelectionState> {
+  const res = await portalFetch<KingProgramSelectionState>("/api/portal/king-program-selection/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const detail =
+      res.data && typeof res.data === "object" && "detail" in (res.data as Record<string, unknown>)
+        ? String((res.data as { detail?: string }).detail ?? "Could not save King selection.")
+        : "Could not save King selection.";
+    throw new Error(detail);
+  }
+  return res.data;
 }

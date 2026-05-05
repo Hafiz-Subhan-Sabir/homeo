@@ -5,6 +5,31 @@ from apps.video_streaming.models import StreamPlaylist, StreamPlaylistItem, Stre
 from apps.video_streaming.playlist_description import parse_playlist_description_sections
 
 
+def _safe_media_url_for_field(file_field, request):
+    """Return a URL only when the backing file exists in storage."""
+    if not file_field:
+        return None
+    name = getattr(file_field, "name", "") or ""
+    if not name:
+        return None
+    storage = getattr(file_field, "storage", None)
+    if storage is None:
+        return None
+    try:
+        if not storage.exists(name):
+            return None
+    except Exception:
+        # If storage backend check fails, avoid emitting a likely-broken URL.
+        return None
+    try:
+        url = file_field.url
+    except Exception:
+        return None
+    if request is not None:
+        return request.build_absolute_uri(url)
+    return url
+
+
 class StreamVideoListSerializer(serializers.ModelSerializer):
     thumbnail_url = serializers.SerializerMethodField()
 
@@ -25,13 +50,8 @@ class StreamVideoListSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_thumbnail_url(self, obj: StreamVideo):
-        if not obj.thumbnail:
-            return None
         request = self.context.get("request")
-        url = obj.thumbnail.url
-        if request is not None:
-            return request.build_absolute_uri(url)
-        return url
+        return _safe_media_url_for_field(obj.thumbnail, request)
 
 
 class StreamVideoDetailSerializer(StreamVideoListSerializer):
@@ -95,18 +115,14 @@ class StreamPlaylistListSerializer(serializers.ModelSerializer):
 
     def get_cover_image_url(self, obj: StreamPlaylist):
         request = self.context.get("request")
-        if obj.cover_image:
-            url = obj.cover_image.url
-            if request is not None:
-                return request.build_absolute_uri(url)
-            return url
+        cover_url = _safe_media_url_for_field(obj.cover_image, request)
+        if cover_url:
+            return cover_url
         for item in obj.items.all():
             sv = item.stream_video
-            if sv.thumbnail:
-                url = sv.thumbnail.url
-                if request is not None:
-                    return request.build_absolute_uri(url)
-                return url
+            thumb_url = _safe_media_url_for_field(sv.thumbnail, request)
+            if thumb_url:
+                return thumb_url
         return None
 
     def get_is_unlocked(self, obj: StreamPlaylist):

@@ -3,6 +3,7 @@ from django.urls import path
 from apps.portal import views
 
 urlpatterns = [
+    path("king-program-selection/", views.KingProgramSelectionView.as_view(), name="king-program-selection"),
     path("social-links/", views.SocialLinkListCreateView.as_view(), name="social-link-list"),
     path("social-links/<int:pk>/", views.SocialLinkDetailView.as_view(), name="social-link-detail"),
     path("missions/", views.MissionListCreateView.as_view(), name="mission-list"),

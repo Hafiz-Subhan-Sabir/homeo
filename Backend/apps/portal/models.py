@@ -2,6 +2,8 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 
+from apps.courses.models import Course
+from apps.video_streaming.models import StreamPlaylist
 
 class PortalPermission(models.Model):
     """Fine-grained permission codename (e.g. social.links.manage)."""
@@ -207,3 +209,29 @@ class UserPlanPurchase(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user_id}:{self.plan_slug}:{self.stripe_checkout_session_id}"
+
+
+class KingProgramSelection(models.Model):
+    """
+    The King buyers must pick exactly 5 programs before premium sections unlock.
+    Programs can be course rows and/or stream playlist rows.
+    """
+
+    REQUIRED_SELECTION_COUNT = 5
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="king_program_selection",
+    )
+    courses = models.ManyToManyField(Course, blank=True, related_name="king_selection_users")
+    playlists = models.ManyToManyField(StreamPlaylist, blank=True, related_name="king_selection_users")
+    completed_at = models.DateTimeField(blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "King program selection"
+        verbose_name_plural = "King program selections"
+
+    def __str__(self) -> str:
+        return f"{self.user_id}:courses={self.courses.count()} playlists={self.playlists.count()}"

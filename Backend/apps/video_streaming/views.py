@@ -21,6 +21,7 @@ from rest_framework.views import APIView
 from django.http import JsonResponse
 
 from apps.portal.models import UserDashboardEntitlement
+from apps.portal.king_access import king_allowed_playlist_ids, king_selection_completed
 from apps.video_streaming.models import StreamPlaylist, StreamPlaylistItem, StreamPlaylistPurchase, StreamVideo
 from apps.video_streaming.transcode_policy import inline_stream_transcode_enabled
 from apps.video_streaming.serializers import (
@@ -49,9 +50,31 @@ def _user_stream_playlists_unlocked_by_entitlement(user) -> bool:
         ent = user.dashboard_entitlement
     except UserDashboardEntitlement.DoesNotExist:
         return False
+    if ent.access_tier == UserDashboardEntitlement.AccessTier.KING:
+        return king_selection_completed(user) and bool(king_allowed_playlist_ids(user))
     return ent.access_tier in (
         UserDashboardEntitlement.AccessTier.MONEY_MASTERY,
-        UserDashboardEntitlement.AccessTier.KING,
+        UserDashboardEntitlement.AccessTier.FULL,
+    )
+
+
+def _playlist_included_by_entitlement(user, playlist_id: int) -> bool:
+    """
+    Per-playlist entitlement check (used by checkout).
+    King access is selection-based, so only selected playlist IDs are included.
+    """
+    if not getattr(user, "is_authenticated", False):
+        return False
+    if getattr(user, "is_staff", False) or getattr(user, "is_superuser", False):
+        return True
+    try:
+        ent = user.dashboard_entitlement
+    except UserDashboardEntitlement.DoesNotExist:
+        return False
+    if ent.access_tier == UserDashboardEntitlement.AccessTier.KING:
+        return king_selection_completed(user) and int(playlist_id) in king_allowed_playlist_ids(user)
+    return ent.access_tier in (
+        UserDashboardEntitlement.AccessTier.MONEY_MASTERY,
         UserDashboardEntitlement.AccessTier.FULL,
     )
 
@@ -321,9 +344,21 @@ class StreamPlaylistListView(generics.ListAPIView):
                 ).values_list("playlist_id", flat=True)
             )
             if _user_stream_playlists_unlocked_by_entitlement(user):
-                unlocked_ids |= set(
-                    StreamPlaylist.objects.filter(is_published=True).values_list("id", flat=True)
-                )
+                if getattr(user, "is_staff", False) or getattr(user, "is_superuser", False):
+                    unlocked_ids |= set(
+                        StreamPlaylist.objects.filter(is_published=True).values_list("id", flat=True)
+                    )
+                else:
+                    try:
+                        ent = user.dashboard_entitlement
+                    except UserDashboardEntitlement.DoesNotExist:
+                        ent = None
+                    if ent is not None and ent.access_tier == UserDashboardEntitlement.AccessTier.KING:
+                        unlocked_ids |= king_allowed_playlist_ids(user)
+                    else:
+                        unlocked_ids |= set(
+                            StreamPlaylist.objects.filter(is_published=True).values_list("id", flat=True)
+                        )
             ctx["unlocked_playlist_ids"] = unlocked_ids
         else:
             ctx["unlocked_playlist_ids"] = set()
@@ -347,6 +382,24 @@ class StreamPlaylistDetailView(generics.RetrieveAPIView):
                     ).values_list("playlist_id", flat=True)
                 )
                 qs = qs.filter(Q(price__lte=0) | Q(id__in=unlocked_ids))
+            else:
+                if not getattr(self.request.user, "is_staff", False) and not getattr(self.request.user, "is_superuser", False):
+                    try:
+                        ent = self.request.user.dashboard_entitlement
+                    except UserDashboardEntitlement.DoesNotExist:
+                        ent = None
+                    if ent is not None and ent.access_tier == UserDashboardEntitlement.AccessTier.KING:
+                        paid_ids = set(
+                            StreamPlaylistPurchase.objects.filter(
+                                user=self.request.user,
+                                status=StreamPlaylistPurchase.Status.PAID,
+                            ).values_list("playlist_id", flat=True)
+                        )
+                        qs = qs.filter(
+                            Q(price__lte=0)
+                            | Q(id__in=king_allowed_playlist_ids(self.request.user))
+                            | Q(id__in=paid_ids)
+                        )
         return (
             qs.annotate(video_count=Count("items", distinct=True))
             .prefetch_related(
@@ -402,7 +455,7 @@ class StreamPlaylistCheckoutSessionView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if _user_stream_playlists_unlocked_by_entitlement(request.user):
+        if _playlist_included_by_entitlement(request.user, playlist.id):
             return Response(
                 {
                     "is_unlocked": True,
