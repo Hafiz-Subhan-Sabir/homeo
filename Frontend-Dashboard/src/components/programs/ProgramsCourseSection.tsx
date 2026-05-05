@@ -634,8 +634,8 @@ export function ProgramsCourseSection({
                 >
                   Details
                 </button>
-                <span className="relative z-[6] flex min-h-[2.25rem] items-center justify-center rounded-xl border border-white/15 bg-black/25 px-2 text-center text-[9px] font-bold uppercase leading-tight tracking-[0.1em] text-white/50 sm:text-[10px]">
-                  {locked && !comingSoon ? "Tap card to unlock" : comingSoon ? "—" : "Tap card to open"}
+                <span className="relative z-[6] hidden min-h-[2.25rem] items-center justify-center rounded-xl border border-white/15 bg-black/25 px-2 text-center text-[9px] font-bold uppercase leading-tight tracking-[0.1em] text-white/50 sm:text-[10px]">
+                  {comingSoon ? "—" : ""}
                 </span>
               </div>
             </div>
@@ -767,14 +767,14 @@ export function ProgramsCourseSection({
                         aria-hidden
                         className="pointer-events-none absolute bottom-4 right-4 h-5 w-10 rounded-sm border-b-2 border-r-2 border-cyan-300/80"
                       />
-                      <div className="relative text-[15px] font-black uppercase tracking-[0.22em] text-fuchsia-100 [text-shadow:0_0_16px_rgba(217,70,239,0.95)] sm:text-[16px]">
+                      <div className="relative text-[13px] font-black uppercase tracking-[0.18em] text-fuchsia-100 [text-shadow:0_0_16px_rgba(217,70,239,0.95)] sm:text-[16px] sm:tracking-[0.22em]">
                         Money Mastery Bundle
                       </div>
-                      <p className="relative mt-3 max-w-[96%] text-[17px] leading-[1.5] text-cyan-50/95 sm:text-[19px]">
+                      <p className="relative mt-3 max-w-[100%] text-[14px] leading-[1.45] text-cyan-50/95 sm:max-w-[96%] sm:text-[19px] sm:leading-[1.5]">
                         Unlock all programs at once (all playlist categories and courses). One checkout, instant full program access.
                       </p>
-                      <div className="relative mt-6 flex items-center justify-between gap-4">
-                        <span className="border border-amber-300/85 bg-amber-950/55 px-5 py-2 text-[16px] font-black text-amber-100 shadow-[0_0_20px_rgba(251,191,36,0.48)] [clip-path:polygon(10px_0,100%_0,100%_calc(100%-10px),calc(100%-10px)_100%,0_100%,0_10px)]">
+                      <div className="relative mt-6 flex flex-row items-center justify-between gap-2 sm:gap-4">
+                        <span className="w-fit shrink-0 border border-amber-300/85 bg-amber-950/55 px-4 py-1.5 text-[14px] font-black text-amber-100 shadow-[0_0_20px_rgba(251,191,36,0.48)] [clip-path:polygon(10px_0,100%_0,100%_calc(100%-10px),calc(100%-10px)_100%,0_100%,0_10px)] sm:px-5 sm:py-2 sm:text-[16px]">
                           £333
                         </span>
                         <button
@@ -784,7 +784,7 @@ export function ProgramsCourseSection({
                           }}
                           disabled={bundleCheckoutBusy}
                           className={cn(
-                            "border px-6 py-3 text-[15px] font-black uppercase tracking-[0.17em] transition sm:text-[16px] [clip-path:polygon(12px_0,100%_0,100%_calc(100%-12px),calc(100%-12px)_100%,0_100%,0_12px)]",
+                            "w-auto border px-4 py-2 text-[12px] font-black uppercase tracking-[0.12em] transition [clip-path:polygon(12px_0,100%_0,100%_calc(100%-12px),calc(100%-12px)_100%,0_100%,0_12px)] sm:px-6 sm:py-3 sm:text-[16px] sm:tracking-[0.17em]",
                             "border-cyan-200/90 bg-[linear-gradient(135deg,rgba(3,57,74,0.95),rgba(9,95,88,0.92),rgba(26,50,9,0.9))] text-cyan-50",
                             "shadow-[0_0_24px_rgba(34,211,238,0.55),0_0_12px_rgba(16,185,129,0.4)] hover:brightness-110 hover:shadow-[0_0_32px_rgba(34,211,238,0.8),0_0_18px_rgba(16,185,129,0.62)]",
                             "disabled:cursor-not-allowed disabled:opacity-60"
