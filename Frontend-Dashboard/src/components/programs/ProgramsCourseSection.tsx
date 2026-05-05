@@ -507,7 +507,7 @@ export function ProgramsCourseSection({
           playlistCardPrimary();
         }}
         className={cn(
-          "group/card relative flex aspect-[3/5] w-full flex-col overflow-hidden text-left outline-none sm:aspect-[4/5]",
+          "group/card relative flex aspect-[3/5] min-h-[20.5rem] w-full flex-col overflow-hidden text-left outline-none sm:min-h-0 sm:aspect-[4/5]",
           "rounded-3xl border-2",
           theme.dominantBorder,
           theme.glow,
@@ -533,8 +533,8 @@ export function ProgramsCourseSection({
             className="pointer-events-none absolute inset-0 z-[2] rounded-[1.28rem] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06),inset_0_1px_0_rgba(255,255,255,0.12)]"
             aria-hidden
           />
-          <div className="relative z-[3] flex h-full min-h-0 flex-col gap-2 p-3 sm:p-3.5">
-            <div className={cn("relative min-h-[9.6rem] overflow-hidden rounded-2xl border-2 sm:min-h-[14.2rem] sm:flex-1", theme.mediaBorder)}>
+            <div className="relative z-[3] flex h-full min-h-0 flex-col gap-2 p-2.5 sm:p-3.5">
+            <div className={cn("relative min-h-[9.4rem] overflow-hidden rounded-2xl border-2 sm:min-h-[14.2rem] sm:flex-1", theme.mediaBorder)}>
               {coverSrc ? (
                 <>
                   <div className={cn("h-full w-full bg-gradient-to-t opacity-95", grad)} />
@@ -583,7 +583,7 @@ export function ProgramsCourseSection({
             ) : null}
             <div
               className={cn(
-                "flex flex-col overflow-hidden rounded-2xl border-2 px-2.5 py-2.5 sm:px-3.5 sm:py-3.5",
+                "shrink-0 flex flex-col overflow-hidden rounded-2xl border-2 px-2 py-1.5 sm:px-3.5 sm:py-3.5",
                 theme.infoPanel,
                 "bg-black/60 shadow-[0_10px_30px_rgba(0,0,0,0.62),inset_0_1px_0_rgba(255,255,255,0.12)]",
                 "backdrop-blur-md transition duration-300 group-hover/card:brightness-125 group-hover/card:saturate-125"
@@ -599,8 +599,8 @@ export function ProgramsCourseSection({
                   {pl.title}
                 </div>
               </div>
-              <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2.5">
-                <span className="inline-flex min-w-0 items-center gap-0.5 overflow-hidden rounded-full border border-amber-300/45 bg-[#130d03]/92 px-2 py-0.5 font-sans text-[11px] font-bold tracking-[0.01em] text-amber-50 shadow-[0_0_14px_rgba(245,158,11,0.28)] [text-shadow:none] sm:px-3 sm:py-1 sm:text-[13px]">
+              <div className="mt-1.5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+                <span className="inline-flex min-w-0 items-center gap-0.5 overflow-hidden rounded-full border border-amber-300/45 bg-[#130d03]/92 px-2 py-0.5 font-sans text-[10px] font-bold tracking-[0.01em] text-amber-50 shadow-[0_0_14px_rgba(245,158,11,0.28)] [text-shadow:none] sm:px-3 sm:py-1 sm:text-[13px]">
                   {Array.from({ length: 5 }).map((_, idx) => (
                     <Star
                       key={`${pl.id}-star-${idx}`}
@@ -622,7 +622,7 @@ export function ProgramsCourseSection({
                   {`£${price.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
                 </span>
               </div>
-              <div className="mt-2 grid grid-cols-2 gap-2">
+              <div className="mt-1.5 grid grid-cols-1 gap-2">
                 <button
                   type="button"
                   data-program-playlist-detail=""
@@ -630,7 +630,7 @@ export function ProgramsCourseSection({
                     e.stopPropagation();
                     setPlaylistDescriptionModal(pl);
                   }}
-                  className="relative z-[6] rounded-xl border border-white/40 bg-black/55 px-2 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-white/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:border-[color:var(--gold-neon-border-mid)] hover:text-[color:var(--gold)] sm:text-[11px] sm:tracking-[0.14em]"
+                  className="relative z-[6] w-full rounded-xl border border-white/40 bg-black/55 px-3 py-2 text-[10px] font-black uppercase tracking-[0.1em] text-white/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:border-[color:var(--gold-neon-border-mid)] hover:text-[color:var(--gold)] sm:text-[11px] sm:tracking-[0.14em]"
                 >
                   Details
                 </button>
@@ -738,8 +738,8 @@ export function ProgramsCourseSection({
                       All
                     </button>
                   </div>
-                  <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(520px,700px)] xl:items-stretch">
-                    <div className="relative max-w-[420px] md:max-w-[560px] lg:max-w-[700px] xl:max-w-[760px]">
+                  <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(420px,560px)] xl:grid-cols-[minmax(0,1fr)_minmax(520px,700px)] lg:items-stretch">
+                    <div className="relative w-full max-w-none sm:max-w-[560px] lg:max-w-[700px] xl:max-w-[760px]">
                       <div
                         className="pointer-events-none absolute -inset-1 rounded-2xl bg-cyan-400/15 blur-sm"
                         aria-hidden
@@ -754,7 +754,7 @@ export function ProgramsCourseSection({
                         />
                       </div>
                     </div>
-                    <div className="relative min-h-[220px] overflow-hidden rounded-3xl border border-fuchsia-300/85 bg-[linear-gradient(135deg,rgba(6,30,52,0.96),rgba(44,9,60,0.93),rgba(12,42,26,0.9))] px-6 py-6 shadow-[0_0_38px_rgba(217,70,239,0.36),0_0_22px_rgba(34,211,238,0.28)]">
+                    <div className="relative min-h-[190px] overflow-hidden rounded-3xl border border-fuchsia-300/85 bg-[linear-gradient(135deg,rgba(6,30,52,0.96),rgba(44,9,60,0.93),rgba(12,42,26,0.9))] px-4 py-4 sm:min-h-[205px] sm:px-5 sm:py-5 lg:min-h-[220px] lg:px-6 lg:py-6 shadow-[0_0_38px_rgba(217,70,239,0.36),0_0_22px_rgba(34,211,238,0.28)]">
                       <span
                         aria-hidden
                         className="pointer-events-none absolute inset-[6px] rounded-[1.2rem] border border-cyan-200/35 shadow-[inset_0_0_0_1px_rgba(217,70,239,0.2),inset_0_0_30px_rgba(34,211,238,0.12)]"
@@ -767,14 +767,14 @@ export function ProgramsCourseSection({
                         aria-hidden
                         className="pointer-events-none absolute bottom-4 right-4 h-5 w-10 rounded-sm border-b-2 border-r-2 border-cyan-300/80"
                       />
-                      <div className="relative text-[13px] font-black uppercase tracking-[0.18em] text-fuchsia-100 [text-shadow:0_0_16px_rgba(217,70,239,0.95)] sm:text-[16px] sm:tracking-[0.22em]">
+                      <div className="relative text-[12px] font-black uppercase tracking-[0.16em] text-fuchsia-100 [text-shadow:0_0_16px_rgba(217,70,239,0.95)] sm:text-[14px] sm:tracking-[0.18em] lg:text-[16px] lg:tracking-[0.22em]">
                         Money Mastery Bundle
                       </div>
-                      <p className="relative mt-3 max-w-[100%] text-[14px] leading-[1.45] text-cyan-50/95 sm:max-w-[96%] sm:text-[19px] sm:leading-[1.5]">
+                      <p className="relative mt-2 max-w-[100%] text-[13px] leading-[1.45] text-cyan-50/95 sm:max-w-[96%] sm:text-[16px] sm:leading-[1.5] lg:mt-3 lg:text-[19px]">
                         Unlock all programs at once (all playlist categories and courses). One checkout, instant full program access.
                       </p>
-                      <div className="relative mt-6 flex flex-row items-center justify-between gap-2 sm:gap-4">
-                        <span className="w-fit shrink-0 border border-amber-300/85 bg-amber-950/55 px-4 py-1.5 text-[14px] font-black text-amber-100 shadow-[0_0_20px_rgba(251,191,36,0.48)] [clip-path:polygon(10px_0,100%_0,100%_calc(100%-10px),calc(100%-10px)_100%,0_100%,0_10px)] sm:px-5 sm:py-2 sm:text-[16px]">
+                      <div className="relative mt-4 flex flex-row items-center justify-between gap-2 sm:mt-5 sm:gap-3 lg:mt-6 lg:gap-4">
+                        <span className="w-fit shrink-0 border border-amber-300/85 bg-amber-950/55 px-4 py-1.5 text-[14px] font-black text-amber-100 shadow-[0_0_20px_rgba(251,191,36,0.48)] [clip-path:polygon(10px_0,100%_0,100%_calc(100%-10px),calc(100%-10px)_100%,0_100%,0_10px)] sm:px-4 sm:py-1.5 sm:text-[14px] lg:px-5 lg:py-2 lg:text-[16px]">
                           £333
                         </span>
                         <button
@@ -784,7 +784,7 @@ export function ProgramsCourseSection({
                           }}
                           disabled={bundleCheckoutBusy}
                           className={cn(
-                            "w-auto border px-4 py-2 text-[12px] font-black uppercase tracking-[0.12em] transition [clip-path:polygon(12px_0,100%_0,100%_calc(100%-12px),calc(100%-12px)_100%,0_100%,0_12px)] sm:px-6 sm:py-3 sm:text-[16px] sm:tracking-[0.17em]",
+                            "w-auto whitespace-nowrap border px-4 py-2 text-[11px] font-black uppercase tracking-[0.11em] transition [clip-path:polygon(12px_0,100%_0,100%_calc(100%-12px),calc(100%-12px)_100%,0_100%,0_12px)] sm:px-5 sm:py-2.5 sm:text-[13px] sm:tracking-[0.14em] lg:px-6 lg:py-3 lg:text-[16px] lg:tracking-[0.17em]",
                             "border-cyan-200/90 bg-[linear-gradient(135deg,rgba(3,57,74,0.95),rgba(9,95,88,0.92),rgba(26,50,9,0.9))] text-cyan-50",
                             "shadow-[0_0_24px_rgba(34,211,238,0.55),0_0_12px_rgba(16,185,129,0.4)] hover:brightness-110 hover:shadow-[0_0_32px_rgba(34,211,238,0.8),0_0_18px_rgba(16,185,129,0.62)]",
                             "disabled:cursor-not-allowed disabled:opacity-60"
