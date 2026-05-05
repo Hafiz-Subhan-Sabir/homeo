@@ -159,7 +159,6 @@ export function MembershipVideoGallery({
               <button
                 type="button"
                 onClick={() => {
-                  setRangeMode("all");
                   setDateFrom("");
                   setDateTo("");
                 }}

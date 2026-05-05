@@ -6,7 +6,7 @@ import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion'
 import { ScrambleText } from './ScrambleText'
 import NavLogo from './NavLogo'
 
-export type NavSectionId = 'home' | 'whatYouGet' | 'ourMethods' | 'joinNow' | 'programs' | 'affiliateLogin'
+export type NavSectionId = 'home' | 'whatYouGet' | 'ourMethods' | 'joinNow' | 'programs' | 'affiliateLogin' | 'syndicateAnalysis'
 
 export type RadialNavItem = {
   id: NavSectionId
@@ -27,6 +27,7 @@ const defaultItems: RadialNavItem[] = [
   { id: 'home', label: 'Home' },
   { id: 'whatYouGet', label: 'What You Get' },
   { id: 'ourMethods', label: 'Our Methods' },
+  { id: 'syndicateAnalysis', label: 'Syndicate Analysis' },
   { id: 'joinNow', label: 'Join Now' },
   { id: 'programs', label: 'Programs' },
   { id: 'affiliateLogin', label: 'Affiliate Login' },
@@ -36,6 +37,12 @@ const THEMES: Record<NavSectionId, { color: string; bg: string; border: string; 
   home: { color: '#60a5fa', bg: 'rgba(96,165,250,0.12)', border: 'rgba(96,165,250,0.5)', glow: 'rgba(96,165,250,0.42)' },
   whatYouGet: { color: '#22d3ee', bg: 'rgba(34,211,238,0.12)', border: 'rgba(34,211,238,0.5)', glow: 'rgba(52, 210, 235, 0.4)' },
   ourMethods: { color: '#d946ef', bg: 'rgba(217,70,239,0.14)', border: 'rgba(217,70,239,0.5)', glow: 'rgba(217,70,239,0.4)' },
+  syndicateAnalysis: {
+    color: '#22c55e',
+    bg: 'rgba(34,197,94,0.12)',
+    border: 'rgba(34,197,94,0.5)',
+    glow: 'rgba(34,197,94,0.42)',
+  },
   joinNow: { color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.5)', glow: 'rgba(248, 191, 47, 0.4)' },
   programs: { color: '#f472b6', bg: 'rgba(244,114,182,0.12)', border: 'rgba(208, 70, 243, 0.5)', glow: 'rgba(218, 114, 244, 0.4)' },
   affiliateLogin: {
@@ -50,6 +57,13 @@ const THEMES: Record<NavSectionId, { color: string; bg: string; border: string; 
 function getSlotRadius(itemCount: number): number {
   if (typeof window === 'undefined') return itemCount >= 6 ? 175 : 195
   const w = window.innerWidth
+  if (itemCount >= 7) {
+    if (w < 380) return 132
+    if (w < 480) return 152
+    if (w < 640) return 174
+    if (w < 768) return 198
+    return 236
+  }
   if (itemCount >= 6) {
     if (w < 380) return 92
     if (w < 480) return 108
@@ -93,6 +107,7 @@ export function RadialNav({
       return { ...it, x, y, baseAngleRad }
     })
   }, [items])
+  const useCompactButtons = items.length >= 7
 
   useLayoutEffect(() => {
     if (!rootRef.current) return
@@ -354,9 +369,14 @@ export function RadialNav({
                         onClick={() => onSelect(it.id)}
                         className={[
                           'nav-card-lightning pointer-events-auto cursor-pointer relative z-10',
-                          'min-w-[136px] max-w-[min(220px,88vw)] rounded-lg border-2 px-3.5 py-2.5 overflow-visible',
+                          useCompactButtons
+                            ? 'min-w-[122px] max-w-[min(200px,86vw)]'
+                            : 'min-w-[136px] max-w-[min(220px,88vw)]',
+                          'rounded-lg border-2 px-3.5 py-2.5 overflow-visible',
                           'text-[12px] font-bold uppercase tracking-[0.1em] whitespace-nowrap',
-                          'sm:min-w-[160px] sm:px-4 sm:py-2.5 sm:text-[13px]',
+                          useCompactButtons
+                            ? 'sm:min-w-[146px] sm:px-3.5 sm:py-2.5 sm:text-[12px]'
+                            : 'sm:min-w-[160px] sm:px-4 sm:py-2.5 sm:text-[13px]',
                           'transition-[filter,box-shadow] duration-500 ease-in-out',
                         ].join(' ')}
                         style={{

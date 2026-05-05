@@ -1,4 +1,5 @@
 import html
+import hashlib
 import json
 import random
 import re
@@ -21,7 +22,9 @@ from django.views.decorators.http import require_POST
 
 from apps.affiliate_tracking.views import ensure_affiliate_profile_for_existing_user, referral_ids_payload
 from apps.courses.models import Course, CourseEnrollment
+from apps.quiz_funnel.logic import get_recommended_protocol, get_recommended_shield
 from apps.portal.models import UserDashboardEntitlement, UserPlanPurchase
+from apps.quiz_funnel.models import Result as QuizResult
 from apps.video_streaming.models import StreamPlaylist, StreamPlaylistPurchase
 from rest_framework.request import Request
 from rest_framework_simplejwt.authentication import JWTAuthentication
@@ -36,6 +39,243 @@ def _canonical_user_for_email(email: str) -> User | None:
   if not e:
     return None
   return User.objects.filter(email=e).order_by("pk").first()
+
+
+def _quiz_result_for_email(email: str) -> QuizResult | None:
+  e = (email or "").strip().lower()
+  if not e:
+    return None
+  return (
+    QuizResult.objects.select_related("user")
+    .filter(user__email__iexact=e)
+    .order_by("created_at", "id")
+    .first()
+  )
+
+
+def _quiz_ticket_username(email: str) -> str:
+  digest = hashlib.sha1((email or "").strip().lower().encode("utf-8")).hexdigest()[:12]
+  return f"quiz_ticket_{digest}"
+
+
+def _keyword_tokens(value: str) -> list[str]:
+  raw = re.split(r"[^a-z0-9]+", (value or "").lower())
+  stop = {
+    "the", "and", "to", "of", "a", "ai", "with", "on", "in", "for", "course", "strategy"
+  }
+  return [t for t in raw if len(t) >= 3 and t not in stop]
+
+
+def _courses_for_quiz_offer(offer_text: str) -> list[Course]:
+  normalized = (offer_text or "").strip()
+  if not normalized:
+    return []
+  title_candidates = [part.strip() for part in normalized.split("/") if part.strip()]
+  chosen: list[Course] = []
+  seen_ids: set[int] = set()
+  for part in title_candidates:
+    q = Course.objects.filter(is_published=True)
+    for token in _keyword_tokens(part):
+      q = q.filter(title__icontains=token)
+    course = q.order_by("title").first()
+    if not course:
+      # Fallback to coarse contains search by full phrase.
+      course = Course.objects.filter(is_published=True, title__icontains=part).order_by("title").first()
+    if not course or course.id in seen_ids:
+      continue
+    seen_ids.add(course.id)
+    chosen.append(course)
+  return chosen
+
+
+def _normalize_ticket_title(title: str) -> str:
+  t = (title or "").strip().lower()
+  aliases = {
+    "the business of empire": "The Business of Empire Building",
+    "business of empire": "The Business of Empire Building",
+  }
+  if t in aliases:
+    return aliases[t]
+  return (title or "").strip()
+
+
+def _existing_locked_ticket_titles_for_user(user: User) -> list[str]:
+  titles: list[str] = []
+  seen: set[str] = set()
+  purchases = StreamPlaylistPurchase.objects.filter(
+    user=user,
+    status=StreamPlaylistPurchase.Status.PAID,
+    stripe_session_id__startswith="quiz_ticket_",
+  ).select_related("playlist")
+  for row in purchases:
+    title = (getattr(row.playlist, "title", "") or "").strip()
+    if not title:
+      continue
+    key = title.lower()
+    if key in seen:
+      continue
+    seen.add(key)
+    titles.append(title)
+
+  # For dedicated quiz-ticket users, enrollments also represent ticket locks.
+  if str(getattr(user, "username", "")).startswith("quiz_ticket_"):
+    for row in CourseEnrollment.objects.filter(user=user).select_related("course"):
+      title = (getattr(row.course, "title", "") or "").strip()
+      if not title:
+        continue
+      key = title.lower()
+      if key in seen:
+        continue
+      seen.add(key)
+      titles.append(title)
+  return titles
+
+
+def _quiz_ticket_titles_for_result(quiz_result: QuizResult) -> list[str]:
+  """
+  Free-ticket flow unlocks only psychology tracks, not business-model tracks.
+  """
+  designation = (quiz_result.category or "").strip()
+  fatal_flaw = (quiz_result.virus or "").strip()
+  shield = _normalize_ticket_title(get_recommended_shield(fatal_flaw))
+  protocol = _normalize_ticket_title(get_recommended_protocol(designation))
+  out: list[str] = []
+  for item in (shield, protocol):
+    if item and item not in out:
+      out.append(item)
+  return out
+
+
+def _best_playlist_match_for_offer_part(part: str) -> StreamPlaylist | None:
+  tokens = _keyword_tokens(part)
+  qs = StreamPlaylist.objects.filter(is_published=True, is_coming_soon=False)
+  candidates = list(qs)
+  if not candidates:
+    return None
+  if not tokens:
+    return candidates[0]
+
+  def _score(title: str) -> tuple[int, int]:
+    t = (title or "").lower()
+    overlap = sum(1 for token in tokens if token in t)
+    # Prefer tighter title lengths when overlap ties.
+    distance = abs(len(t) - len(part))
+    return overlap, -distance
+
+  ranked = sorted(candidates, key=lambda p: _score(p.title), reverse=True)
+  best = ranked[0]
+  best_overlap = _score(best.title)[0]
+  return best if best_overlap > 0 else None
+
+
+def _playlists_for_quiz_offer(offer_text: str) -> list[StreamPlaylist]:
+  normalized = (offer_text or "").strip()
+  if not normalized:
+    return []
+  title_candidates = [part.strip() for part in normalized.split("/") if part.strip()]
+  out: list[StreamPlaylist] = []
+  seen: set[int] = set()
+  for part in title_candidates:
+    playlist = _best_playlist_match_for_offer_part(part)
+    if not playlist or playlist.id in seen:
+      continue
+    seen.add(playlist.id)
+    out.append(playlist)
+  return out
+
+
+def _courses_for_ticket_titles(ticket_titles: list[str]) -> list[Course]:
+  out: list[Course] = []
+  seen: set[int] = set()
+  for title in ticket_titles:
+    exact = Course.objects.filter(is_published=True, title__iexact=title).order_by("title").first()
+    if exact is not None:
+      course = exact
+    else:
+      fuzzy = _courses_for_quiz_offer(title)
+      course = fuzzy[0] if fuzzy else None
+    if not course or course.id in seen:
+      continue
+    seen.add(course.id)
+    out.append(course)
+  return out
+
+
+def _playlists_for_ticket_titles(ticket_titles: list[str]) -> list[StreamPlaylist]:
+  out: list[StreamPlaylist] = []
+  seen: set[int] = set()
+  for title in ticket_titles:
+    exact = StreamPlaylist.objects.filter(
+      is_published=True, is_coming_soon=False, title__iexact=title
+    ).order_by("title").first()
+    playlist = exact or _best_playlist_match_for_offer_part(title)
+    if not playlist or playlist.id in seen:
+      continue
+    seen.add(playlist.id)
+    out.append(playlist)
+  return out
+
+
+def _ensure_quiz_ticket_user_and_enrollment(email: str, selected_ticket_title: str = "") -> User:
+  e = (email or "").strip().lower()
+  user = _canonical_user_for_email(e)
+  if user is None:
+    base = _quiz_ticket_username(e)
+    username = base
+    suffix = 2
+    while User.objects.filter(username=username).exists():
+      username = f"{base}_{suffix}"
+      suffix += 1
+    user = User(username=username, email=e)
+    user.set_unusable_password()
+    user.save()
+  # Ticket users always stay in NONE tier and access only enrolled ticket courses.
+  ent, _ = UserDashboardEntitlement.objects.get_or_create(user=user)
+  if ent.access_tier != UserDashboardEntitlement.AccessTier.NONE:
+    ent.access_tier = UserDashboardEntitlement.AccessTier.NONE
+    ent.save(update_fields=["access_tier", "updated_at"])
+
+  quiz_result = _quiz_result_for_email(e)
+  if quiz_result is None:
+    return user
+  existing_locked_titles = _existing_locked_ticket_titles_for_user(user)
+  selected = _normalize_ticket_title(selected_ticket_title)
+  if existing_locked_titles:
+    # First successful free-ticket lock for this email is permanent.
+    ticket_titles = existing_locked_titles
+  elif selected:
+    # Unlock only the clicked ticket from quiz report.
+    ticket_titles = [selected]
+  else:
+    ticket_titles = _quiz_ticket_titles_for_result(quiz_result)
+  courses = _courses_for_ticket_titles(ticket_titles)
+  playlists = _playlists_for_ticket_titles(ticket_titles)
+  if str(user.username).startswith("quiz_ticket_"):
+    CourseEnrollment.objects.filter(user=user).exclude(course_id__in=[c.id for c in courses]).delete()
+    # Keep only ticket-entitled playlist unlocks for quiz-ticket users.
+    StreamPlaylistPurchase.objects.filter(user=user).exclude(playlist_id__in=[p.id for p in playlists]).delete()
+  for course in courses:
+    CourseEnrollment.objects.get_or_create(user=user, course=course)
+  for playlist in playlists:
+    purchase, _ = StreamPlaylistPurchase.objects.get_or_create(
+      user=user,
+      playlist=playlist,
+      defaults={
+        "status": StreamPlaylistPurchase.Status.PAID,
+        "stripe_session_id": f"quiz_ticket_{user.id}_{playlist.id}",
+        "stripe_checkout_session_id": f"quiz_ticket_{user.id}_{playlist.id}",
+        "amount_paid": 0,
+        "currency": "gbp",
+        "paid_at": timezone.now(),
+      },
+    )
+    if purchase.status != StreamPlaylistPurchase.Status.PAID:
+      purchase.status = StreamPlaylistPurchase.Status.PAID
+      purchase.amount_paid = 0
+      purchase.currency = "gbp"
+      purchase.paid_at = timezone.now()
+      purchase.save(update_fields=["status", "amount_paid", "currency", "paid_at", "updated_at"])
+  return user
 
 
 def _json_error(message: str, status: int = 400) -> JsonResponse:
@@ -189,7 +429,8 @@ def _unique_pending_username() -> str:
 def _create_and_email_login_otp(email: str):
   """Create LoginOTP and send email. Returns None on success, or JsonResponse error."""
   user_by_email = _canonical_user_for_email(email)
-  if user_by_email is None:
+  quiz_result = _quiz_result_for_email(email)
+  if user_by_email is None and quiz_result is None:
     return _json_error("No account found for this email.", status=404)
 
   otp_code = _generate_otp()
@@ -202,7 +443,8 @@ def _create_and_email_login_otp(email: str):
   )
 
   try:
-    _send_login_otp_email(email=email, otp_code=otp_code, username=user_by_email.username)
+    username = user_by_email.username if user_by_email is not None else (email.split("@")[0] or "Operator")
+    _send_login_otp_email(email=email, otp_code=otp_code, username=username)
   except Exception:
     if settings.DEBUG:
       print(f"[DEV OTP FALLBACK] login {email}: {otp_code}")
@@ -851,7 +1093,7 @@ def login_view(request):
   except ValidationError:
     return _json_error("Enter a valid email address.")
 
-  if _canonical_user_for_email(email) is None:
+  if _canonical_user_for_email(email) is None and _quiz_result_for_email(email) is None:
     return JsonResponse(
       {
         "error": "No account found for this email. Please sign up first.",
@@ -882,6 +1124,7 @@ def verify_login_otp_view(request):
 
   email = str(payload.get("email", "")).strip().lower()
   otp = str(payload.get("otp", "")).strip()
+  selected_ticket_title = str(payload.get("ticket", "")).strip()
 
   if not email or not otp:
     return _json_error("Email and OTP are required.")
@@ -889,7 +1132,8 @@ def verify_login_otp_view(request):
     return _json_error("OTP must be a 6-digit code.")
 
   user = _canonical_user_for_email(email)
-  if user is None:
+  quiz_result = _quiz_result_for_email(email)
+  if user is None and quiz_result is None:
     return _json_error("Invalid email.", status=401)
 
   try:
@@ -905,6 +1149,13 @@ def verify_login_otp_view(request):
     return _json_error("Invalid OTP code.", status=400)
 
   login_otp.delete()
+  if quiz_result is not None:
+    # Always sync quiz-ticket entitlements for this email on successful OTP login.
+    # This also covers existing non-ticket accounts so the promised free-ticket
+    # playlists/courses unlock correctly in `/programs`.
+    user = _ensure_quiz_ticket_user_and_enrollment(email, selected_ticket_title=selected_ticket_title)
+  elif user is None:
+    return _json_error("Invalid email.", status=401)
   auth_token, _ = Token.objects.get_or_create(user=user)
   af_profile = ensure_affiliate_profile_for_existing_user(user)
   return JsonResponse(

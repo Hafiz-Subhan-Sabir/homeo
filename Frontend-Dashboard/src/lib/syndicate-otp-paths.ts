@@ -7,8 +7,12 @@ export function syndicateOtpUiBase(): string {
   return (process.env.NEXT_PUBLIC_SYNDICATE_OTP_UI_BASE || "").replace(/\/$/, "");
 }
 
-export function syndicateOtpLoginHref(prefillEmail = ""): string {
-  return prefillEmail ? `/login?email=${encodeURIComponent(prefillEmail)}` : "/login";
+export function syndicateOtpLoginHref(prefillEmail = "", next = ""): string {
+  const params = new URLSearchParams();
+  if (prefillEmail) params.set("email", prefillEmail);
+  if (next) params.set("next", next);
+  const q = params.toString();
+  return q ? `/login?${q}` : "/login";
 }
 
 export function syndicateOtpSignupHref(prefillEmail = ""): string {
@@ -16,9 +20,13 @@ export function syndicateOtpSignupHref(prefillEmail = ""): string {
   return prefillEmail ? `${b}/signup?email=${encodeURIComponent(prefillEmail)}` : `${b}/signup`;
 }
 
-export function syndicateOtpVerifyHref(email: string, flow: "login" | "signup"): string {
+export function syndicateOtpVerifyHref(email: string, flow: "login" | "signup", next = ""): string {
   const b = syndicateOtpUiBase();
-  return `${b}/verify-otp?email=${encodeURIComponent(email)}&flow=${flow}`;
+  const params = new URLSearchParams();
+  params.set("email", email);
+  params.set("flow", flow);
+  if (next) params.set("next", next);
+  return `${b}/verify-otp?${params.toString()}`;
 }
 
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);

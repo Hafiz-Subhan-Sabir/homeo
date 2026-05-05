@@ -4,6 +4,18 @@ from apps.courses.models import Course, CourseEnrollment, Video
 from apps.portal.models import UserDashboardEntitlement
 
 
+def _user_is_quiz_ticket_user(user: AbstractBaseUser) -> bool:
+    """
+    Quiz-ticket users should only access explicitly enrolled courses.
+    They are created from quiz OTP flow when no normal account exists.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if getattr(user, "is_staff", False) or getattr(user, "is_superuser", False):
+        return False
+    return str(getattr(user, "username", "")).startswith("quiz_ticket_")
+
+
 def _user_is_playlist_only_buyer(user: AbstractBaseUser) -> bool:
     """
     User paid for one or more stream playlists only (no Money Mastery / King tier).
@@ -51,6 +63,8 @@ def user_can_access_course(user: AbstractBaseUser, course: Course) -> bool:
         return True
     if not course.is_published:
         return False
+    if _user_is_quiz_ticket_user(user):
+        return CourseEnrollment.objects.filter(user=user, course=course).exists()
     if _user_is_playlist_only_buyer(user):
         return CourseEnrollment.objects.filter(user=user, course=course).exists()
     if _user_has_full_course_access(user):

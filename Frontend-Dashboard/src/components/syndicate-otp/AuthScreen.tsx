@@ -39,6 +39,8 @@ type AuthScreenProps = {
   selectedBilling?: string;
   selectedAmount?: string;
   otpFlow?: OtpFlow;
+  postLoginNext?: string;
+  selectedTicket?: string;
 };
 
 type ApiPayload = {
@@ -77,6 +79,8 @@ export default function AuthScreen({
   selectedBilling = "",
   selectedAmount = "",
   otpFlow = "login",
+  postLoginNext = "",
+  selectedTicket = "",
 }: AuthScreenProps) {
   const router = useRouter();
   const [email, setEmail] = useState(prefilledEmail);
@@ -99,12 +103,16 @@ export default function AuthScreen({
   const normalizedPlan = selectedPlan.trim();
   const normalizedBilling = selectedBilling.trim();
   const normalizedAmount = selectedAmount.trim();
+  const normalizedPostLoginNext = postLoginNext.trim();
+  const normalizedTicket = selectedTicket.trim();
   const appendOfferParams = (baseHref: string) => {
-    if (!normalizedPlan && !normalizedBilling && !normalizedAmount) return baseHref;
+    if (!normalizedPlan && !normalizedBilling && !normalizedAmount && !normalizedPostLoginNext && !normalizedTicket) return baseHref;
     const params = new URLSearchParams();
     if (normalizedPlan) params.set("plan", normalizedPlan);
     if (normalizedBilling) params.set("billing", normalizedBilling);
     if (normalizedAmount) params.set("amount", normalizedAmount);
+    if (normalizedPostLoginNext) params.set("next", normalizedPostLoginNext);
+    if (normalizedTicket) params.set("ticket", normalizedTicket);
     return `${baseHref}${baseHref.includes("?") ? "&" : "?"}${params.toString()}`;
   };
 
@@ -116,9 +124,9 @@ export default function AuthScreen({
   const switchHrefBase = isSignup
     ? syndicateOtpLoginHref()
     : isOtp
-      ? isSignupOtp
-        ? syndicateOtpSignupHref(email.trim())
-        : syndicateOtpLoginHref(email.trim())
+          ? isSignupOtp
+            ? syndicateOtpSignupHref(email.trim())
+            : syndicateOtpLoginHref(email.trim(), normalizedPostLoginNext)
       : syndicateOtpSignupHref();
   const switchHref = appendOfferParams(switchHrefBase);
   const switchText = isSignup
@@ -131,10 +139,10 @@ export default function AuthScreen({
 
   const requestBody = useMemo(() => {
     if (isOtp) {
-      return { email: email.trim(), otp: otpValue };
+      return { email: email.trim(), otp: otpValue, ticket: normalizedTicket || undefined };
     }
-    return { email: email.trim() };
-  }, [email, isOtp, otpValue]);
+    return { email: email.trim(), ticket: normalizedTicket || undefined };
+  }, [email, isOtp, otpValue, normalizedTicket]);
 
   useEffect(() => {
     const el = document.getElementById("syndicate-otp-mount");
@@ -569,10 +577,12 @@ export default function AuthScreen({
           }
         }
 
-        const nextUrl =
-          typeof window !== "undefined"
-            ? resolvePostOtpAppRedirect(data.redirect_url)
-            : DASHBOARD_FALLBACK;
+      const nextUrl =
+          normalizedPostLoginNext
+            ? normalizedPostLoginNext
+            : (typeof window !== "undefined"
+              ? resolvePostOtpAppRedirect(data.redirect_url)
+              : DASHBOARD_FALLBACK);
         setLuxuryHref(nextUrl);
         setLuxuryOpen(true);
         return;
@@ -594,7 +604,11 @@ export default function AuthScreen({
         throw new Error("Verification step not started. Please try again.");
       }
       setMessage(data.message || "Check your inbox for the code.");
-      router.replace(appendOfferParams(syndicateOtpVerifyHref(data.email || email.trim(), "login")));
+      router.replace(
+        appendOfferParams(
+          syndicateOtpVerifyHref(data.email || email.trim(), "login")
+        )
+      );
     } catch (submitError) {
       setError(
         submitError instanceof Error

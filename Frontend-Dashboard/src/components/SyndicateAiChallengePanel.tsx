@@ -268,12 +268,14 @@ function SyndicateStatsPieTooltip({
   allZero
 }: {
   active?: boolean;
-  payload?: ReadonlyArray<{ name?: string; value?: number; payload?: { name?: string } }>;
+  /** Recharts `Tooltip` payload shape varies by chart; normalize loosely at runtime. */
+  payload?: unknown;
   pieDailyData: Array<{ name: string; value: number }>;
   allZero: boolean;
 }) {
-  if (!active || !payload?.length) return null;
-  const row = payload[0];
+  const rows = Array.isArray(payload) ? payload : [];
+  if (!active || !rows.length) return null;
+  const row = rows[0] as { name?: string | number; payload?: { name?: string } };
   const name = String(row?.name ?? row?.payload?.name ?? "");
   const pts = allZero ? 0 : pieDailyData.find((d) => d.name === name)?.value ?? 0;
   return (

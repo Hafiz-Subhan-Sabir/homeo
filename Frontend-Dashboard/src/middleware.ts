@@ -34,6 +34,7 @@ const sameHostHint =
 
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const isPublicStaticFile = /\.[a-zA-Z0-9]+$/.test(pathname);
   const authCookie = request.cookies.get("simple_auth_session")?.value;
   const hasAuthSession = authCookie === "1";
   const section = (request.nextUrl.searchParams.get("section") || "").trim().toLowerCase();
@@ -53,6 +54,9 @@ export function middleware(request: NextRequest) {
   const protectedRootSectionPath = pathname === "/" && dashboardSections.has(section);
   const authFreePath =
     publicMarketingPath ||
+    isPublicStaticFile ||
+    pathname === "/quiz" ||
+    pathname.startsWith("/quiz/") ||
     pathname === "/affiliate" ||
     pathname.startsWith("/affiliate/") ||
     pathname === "/affiliate-login" ||

@@ -1,0 +1,201 @@
+import csv
+
+from django.contrib import admin
+from django.http import HttpResponse
+from django.urls import path, reverse
+
+from .models import QuizOption, QuizQuestion, Result, User
+
+
+def _build_excel_response(filename: str) -> HttpResponse:
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
+def export_users_to_excel(modeladmin, request, queryset):
+    response = _build_excel_response("quiz_users_export.csv")
+    writer = csv.writer(response)
+    writer.writerow(["User Name", "Email", "Number", "Score", "Category", "Virus"])
+
+    users = queryset.select_related("result")
+    for user in users:
+        result = getattr(user, "result", None)
+        writer.writerow(
+            [
+                user.name or "",
+                user.email or "",
+                user.phone or "",
+                result.score if result else "",
+                result.category if result else "",
+                result.virus if result else "",
+            ]
+        )
+    return response
+
+
+export_users_to_excel.short_description = "Export selected users to Excel"
+
+
+def export_results_to_excel(modeladmin, request, queryset):
+    response = _build_excel_response("quiz_results_export.csv")
+    writer = csv.writer(response)
+    writer.writerow(["User Name", "Email", "Number", "Score", "Category", "Virus"])
+
+    results = queryset.select_related("user")
+    for result in results:
+        user = result.user
+        writer.writerow(
+            [
+                user.name or "",
+                user.email or "",
+                user.phone or "",
+                result.score,
+                result.category or "",
+                result.virus or "",
+            ]
+        )
+    return response
+
+
+export_results_to_excel.short_description = "Export selected results to Excel"
+
+
+class ResultInline(admin.StackedInline):
+    model = Result
+    extra = 0
+    can_delete = False
+    fields = ("score", "category", "virus", "course_offer", "ai_report", "created_at")
+    readonly_fields = ("score", "category", "virus", "course_offer", "ai_report", "created_at")
+
+
+@admin.register(User)
+class UserAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "email", "phone", "score", "category", "virus", "course_offer", "created_at")
+    search_fields = ("name", "email", "phone")
+    ordering = ("-created_at",)
+    list_filter = ("created_at",)
+    date_hierarchy = "created_at"
+    inlines = [ResultInline]
+    actions = [export_users_to_excel]
+    change_list_template = "admin/quiz_funnel/user/change_list.html"
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "export-filtered/",
+                self.admin_site.admin_view(self.export_filtered_view),
+                name="quiz_funnel_user_export_filtered",
+            ),
+        ]
+        return custom_urls + urls
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        query_string = request.GET.urlencode()
+        export_url = reverse("admin:quiz_funnel_user_export_filtered")
+        if query_string:
+            export_url = f"{export_url}?{query_string}"
+        extra_context["export_filtered_url"] = export_url
+        return super().changelist_view(request, extra_context=extra_context)
+
+    def export_filtered_view(self, request):
+        changelist = self.get_changelist_instance(request)
+        queryset = changelist.get_queryset(request).select_related("result")
+        response = _build_excel_response("quiz_users_export.csv")
+        writer = csv.writer(response)
+        writer.writerow(["User Name", "Email", "Number", "Score", "Category", "Virus"])
+        for user in queryset:
+            result = getattr(user, "result", None)
+            writer.writerow(
+                [
+                    user.name or "",
+                    user.email or "",
+                    user.phone or "",
+                    result.score if result else "",
+                    result.category if result else "",
+                    result.virus if result else "",
+                ]
+            )
+        return response
+
+    @admin.display(description="Score")
+    def score(self, obj):
+        return obj.result.score if hasattr(obj, "result") else "-"
+
+    @admin.display(description="Category")
+    def category(self, obj):
+        return obj.result.category if hasattr(obj, "result") else "-"
+
+    @admin.display(description="Virus")
+    def virus(self, obj):
+        return obj.result.virus if hasattr(obj, "result") else "-"
+
+    @admin.display(description="Course Offer")
+    def course_offer(self, obj):
+        return obj.result.course_offer if hasattr(obj, "result") else "-"
+
+
+@admin.register(Result)
+class ResultAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "score", "category", "virus", "course_offer", "created_at")
+    search_fields = ("user__name", "user__email", "category")
+    ordering = ("-created_at",)
+    list_filter = ("created_at", "category", "virus")
+    date_hierarchy = "created_at"
+    actions = [export_results_to_excel]
+    change_list_template = "admin/quiz_funnel/result/change_list.html"
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "export-filtered/",
+                self.admin_site.admin_view(self.export_filtered_view),
+                name="quiz_funnel_result_export_filtered",
+            ),
+        ]
+        return custom_urls + urls
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        query_string = request.GET.urlencode()
+        export_url = reverse("admin:quiz_funnel_result_export_filtered")
+        if query_string:
+            export_url = f"{export_url}?{query_string}"
+        extra_context["export_filtered_url"] = export_url
+        return super().changelist_view(request, extra_context=extra_context)
+
+    def export_filtered_view(self, request):
+        changelist = self.get_changelist_instance(request)
+        queryset = changelist.get_queryset(request).select_related("user")
+        response = _build_excel_response("quiz_results_export.csv")
+        writer = csv.writer(response)
+        writer.writerow(["User Name", "Email", "Number", "Score", "Category", "Virus"])
+        for result in queryset:
+            user = result.user
+            writer.writerow(
+                [
+                    user.name or "",
+                    user.email or "",
+                    user.phone or "",
+                    result.score,
+                    result.category or "",
+                    result.virus or "",
+                ]
+            )
+        return response
+
+
+class QuizOptionInline(admin.TabularInline):
+    model = QuizOption
+    extra = 0
+
+
+@admin.register(QuizQuestion)
+class QuizQuestionAdmin(admin.ModelAdmin):
+    list_display = ("id", "section", "question_text", "created_at")
+    search_fields = ("question_text", "section")
+    ordering = ("id",)
+    inlines = [QuizOptionInline]

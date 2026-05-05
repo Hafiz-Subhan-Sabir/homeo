@@ -13,6 +13,7 @@
     "framer-motion": "^12.38.0",
     "gsap": "^3.14.2",
     "hls.js": "^1.6.16",
+    "jspdf": "^3.0.4",
     "lucide-react": "^1.0.1",
     "next": "^16.1.7",
     "qrcode": "^1.5.4",

@@ -9,11 +9,13 @@ const SECTION_ROUTES: Record<Exclude<NavSectionId, 'joinNow' | 'affiliateLogin'>
   whatYouGet: '/what-you-get',
   ourMethods: '/our-methods',
   programs: '/programs',
+  syndicateAnalysis: '/quiz',
 }
 
 function getActiveNavId(pathname: string, hash: string): NavSectionId {
   if (hash === '#joinNowSection') return 'joinNow'
   if (pathname === '/affiliate-login' || pathname.startsWith('/affiliate-login/')) return 'affiliateLogin'
+  if (pathname === '/quiz' || pathname.startsWith('/quiz/')) return 'syndicateAnalysis'
   if (pathname === '/what-you-get') return 'whatYouGet'
   if (pathname === '/our-methods') return 'ourMethods'
   if (pathname === '/programs') return 'programs'

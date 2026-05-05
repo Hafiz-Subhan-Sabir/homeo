@@ -1,6 +1,7 @@
 from django.urls import include, path
 
 from apps.portal import views as portal_views
+from apps.quiz_funnel import views as quiz_funnel_views
 
 from . import auth_views
 from . import views
@@ -8,6 +9,8 @@ from . import views
 # Fallback when ROOT_URLCONF only mounts `path("api/", include("api.urls"))`.
 # Names omitted to avoid clashing with syndicate_backend.urls (same paths, first match wins).
 urlpatterns = [
+    path("quiz-questions", quiz_funnel_views.fetch_quiz_questions),
+    path("submit-answers", quiz_funnel_views.submit_answers),
     path("courses/", include("apps.courses.urls")),
     path("streaming/", include("apps.video_streaming.urls")),
     path("videos/", include("apps.courses.urls_videos")),

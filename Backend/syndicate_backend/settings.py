@@ -187,6 +187,7 @@ INSTALLED_APPS.extend(
         'apps.affiliate_tracking.apps.AffiliateTrackingConfig',
         'apps.courses.apps.CoursesConfig',
         'apps.video_streaming.apps.VideoStreamingConfig',
+        'apps.quiz_funnel.apps.QuizFunnelConfig',
     ]
 )
 
