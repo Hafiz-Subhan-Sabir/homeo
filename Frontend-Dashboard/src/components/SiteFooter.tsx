@@ -9,7 +9,17 @@ const footerLinkClass =
 const socialIconClass =
   'inline-flex h-10 w-10 items-center justify-center rounded-full border border-amber-300/60 bg-black/40 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.2)] transition duration-300 ease-out hover:scale-110 hover:text-amber-100 hover:shadow-[0_0_18px_rgba(251,191,36,0.42)] focus-visible:scale-110 focus-visible:outline-none'
 
-export default function SiteFooter() {
+type SiteFooterProps = {
+  sloganTypingSpeed?: number;
+  sloganDeletingSpeed?: number;
+  sloganPauseMs?: number;
+};
+
+export default function SiteFooter({
+  sloganTypingSpeed,
+  sloganDeletingSpeed,
+  sloganPauseMs,
+}: SiteFooterProps = {}) {
   return (
     <footer
       className="relative min-h-[clamp(300px,42vh,320px)] w-full overflow-hidden border-t bg-[#02050b] px-[clamp(1rem,3vw,2rem)] py-[clamp(2.5rem,6vw,4.5rem)]"
@@ -46,9 +56,9 @@ export default function SiteFooter() {
           <div className=" flex w-full max-w-[min(950px,100%)] justify-center px-[clamp(0.25rem,1vw,0.75rem)] py-[clamp(0.25rem,1vw,0.6rem)] text-center md:mx-0 md:justify-self-center md:justify-center md:px-4 md:text-center lg: ml-2 lg:px-6">
             <NeonTypingBadge
               phrases={['HONOUR · MONEY · POWER · FREEDOM']}
-              typingSpeed={24}
-              deletingSpeed={24}
-              pauseMs={420}
+              typingSpeed={sloganTypingSpeed ?? 24}
+              deletingSpeed={sloganDeletingSpeed ?? 24}
+              pauseMs={sloganPauseMs ?? 420}
               boxed={false}
               className="footer-typing"
             />

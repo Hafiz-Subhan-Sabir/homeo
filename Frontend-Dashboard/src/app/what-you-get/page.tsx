@@ -55,11 +55,11 @@ export default function WhatYouGetPage() {
             <div className="mx-auto flex w-full max-w-[920px] justify-center">
               <NeonTypingBadge
                 phrases={['HONOUR · MONEY · POWER · FREEDOM']}
-                typingSpeed={34}
-                deletingSpeed={24}
-                pauseMs={420}
+                typingSpeed={70}
+                deletingSpeed={48}
+                pauseMs={900}
                 boxed={false}
-                className="mx-auto w-full max-w-[min(92vw,720px)]"
+                className="footer-typing mx-auto w-full max-w-[min(92vw,720px)]"
               />
             </div>
           </div>
@@ -129,7 +129,7 @@ export default function WhatYouGetPage() {
                     alt="Syndicate gold key"
                     fill
                     sizes="(max-width: 1024px) 92vw, 24vw"
-                    className="object-contain p-3 transition duration-500 group-hover:scale-[1.05]"
+                    className="what-you-get-key-float object-contain p-3 transition duration-500 group-hover:scale-[1.05]"
                   />
                 </div>
               </div>
@@ -173,7 +173,7 @@ export default function WhatYouGetPage() {
               ))}
               </div>
             </div>
-            <div className="mx-auto mt-10 flex w-full justify-center sm:mt-12">
+            <div className="mx-auto mt-6 flex w-full justify-center sm:mt-10">
               <div className="h-[250px] w-[250px] sm:h-[320px] sm:w-[320px]">
                 <Image
                   src="/assets/coin-gold.png"
@@ -187,9 +187,9 @@ export default function WhatYouGetPage() {
           </div>
         </section>
 
-        <section className="px-4 pb-12 pt-8 sm:px-6 sm:pb-16 sm:pt-10">
+        <section className="px-4 pb-10 pt-4 sm:px-6 sm:pb-16 sm:pt-8">
           <div className="mx-auto w-full max-w-[min(1650px,96vw)] rounded-3xl bg-[#020205]/88 p-6 text-center sm:p-10">
-            <div className="mt-8 flex flex-wrap justify-center gap-4">
+            <div className="mt-6 flex flex-wrap justify-center gap-4 sm:mt-8">
               <div className="group relative rounded-xl bg-gradient-to-r from-cyan-300 via-sky-500 to-fuchsia-500 p-[1px]">
                 <span className="pointer-events-none absolute inset-[-1px] rounded-xl bg-inherit opacity-70 blur-[10px]" />
                 <Link
@@ -216,7 +216,7 @@ export default function WhatYouGetPage() {
       </main>
 
       <FeaturedLogosStrip logos={FEATURED_LOGOS} speedSeconds={40} />
-      <SiteFooter />
+      <SiteFooter sloganTypingSpeed={42} sloganDeletingSpeed={32} sloganPauseMs={900} />
       <style jsx>{`
         .what-you-get-stagger-row {
           opacity: 0;
@@ -233,18 +233,27 @@ export default function WhatYouGetPage() {
           }
         }
         .coin-wheel-lr {
-          animation: coinWheelLeftRight 4.8s ease-in-out infinite;
+          animation: coinWheelSpin 6.2s linear infinite;
           transform-origin: center;
         }
-        @keyframes coinWheelLeftRight {
+        @keyframes coinWheelSpin {
           from {
-            transform: translateX(-52px) rotate(0deg);
-          }
-          50% {
-            transform: translateX(52px) rotate(180deg);
+            transform: rotate(0deg);
           }
           to {
-            transform: translateX(-52px) rotate(360deg);
+            transform: rotate(360deg);
+          }
+        }
+        .what-you-get-key-float {
+          animation: whatYouGetKeyFloatLocal 4.6s ease-in-out infinite;
+        }
+        @keyframes whatYouGetKeyFloatLocal {
+          0%,
+          100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-14px);
           }
         }
       `}</style>
