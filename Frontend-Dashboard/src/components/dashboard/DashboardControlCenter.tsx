@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import { useActivityTimeline } from "@/contexts/ActivityTimelineContext";
 import type { ActivityCategory, ActivityItem, DashboardNavKey, DashboardSnapshots } from "./types";
 import { useDashboardSnapshots, type DashboardCourseLike } from "./useDashboardSnapshots";
@@ -611,11 +612,13 @@ function HeroStatusPanel({
 function AffiliateSnapshotCard({
   themeMode,
   snapshots,
-  onNavigate
+  onNavigate,
+  onOpenAffiliate
 }: {
   themeMode: ThemeMode;
   snapshots: DashboardSnapshots;
   onNavigate: (nav: DashboardNavKey) => void;
+  onOpenAffiliate: () => void;
 }) {
   const a = snapshots.affiliate;
   const [hoverMetric, setHoverMetric] = useState<string | null>(null);
@@ -629,7 +632,7 @@ function AffiliateSnapshotCard({
         <motion.button
           type="button"
           onClick={() => {
-            window.location.assign("/affiliate-login");
+            onOpenAffiliate();
           }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.98 }}
@@ -744,8 +747,8 @@ function AffiliateSnapshotCard({
           <motion.button
             type="button"
             onClick={() => {
-            window.location.assign("/affiliate-login");
-          }}
+              onOpenAffiliate();
+            }}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.98 }}
             className="rounded-md border border-[rgba(255,215,0,0.35)] bg-black/20 px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[color:var(--gold)]/90 hover:border-[rgba(255,215,0,0.7)]"
@@ -1029,6 +1032,7 @@ export default function DashboardControlCenter({
   onNavigate,
   dashboardNavLocks
 }: DashboardControlCenterProps) {
+  const router = useRouter();
   const { snapshots } = useDashboardSnapshots({ userName, courses });
   const integrityHigh = snapshots.coreIntegrity.integrityPct > 90;
   const syndicateLocked = !!dashboardNavLocks?.monk;
@@ -1063,7 +1067,12 @@ export default function DashboardControlCenter({
 
           <GoalPathSystem themeMode={themeMode} courses={courses} onNavigate={onNavigate} />
 
-          <AffiliateSnapshotCard themeMode={themeMode} snapshots={snapshots} onNavigate={onNavigate} />
+          <AffiliateSnapshotCard
+            themeMode={themeMode}
+            snapshots={snapshots}
+            onNavigate={onNavigate}
+            onOpenAffiliate={() => router.push("/affiliate-login")}
+          />
 
           <ActivityTimelineCard themeMode={themeMode} />
         </div>

@@ -3079,7 +3079,7 @@ export default function Page() {
                 userName={profileName}
                 courses={dashboardCoursesForSnapshots}
                 onNavigate={(nav: DashboardNavKey) => {
-                  if (nav === "affiliate") window.location.assign("/affiliate-login");
+                  if (nav === "affiliate") router.push("/affiliate-login");
                   else applyNavKey(nav);
                 }}
                 onOpenChange={(open) => {
@@ -3537,7 +3537,7 @@ export default function Page() {
                         courses={dashboardCoursesForSnapshots}
                         dashboardNavLocks={portalUser?.dashboard_nav_locks}
                         onNavigate={(nav) => {
-                          if (nav === "affiliate") window.location.assign("/affiliate-login");
+                          if (nav === "affiliate") router.push("/affiliate-login");
                           else applyNavKey(nav);
                         }}
                       />

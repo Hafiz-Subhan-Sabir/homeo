@@ -382,7 +382,7 @@ export function PricingPage({
         return
       }
       if (response.ok && (payload.is_unlocked || payload.already_purchased)) {
-        window.location.assign("/dashboard")
+        router.push("/dashboard")
         return
       }
       goToSignupPurchase(plan, selectedBilling, amount)

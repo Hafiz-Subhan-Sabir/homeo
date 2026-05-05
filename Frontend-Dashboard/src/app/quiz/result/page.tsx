@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { jsPDF } from "jspdf";
 import BrandHeader from "@/components/quiz-funnel/BrandHeader";
 
@@ -119,6 +120,7 @@ function renderStyledReport(report: string, loginEmail: string) {
 export default function ResultPage() {
   const [result, setResult] = useState<QuizResultPayload | null>(null);
   const [quizEmail, setQuizEmail] = useState("");
+  const router = useRouter();
 
   useEffect(() => {
     const raw = localStorage.getItem("quiz_result");
@@ -504,7 +506,7 @@ export default function ResultPage() {
     URL.revokeObjectURL(downloadUrl);
     // Give the browser a brief moment to start the download before redirecting.
     window.setTimeout(() => {
-      window.location.assign("/");
+      router.push("/");
     }, 350);
   }
 
